@@ -253,10 +253,16 @@ function addCommands(
       // If there's already a dashboard, append the cloned area
       if (dashboardOutputs.currentWidget) {
         // Do appening stuff here (how? Still trying to figure it out.)
+        (dashboardOutputs.currentWidget.content as Panel).addWidget(content);
+        dashboardOutputs.currentWidget.update();
         console.log('Output added to dashboard (not really)');
       } else {
         // If there's not a dashboard, create one and add the current output
-        const widget = new MainAreaWidget({ content });
+        const panel = new Panel();
+        panel.title.label = 'Dashboard';
+        panel.title.icon = notebookIcon;
+        panel.addWidget(content);
+        const widget = new MainAreaWidget({ content: panel });
         current.context.addSibling(widget, {
           ref: current.id,
           mode: 'split-bottom'
