@@ -1,0 +1,7 @@
+.pr-DashboardWidget {
+    border: 1px solid black;
+}
+
+.pr-DashboardWidget:focus {
+    border: 1px solid #2196F3;
+}

@@ -339,6 +339,14 @@ const extension: JupyterFrontEndPlugin<void> = {
       rank: 0
     });
 
+    // Add commands to key bindings
+    app.commands.addKeyBinding({
+      command: CommandIDs.deleteOutput,
+      args: {},
+      keys: ['Backspace'],
+      selector: '.pr-DashboardWidget'
+    })
+
     // Server component currently unimplemented. Unneeded?
     //
     // requestAPI<any>('get_example')
