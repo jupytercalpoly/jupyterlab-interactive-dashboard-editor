@@ -10,18 +10,27 @@ import {
 
 import {
   ReadonlyPartialJSONObject,
-  UUID
+  UUID,
 } from '@lumino/coreutils';
 
 import {
-  Panel, Widget
+  Panel,
+  Widget,
 } from '@lumino/widgets';
 
 import { CodeCell } from '@jupyterlab/cells';
 
-import { notebookIcon } from '@jupyterlab/ui-components';
+import { LabIcon } from '@jupyterlab/ui-components';
 
 import { ArrayExt } from '@lumino/algorithm';
+
+import { Message } from '@lumino/messaging';
+
+import whiteDashboardSvgstr from '../style/icons/dashboard_icon_filled_white.svg';
+import greyDashboardSvgstr from '../style/icons/dashboard_icon_filled_grey.svg';
+import blueDashboardSvgstr from '../style/icons/dashboard_icon_filled_blue.svg';
+import whiteDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_white.svg';
+import greyDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_grey.svg';
 
 import {
   MainAreaWidget,
@@ -51,8 +60,26 @@ namespace CommandIDs {
 
   export const addToDashboard = 'notebook:add-to-dashboard';
 
-  export const renameDashboard = 'dashboard:rename-dashboard'
+  export const renameDashboard = 'dashboard:rename-dashboard';
 
+  export const deleteOutput = 'dashboard:delete-dashboard-widget';
+
+}
+
+/**
+ * Dashboard icons
+ */
+namespace Icons {
+
+  export const whiteDashboard = new LabIcon({ name: 'pr-icons:white-dashboard', svgstr: whiteDashboardSvgstr});
+
+  export const greyDashboard = new LabIcon({ name: 'pr-icons:grey-dashboard', svgstr: greyDashboardSvgstr});
+
+  export const blueDashboard = new LabIcon({ name: 'pr-icons:blue-dashboard', svgstr: blueDashboardSvgstr});
+
+  export const whiteDashboardOutline = new LabIcon({ name: 'pr-icons:white-dashboard-icon', svgstr: whiteDashboardOutlineSvgstr});
+
+  export const greyDashboardOutline = new LabIcon({ name: 'pr-icons:grey-dashboard-outline', svgstr: greyDashboardOutlineSvgstr});
 }
 
 /**
@@ -101,7 +128,7 @@ class Dashboard extends MainAreaWidget<Widget> {
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
-    this.title.icon = notebookIcon;
+    this.title.icon = Icons.blueDashboard;
     // Add caption?
 
     this.addClass(DASHBOARD_CLASS);
@@ -135,6 +162,8 @@ class DashboardWidget extends Panel {
     this._cell = options.cell || null;
     this.id = `DashboardWidget-${UUID.uuid4()}`;
     this.addClass(DASHBOARD_WIDGET_CLASS);
+    // Makes widget focusable for WidgetTracker
+    this.node.setAttribute('tabindex', '-1');
 
     // Wait for the notebook to be loaded before cloning the output area.
     void this._notebook.context.ready.then(() => {
@@ -169,10 +198,41 @@ class DashboardWidget extends Panel {
     return this._notebook.context.path;
   }
 
+  /**
+   * Create click listeners on attach
+   */
+  onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.node.addEventListener('click', this);
+    this.node.addEventListener('contextmenu', this);
+  }
+
+  /**
+   * Remove click listeners on detach
+   */
+  onBeforeDetach(msg: Message): void {
+    super.onBeforeDetach(msg);
+    this.node.removeEventListener('click', this);
+    this.node.removeEventListener('contextmenu', this);
+  }
+
+  handleEvent(event: Event): void {
+    switch(event.type) {
+      case 'click':
+      case 'contextmenu':
+        // Focuses on clicked output and blurs all others
+        // Is there a more efficient way to blur other outputs?
+        Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS))
+             .map(blur);
+        this.node.focus();
+    }
+  }
+
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
 }
+
 
 /**
  * A widget used to rename dashboards.
@@ -235,13 +295,19 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({
+      namespace: 'dashboards'
+    });
+
+    //Tracker for DashboardWidgets
+    const outputTracker = new WidgetTracker<DashboardWidget>({
       namespace: 'dashboard-outputs'
     });
 
     addCommands(
       app,
       tracker,
-      dashboardTracker
+      dashboardTracker,
+      outputTracker
     );
 
     // Adds commands to code cell context menu.
@@ -267,6 +333,12 @@ const extension: JupyterFrontEndPlugin<void> = {
       rank: 0
     });
 
+    app.contextMenu.addItem({
+      command: CommandIDs.deleteOutput,
+      selector: '.pr-DashboardWidget',
+      rank: 0
+    });
+
     // Server component currently unimplemented. Unneeded?
     //
     // requestAPI<any>('get_example')
@@ -285,7 +357,8 @@ const extension: JupyterFrontEndPlugin<void> = {
 function addCommands(
   app: JupyterFrontEnd,
   tracker: INotebookTracker,
-  dashboardTracker: WidgetTracker<Dashboard>
+  dashboardTracker: WidgetTracker<Dashboard>,
+  outputTracker: WidgetTracker<DashboardWidget>
 ): void {
   const { commands, shell } = app;
 
@@ -336,11 +409,23 @@ function addCommands(
   }
 
   /**
+   * Deletes a selected DashboardWidget
+   */
+  commands.addCommand(CommandIDs.deleteOutput, {
+    label: 'Delete Output',
+    execute: args => {
+      console.log('Deleting widget ', outputTracker.currentWidget.id);
+      outputTracker.currentWidget.dispose();
+    }
+  });
+
+  /**
    * Creates a dialog for renaming a dashboard.
    */
   commands.addCommand(CommandIDs.renameDashboard, {
     label: 'Rename Dashboard',
     execute: args => {
+      // Should this be async? Still kind of unclear on when that needs to be used.
       if (dashboardTracker.currentWidget) {
         showDialog({
           title: 'Rename Dashboard',
@@ -371,13 +456,12 @@ function addCommands(
   });
 
   /**
-   * Logs the document tracker to console for debugging.
+   * Logs the outputTracker to console for debugging.
    */
   commands.addCommand(CommandIDs.printTracker, {
     label: 'Print Tracker',
     execute: args => {
-      console.log('Widget: ', tracker.currentWidget);
-      console.log(tracker);
+      console.log(outputTracker);
     },
     isEnabled: isEnabledAndSingleSelected
   });
@@ -409,30 +493,34 @@ function addCommands(
         dashboardTracker.currentWidget.update();
       } else {
         // If there's not a dashboard, create one and add the current output.
-        const dashboard = new Dashboard({ content });
+        const dashboard = new Dashboard({ content: undefined });
+        dashboard.addWidget(content);
         current.context.addSibling(dashboard, {
           ref: current.id,
           mode: 'split-bottom'
         });
 
-        const updateCloned = () => {
-          void dashboardTracker.save(dashboard);
-        };
-  
-        current.context.pathChanged.connect(updateCloned);
-        current.context.model?.cells.changed.connect(updateCloned);
-  
-        // Add the cloned output to the output widget tracker.
+        // Add the dashboard to the dashboard tracker.
         void dashboardTracker.add(dashboard);
-  
-        // Remove the output view if the parent notebook is closed.
-        current.content.disposed.connect(() => {
-          current!.context.pathChanged.disconnect(updateCloned);
-          current!.context.model?.cells.changed.disconnect(updateCloned);
-          dashboard.dispose();
-        });
       }
 
+      const updateOutputs = () => {
+        void outputTracker.save(content);
+      }
+
+      current.context.pathChanged.connect(updateOutputs);
+      current.context.model?.cells.changed.connect(updateOutputs);
+
+      // Add the output to the output tracker.
+      outputTracker.add(content);
+
+      // Close the output when the parent notebook is closed.
+      // FIXME: This doesn't work!
+      current.content.disposed.connect(() => {
+        current!.context.pathChanged.disconnect(updateOutputs);
+        current!.context.model?.cells.changed.disconnect(updateOutputs);
+        content.dispose;
+      });
     },
     isEnabled: isEnabledAndSingleSelected
   });
