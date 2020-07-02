@@ -26,6 +26,8 @@ import { ArrayExt } from '@lumino/algorithm';
 
 import { Message } from '@lumino/messaging';
 
+// import { Drag, IDragEvent } from '@lumino/dragdrop';
+
 import whiteDashboardSvgstr from '../style/icons/dashboard_icon_filled_white.svg';
 import greyDashboardSvgstr from '../style/icons/dashboard_icon_filled_grey.svg';
 import blueDashboardSvgstr from '../style/icons/dashboard_icon_filled_blue.svg';
@@ -64,6 +66,10 @@ namespace CommandIDs {
 
   export const deleteOutput = 'dashboard:delete-dashboard-widget';
 
+  export const undo = 'dashboard:undo';
+
+  export const redo = 'dashboard:redo';
+
 }
 
 /**
@@ -82,41 +88,48 @@ namespace Icons {
   export const greyDashboardOutline = new LabIcon({ name: 'pr-icons:grey-dashboard-outline', svgstr: greyDashboardOutlineSvgstr});
 }
 
-/**
- * Namespace for Dashboard options
- */
-namespace Dashboard {
-  export interface IOptions extends MainAreaWidget.IOptionsOptionalContent {
-    /**
-     * Dashboard name;
-     */
-    name?: string;
-
-  }
-}
 
 /**
- * Namespace for DashboardWidget options
+ * Class to wrap dashboard commands with undo/redo functionality.
+ * CURRENTLY UNUSED
  */
-namespace DashboardWidget {
-  export interface IOptions {
-    /**
-     * The notebook associated with the cloned output area.
-     */
-    notebook: NotebookPanel;
-
-    /**
-     * The cell for which to clone the output area.
-     */
-    cell?: CodeCell;
-
-    /**
-     * If the cell is not available, provide the index
-     * of the cell for when the notebook is loaded.
-     */
-    index?: number;
+class DashboardCommand {
+  constructor(options: DashboardCommand.IOptions) {
+    this._dashboard = options.dashboard;
+    this._widget = options.widget;
+    this._execute = options.execute;
+    this._undo = options.undo;
+    this._redo = options.redo;
   }
+
+  execute(): void {
+    this._execute({
+      dashboard: this._dashboard,
+      widget: this._widget,
+    });
+  }
+
+  undo(): void {
+    this._undo({
+      dashboard: this._dashboard,
+      widget: this._widget,
+    });
+  }
+
+  redo(): void {
+    this._redo({
+      dashboard: this._dashboard,
+      widget: this._widget,
+    });
+  }
+
+  private _execute: DashboardFunction;
+  private _undo: OptionalDashboardFunction;
+  private _redo: OptionalDashboardFunction;
+  private _dashboard: Dashboard | undefined; 
+  private _widget: DashboardWidget | undefined;
 }
+
 
 /**
  * Main Dashboard display widget. Currently extends MainAreaWidget (May change)
@@ -131,6 +144,10 @@ class Dashboard extends MainAreaWidget<Widget> {
     this.title.icon = Icons.blueDashboard;
     // Add caption?
 
+    this._undoStack = [];
+    this._redoStack = [];
+    this._maxStackSize = options.maxStackSize !== undefined ? options.maxStackSize : Dashboard.DEFAULT_MAX_STACK_SIZE;
+    
     this.addClass(DASHBOARD_CLASS);
   }
 
@@ -145,6 +162,53 @@ class Dashboard extends MainAreaWidget<Widget> {
     this.title.label = newName;
   }
 
+  // Executes a DashboardCommand and adds it to the undo stack.
+  // CURRENTLY UNUSED
+  runCommand(command: DashboardCommand): void {
+    this._redoStack = [];
+    command.execute();
+    this._undoStack.push(command);
+  }
+
+  // Undoes the last executed DashboardCommand.
+  // CURRENTLY UNUSED
+  undo(): void {
+    if (!this._undoStack.length) {
+      return;
+    }
+    const command = this._undoStack.pop();
+    command.undo();
+    if (this._redoStack.length >= this._maxStackSize) {
+      void this._redoStack.shift();
+    }
+    this._redoStack.push(command);
+  }
+
+  // Redoes the last undone DasboardCommand.
+  // CURRENTLY UNUSED
+  redo(): void {
+    if (!this._redoStack.length) {
+      return;
+    }
+    const command = this._redoStack.pop();
+    command.redo();
+    if (this._undoStack.length >= this._maxStackSize) {
+      void this.undoStack.shift();
+    }
+    this._undoStack.push(command);
+  }
+
+  get undoStack(): Array<DashboardCommand> {
+    return this._undoStack;
+  }
+
+  get redoStack(): Array<DashboardCommand> {
+    return this._redoStack;
+  }
+
+  private _undoStack: Array<DashboardCommand>;
+  private _redoStack: Array<DashboardCommand>;
+  private _maxStackSize: number;
   private _name: string;
 }
 
@@ -164,6 +228,8 @@ class DashboardWidget extends Panel {
     this.addClass(DASHBOARD_WIDGET_CLASS);
     // Makes widget focusable for WidgetTracker
     this.node.setAttribute('tabindex', '-1');
+    // Make widget draggable
+    this.node.setAttribute('draggable', 'true');
 
     // Wait for the notebook to be loaded before cloning the output area.
     void this._notebook.context.ready.then(() => {
@@ -225,6 +291,7 @@ class DashboardWidget extends Panel {
         Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS))
              .map(blur);
         this.node.focus();
+        break;
     }
   }
 
@@ -339,6 +406,18 @@ const extension: JupyterFrontEndPlugin<void> = {
       rank: 0
     });
 
+    app.contextMenu.addItem({
+      command: CommandIDs.undo,
+      selector: '.pr-JupyterDashboard',
+      rank: 1
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.redo,
+      selector: '.pr-JupyterDashboard',
+      rank: 2
+    });
+
     // Add commands to key bindings
     app.commands.addKeyBinding({
       command: CommandIDs.deleteOutput,
@@ -417,13 +496,47 @@ function addCommands(
   }
 
   /**
-   * Deletes a selected DashboardWidget
+   * Undoes the previous action in a dashboard.
+   * CURRENTLY UNUSED
+   */
+  commands.addCommand(CommandIDs.undo, {
+    label: 'Undo (not implemented)',
+    execute: args => dashboardTracker.currentWidget.undo(),
+    isEnabled: () => !!dashboardTracker.currentWidget.undoStack.length,
+    isVisible: () => false
+  });
+
+/**
+ * Redoes the previous undo in a dashboard.
+ * CURRENTLY UNUSED
+ */
+  commands.addCommand(CommandIDs.redo, {
+    label: 'Redo (not implemented)',
+    execute: args => dashboardTracker.currentWidget.redo(),
+    isEnabled: () => !!dashboardTracker.currentWidget.redoStack.length,
+    isVisible: () => false
+  });
+
+  /**
+   * Deletes a selected DashboardWidget.
+   * Test bed for undo/redo.
    */
   commands.addCommand(CommandIDs.deleteOutput, {
     label: 'Delete Output',
     execute: args => {
-      console.log('Deleting widget ', outputTracker.currentWidget.id);
-      outputTracker.currentWidget.dispose();
+      const command = new DashboardCommand({
+        dashboard: dashboardTracker.currentWidget,
+        widget: outputTracker.currentWidget,
+        execute: (options) => options.widget.dispose(),
+        undo: (options) => {
+          options.dashboard.addWidget(options.widget);
+          options.dashboard.update();
+          outputTracker.add(options.widget);
+        },
+        // FIXME: This redo function doesn't work!
+        redo: (options) => options.widget.dispose()
+      });
+      dashboardTracker.currentWidget.runCommand(command);
     }
   });
 
@@ -487,14 +600,14 @@ function addCommands(
       }
       const cell = current.content.activeCell as CodeCell;
       const index = current.content.activeCellIndex;
-
+  
       // Create a DashboardWidget around the selected cell.
       const content = new DashboardWidget({
         notebook: current,
         cell,
         index
       });
-
+  
       // If there's already a dashboard, append the cloned area.
       if (dashboardTracker.currentWidget) {
         dashboardTracker.currentWidget.addWidget(content);
@@ -507,21 +620,21 @@ function addCommands(
           ref: current.id,
           mode: 'split-bottom'
         });
-
+  
         // Add the dashboard to the dashboard tracker.
         void dashboardTracker.add(dashboard);
       }
-
+  
       const updateOutputs = () => {
         void outputTracker.save(content);
       }
-
+  
       current.context.pathChanged.connect(updateOutputs);
       current.context.model?.cells.changed.connect(updateOutputs);
-
+  
       // Add the output to the output tracker.
       outputTracker.add(content);
-
+  
       // Close the output when the parent notebook is closed.
       // FIXME: This doesn't work!
       current.content.disposed.connect(() => {
@@ -533,4 +646,104 @@ function addCommands(
     isEnabled: isEnabledAndSingleSelected
   });
 }
+
+/**
+ * Namespace for Dashboard options
+ */
+namespace Dashboard {
+  export interface IOptions extends MainAreaWidget.IOptionsOptionalContent {
+    /**
+     * Dashboard name.
+     */
+    name?: string;
+
+    /**
+     * Maximum size of the undo/redo stack.
+     */
+    maxStackSize?: number;
+
+  }
+
+  export const DEFAULT_MAX_STACK_SIZE = 10;
+}
+
+/**
+ * Namespace for DashboardWidget options
+ */
+namespace DashboardWidget {
+  export interface IOptions {
+    /**
+     * The notebook associated with the cloned output area.
+     */
+    notebook: NotebookPanel;
+
+    /**
+     * The cell for which to clone the output area.
+     */
+    cell?: CodeCell;
+
+    /**
+     * If the cell is not available, provide the index
+     * of the cell for when the notebook is loaded.
+     */
+    index?: number;
+  }
+}
+
+
+/**
+ * A type for the execute, undo, and redo functions of a DashboardCommand
+ */
+type DashboardFunction = (args: DashboardFunction.IOptions) => void;
+
+type OptionalDashboardFunction = DashboardFunction | undefined;
+
+
+/**
+ * Namespace for DashboardCommand options
+ */
+namespace DashboardCommand {
+  export interface IOptions {
+    /**
+     * The dashboard associated with the command.
+     */
+    dashboard?: Dashboard;
+
+    /**
+     * Function to execute command.
+     */
+    execute: DashboardFunction;
+
+    /**
+     * Function to undo command.
+     */
+    undo?: OptionalDashboardFunction;
+
+    /**
+     * Function to redo command.
+     */
+    redo?: OptionalDashboardFunction;
+
+    /**
+     * The dashboard widget associated with the command.
+     * May need to change to an iterable if selecting multiple widgets.
+     */
+    widget?: DashboardWidget;
+  }
+}
+
+/**
+ * Namespace for DashboardFunction options
+ */
+namespace DashboardFunction {
+  export interface IOptions {
+    
+    dashboard?: Dashboard;
+
+    widget?: DashboardWidget;
+
+  }
+}
+
+
 export default extension;
