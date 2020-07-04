@@ -16,6 +16,7 @@ import {
 import {
   Panel,
   Widget,
+  BoxPanel,
 } from '@lumino/widgets';
 
 import { CodeCell } from '@jupyterlab/cells';
@@ -25,6 +26,10 @@ import { LabIcon } from '@jupyterlab/ui-components';
 import { ArrayExt } from '@lumino/algorithm';
 
 import { Message } from '@lumino/messaging';
+
+import { MimeData } from '@lumino/coreutils';
+
+import { IDragEvent } from '@lumino/dragdrop';
 
 import whiteDashboardSvgstr from '../style/icons/dashboard_icon_filled_white.svg';
 import greyDashboardSvgstr from '../style/icons/dashboard_icon_filled_grey.svg';
@@ -50,6 +55,8 @@ const RENAME_TITLE_CLASS = 'pr-RenameTitle';
 const DASHBOARD_CLASS = 'pr-JupyterDashboard';
 
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
+
+const DROP_TARGET_CLASS = 'pr-DropTarget';
 
 /**
  * Command IDs used
@@ -119,12 +126,29 @@ namespace DashboardWidget {
 }
 
 /**
+ * A namespace for private functionality.
+ */
+namespace Private {
+  /**
+   * Given a MimeData instance, extract the first text data, if any.
+   */
+  export function findTextData(mime: MimeData): string | undefined {
+    const types = mime.types();
+    const textType = types.find(t => t.indexOf('text') === 0);
+    if (textType === undefined) {
+      return "undefined" as string;
+    }
+    return mime.getData(textType) as string;
+  }
+}
+
+/**
  * Main Dashboard display widget. Currently extends MainAreaWidget (May change)
  */
 class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    super({...options, content: options.content !== undefined ? options.content : new Panel()});
+    super({...options, content: options.content !== undefined ? options.content : new BoxPanel({ spacing: 0 })});
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
@@ -205,6 +229,10 @@ class DashboardWidget extends Panel {
     super.onAfterAttach(msg);
     this.node.addEventListener('click', this);
     this.node.addEventListener('contextmenu', this);
+    this.node.addEventListener('p-dragenter', this);
+    this.node.addEventListener('p-dragleave', this);
+    this.node.addEventListener('p-dragover', this);
+    this.node.addEventListener('p-drop', this);
   }
 
   /**
@@ -214,6 +242,81 @@ class DashboardWidget extends Panel {
     super.onBeforeDetach(msg);
     this.node.removeEventListener('click', this);
     this.node.removeEventListener('contextmenu', this);
+    this.node.addEventListener('p-dragenter', this);
+    this.node.addEventListener('p-dragleave', this);
+    this.node.addEventListener('p-dragover', this);
+    this.node.addEventListener('p-drop', this);
+  }
+
+    /**
+   * Handle the `'p-dragenter'` event for the widget.
+   */
+  private _evtDragEnter(event: IDragEvent): void {
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.addClass('pr-DropTarget');
+  }
+
+  /**
+   * Handle the `'p-dragleave'` event for the widget.
+   */
+  private _evtDragLeave(event: IDragEvent): void {
+    this.removeClass(DROP_TARGET_CLASS);
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  /**
+   * Handle the `'p-dragover'` event for the widget.
+   */
+  private _evtDragOver(event: IDragEvent): void {
+    this.removeClass(DROP_TARGET_CLASS);
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.dropAction = 'copy';
+    this.addClass(DROP_TARGET_CLASS);
+  }
+
+  /**
+   * Handle the `'p-drop'` event for the widget.
+   */
+  private _evtDrop(event: IDragEvent): void {
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    this.removeClass(DROP_TARGET_CLASS);
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.proposedAction === 'none') {
+      event.dropAction = 'none';
+      return;
+    }
+    // const coordinate = {
+    //   top: event.y,
+    //   bottom: event.y,
+    //   left: event.x,
+    //   right: event.x,
+    //   x: event.x,
+    //   y: event.y,
+    //   width: 0,
+    //   height: 0
+    // };
+    // const position = this.editor.getPositionForCoordinate(coordinate);
+    // const offset = this.editor.getOffsetAt(position);
+    // this.model.value.insert(offset, data);
   }
 
   handleEvent(event: Event): void {
@@ -225,6 +328,18 @@ class DashboardWidget extends Panel {
         Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS))
              .map(blur);
         this.node.focus();
+      case 'p-dragenter':
+        this._evtDragEnter(event as IDragEvent);
+        break;
+      case 'p-dragleave':
+        this._evtDragLeave(event as IDragEvent);
+        break;
+      case 'p-dragover':
+        this._evtDragOver(event as IDragEvent);
+        break;
+      case 'p-drop':
+        this._evtDrop(event as IDragEvent);
+        break;
     }
   }
 
