@@ -16,6 +16,7 @@ import {
 import {
   Panel,
   Widget,
+  BoxPanel,
 } from '@lumino/widgets';
 
 import { CodeCell } from '@jupyterlab/cells';
@@ -137,7 +138,7 @@ class DashboardCommand {
 class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    super({...options, content: options.content !== undefined ? options.content : new Panel()});
+    super({...options, content: options.content !== undefined ? options.content : new BoxPanel()});
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
@@ -153,7 +154,7 @@ class Dashboard extends MainAreaWidget<Widget> {
 
   addWidget(widget: DashboardWidget): void {
     // Have to call .update() after to see changes. Include update in function?
-    (this.content as Panel).addWidget(widget);
+    (this.content as BoxPanel).addWidget(widget);
   }
 
   rename(newName: string): void {
@@ -614,7 +615,7 @@ function addCommands(
         dashboardTracker.currentWidget.update();
       } else {
         // If there's not a dashboard, create one and add the current output.
-        const dashboard = new Dashboard({ content: undefined });
+        const dashboard = new Dashboard({});
         dashboard.addWidget(content);
         current.context.addSibling(dashboard, {
           ref: current.id,
