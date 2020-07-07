@@ -184,8 +184,9 @@ class DashboardLayout extends BoxLayout {
  * Main content widget for the Dashboard widget.
  */
 class DashboardArea extends BoxPanel {
-  constructor(options: BoxPanel.IOptions) {
+  constructor(options: DashboardArea.IOptions) {
     super({...options, layout: new DashboardLayout(options)});
+    this._outputTracker = options.outputTracker;
   }
 
   placeWidget(index: number, widget: DashboardWidget): void {
@@ -268,11 +269,36 @@ class DashboardArea extends BoxPanel {
     this.removeClass(DROP_TARGET_CLASS);
     event.preventDefault();
     event.stopPropagation();
-    console.log('dropped!');
+    console.log('dropped!', event);
+
+    const notebook = event.source.parent as NotebookPanel;
+    const cell = notebook.content.activeCell as CodeCell;
+    const index = notebook.content.activeCellIndex;
+
+    const widget = new DashboardWidget({
+      notebook,
+      cell,
+      index
+    });
+    
+    this._outputTracker.add(widget);
+    // FIXME:
+    // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
+    const dropIndex = this._calculateDropIndex(event);
+    this.insertWidget(dropIndex, widget);
+    this.update();
+
     if (event.proposedAction === 'none') {
       event.dropAction = 'none';
       return;
     }
+  }
+
+  private _calculateDropIndex(event: IDragEvent): number {
+    if (this._outputTracker.size === 0) {
+      return 0;
+    }
+    //unfinished
   }
 
   handleEvent(event: Event): void {
@@ -291,6 +317,8 @@ class DashboardArea extends BoxPanel {
         break;
     }
   }
+
+  private _outputTracker: WidgetTracker<DashboardWidget>;
 }
 
 
@@ -300,7 +328,7 @@ class DashboardArea extends BoxPanel {
 class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const dashboardArea = new DashboardArea({ spacing: 0, layout: new DashboardLayout({}) })
+    const dashboardArea = new DashboardArea({ spacing: 0, outputTracker: options.outputTracker, layout: new DashboardLayout({}) })
     super({...options, content: options.content !== undefined ? options.content : dashboardArea });
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
@@ -466,6 +494,9 @@ class DashboardWidget extends Panel {
   private _cell: CodeCell | null = null;
 }
 
+/**
+ * A widget used to get an index for inserting widgets into a Dashboard.
+ */
 class InsertHandler extends Widget {
   constructor() {
     super({ node: createInsertNode() });
@@ -526,6 +557,9 @@ function createRenameNode(): HTMLElement {
   return body;
 }
 
+/**
+ * Create the node for an insert handler.
+ */
 function createInsertNode(): HTMLElement {
   const body = document.createElement('div');
 
@@ -707,7 +741,7 @@ function addCommands(
 
     if (options.createNew) {
       // Create a new dashboard and add the widget.
-      dashboard = new Dashboard({});
+      dashboard = new Dashboard({ outputTracker });
       dashboard.insertWidget(-1, widget);
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
@@ -928,6 +962,11 @@ namespace Dashboard {
      */
     maxStackSize?: number;
 
+    /**
+     * Tracker for child widgets.
+     */
+    outputTracker: WidgetTracker<DashboardWidget>;
+
   }
 
   export const DEFAULT_MAX_STACK_SIZE = 10;
@@ -999,7 +1038,20 @@ namespace DashboardCommand {
 }
 
 /**
- * Namespace for DashboardFunction options
+ * Namespace for DashboardArea options.
+ */
+namespace DashboardArea {
+  export interface IOptions extends BoxPanel.IOptions {
+
+    /**
+     * Tracker for child widgets.
+     */
+    outputTracker: WidgetTracker<DashboardWidget>;
+  }
+}
+
+/**
+ * Namespace for DashboardFunction options.
  */
 namespace DashboardFunction {
   export interface IOptions {
