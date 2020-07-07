@@ -191,6 +191,106 @@ class DashboardArea extends BoxPanel {
   placeWidget(index: number, widget: DashboardWidget): void {
     (this.layout as DashboardLayout).placeWidget(index, widget);
   }
+
+  /**
+   * Create click listeners on attach
+   */
+  onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.node.addEventListener('lm-dragenter', this);
+    this.node.addEventListener('lm-dragleave', this);
+    this.node.addEventListener('lm-dragover', this);
+    this.node.addEventListener('lm-drop', this);
+  }
+
+  /**
+   * Remove click listeners on detach
+   */
+  onBeforeDetach(msg: Message): void {
+    super.onBeforeDetach(msg);
+    this.node.removeEventListener('lm-dragenter', this);
+    this.node.removeEventListener('lm-dragleave', this);
+    this.node.removeEventListener('lm-dragover', this);
+    this.node.removeEventListener('lm-drop', this);
+  }
+
+    /**
+   * Handle the `'lm-dragenter'` event for the widget.
+   */
+  private _evtDragEnter(event: IDragEvent): void {
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('dragenter');
+    this.addClass('pr-DropTarget');
+  }
+
+  /**
+   * Handle the `'lm-dragleave'` event for the widget.
+   */
+  private _evtDragLeave(event: IDragEvent): void {
+    this.removeClass(DROP_TARGET_CLASS);
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('dragleave');
+  }
+
+  /**
+   * Handle the `'lm-dragover'` event for the widget.
+   */
+  private _evtDragOver(event: IDragEvent): void {
+    this.removeClass(DROP_TARGET_CLASS);
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.dropAction = 'copy';
+    this.addClass(DROP_TARGET_CLASS);
+  }
+
+  /**
+   * Handle the `'lm-drop'` event for the widget.
+   */
+  private _evtDrop(event: IDragEvent): void {
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
+    this.removeClass(DROP_TARGET_CLASS);
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('dropped!');
+    if (event.proposedAction === 'none') {
+      event.dropAction = 'none';
+      return;
+    }
+  }
+
+  handleEvent(event: Event): void {
+    switch(event.type) {
+      case 'lm-dragenter':
+        this._evtDragEnter(event as IDragEvent);
+        break;
+      case 'lm-dragleave':
+        this._evtDragLeave(event as IDragEvent);
+        break;
+      case 'lm-dragover':
+        this._evtDragOver(event as IDragEvent);
+        break;
+      case 'lm-drop':
+        this._evtDrop(event as IDragEvent);
+        break;
+    }
+  }
 }
 
 
@@ -338,10 +438,6 @@ class DashboardWidget extends Panel {
     super.onAfterAttach(msg);
     this.node.addEventListener('click', this);
     this.node.addEventListener('contextmenu', this);
-    this.node.addEventListener('lm-dragenter', this);
-    this.node.addEventListener('lm-dragleave', this);
-    this.node.addEventListener('lm-dragover', this);
-    this.node.addEventListener('lm-drop', this);
   }
 
   /**
@@ -351,85 +447,6 @@ class DashboardWidget extends Panel {
     super.onBeforeDetach(msg);
     this.node.removeEventListener('click', this);
     this.node.removeEventListener('contextmenu', this);
-    this.node.removeEventListener('lm-dragenter', this);
-    this.node.removeEventListener('lm-dragleave', this);
-    this.node.removeEventListener('lm-dragover', this);
-    this.node.removeEventListener('lm-drop', this);
-  }
-
-    /**
-   * Handle the `'lm-dragenter'` event for the widget.
-   */
-  private _evtDragEnter(event: IDragEvent): void {
-    const data = Private.findTextData(event.mimeData);
-    if (data === undefined) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    this.addClass('pr-DropTarget');
-  }
-
-  /**
-   * Handle the `'lm-dragleave'` event for the widget.
-   */
-  private _evtDragLeave(event: IDragEvent): void {
-    this.removeClass(DROP_TARGET_CLASS);
-    const data = Private.findTextData(event.mimeData);
-    if (data === undefined) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  /**
-   * Handle the `'lm-dragover'` event for the widget.
-   */
-  private _evtDragOver(event: IDragEvent): void {
-    this.removeClass(DROP_TARGET_CLASS);
-    const data = Private.findTextData(event.mimeData);
-    if (data === undefined) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    event.dropAction = 'copy';
-    this.addClass(DROP_TARGET_CLASS);
-  }
-
-  /**
-   * Handle the `'lm-drop'` event for the widget.
-   */
-  private _evtDrop(event: IDragEvent): void {
-    const data = Private.findTextData(event.mimeData);
-    if (data === undefined) {
-      return;
-    }
-    this.removeClass(DROP_TARGET_CLASS);
-    event.preventDefault();
-    event.stopPropagation();
-    console.log('dropped!');
-    if (event.proposedAction === 'none') {
-      event.dropAction = 'none';
-      return;
-    }
-
-    // Please add a description if you're going to comment a block of code out!
-    //
-    // const coordinate = {
-    //   top: event.y,
-    //   bottom: event.y,
-    //   left: event.x,
-    //   right: event.x,
-    //   x: event.x,
-    //   y: event.y,
-    //   width: 0,
-    //   height: 0
-    // };
-    // const position = this.editor.getPositionForCoordinate(coordinate);
-    // const offset = this.editor.getOffsetAt(position);
-    // this.model.value.insert(offset, data);
   }
 
   handleEvent(event: Event): void {
@@ -441,18 +458,6 @@ class DashboardWidget extends Panel {
         Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS))
              .map(blur);
         this.node.focus();
-      case 'p-dragenter':
-        this._evtDragEnter(event as IDragEvent);
-        break;
-      case 'p-dragleave':
-        this._evtDragLeave(event as IDragEvent);
-        break;
-      case 'p-dragover':
-        this._evtDragOver(event as IDragEvent);
-        break;
-      case 'p-drop':
-        this._evtDrop(event as IDragEvent);
-        break;
     }
   }
 
