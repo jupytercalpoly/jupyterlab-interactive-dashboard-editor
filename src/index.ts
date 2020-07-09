@@ -6,6 +6,7 @@ import {
 import {
   INotebookTracker,
   NotebookPanel,
+  INotebookModel
 } from '@jupyterlab/notebook';
 
 import {
@@ -19,6 +20,18 @@ import {
   BoxPanel,
   BoxLayout
 } from '@lumino/widgets';
+
+import {
+  IDisposable, DisposableDelegate
+} from '@lumino/disposable';
+
+import {
+  ToolbarButton
+} from '@jupyterlab/apputils';
+
+import {
+  DocumentRegistry
+} from '@jupyterlab/docregistry';
 
 import {
   CodeCell
@@ -165,6 +178,23 @@ class DashboardCommand {
  * A namespace for private functionality.
  */
 namespace Private {
+  // export function findCellOuput(mime: MimeData): string | undefined{
+  //   let target = event.target as HTMLElement;
+  //   const cellFilter = (node: HTMLElement) =>
+  //     node.classList.contains(CONSOLE_CELL_CLASS);
+  //   let cellIndex = CellDragUtils.findCell(target, this._cells, cellFilter);
+
+
+  //   // Create a DashboardWidget around the selected cell.
+  //   const content = new DashboardWidget({
+  //     notebook: current,
+  //     cell,
+  //     index
+  //   });
+  //   return 
+  // }
+  
+
   /**
    * Given a MimeData instance, extract the first text data, if any.
    */
@@ -174,6 +204,7 @@ namespace Private {
     if (textType === undefined) {
       return "undefined" as string;
     }
+    
     return mime.getData(textType) as string;
   }
 }
@@ -798,6 +829,8 @@ const extension: JupyterFrontEndPlugin<void> = {
       selector: '.pr-DashboardWidget'
     });
 
+    app.docRegistry.addWidgetExtension('Notebook', new DashboardButton(app, outputTracker, dashboardTracker, tracker));
+
     // Server component currently unimplemented. Unneeded?
     //
     // requestAPI<any>('get_example')
@@ -1217,5 +1250,52 @@ namespace DashboardInsert {
   }
 }
 
+/**
+ * Adds a button to the toolbar.
+ */
+export
+class DashboardButton implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
+  _app: JupyterFrontEnd;
+  _dashboard: Dashboard;
+  // _outputTracker: WidgetTracker<DashboardWidget>;
+  _dashboardTracker: WidgetTracker<Dashboard>;
+  _tracker: INotebookTracker;
+  constructor(app: JupyterFrontEnd, outputTracker: WidgetTracker<DashboardWidget>, dashboardTracker: WidgetTracker<Dashboard>, tracker: INotebookTracker) {
+    this._app = app;
+    this._dashboard= new Dashboard({outputTracker});
+    // this._outputTracker = outputTracker;
+    this._dashboardTracker = dashboardTracker;
+    this._tracker = tracker;
+  }
+
+  createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
+    let callback = () => {
+      const currentNotebook = this._tracker.currentWidget;
+      if (currentNotebook) {
+        this._app.shell.activateById(currentNotebook.id);
+      }
+
+      currentNotebook.context.addSibling(this._dashboard, {
+        ref: currentNotebook.id,
+        mode: 'split-bottom'
+      });
+
+      // Add the new dashboard to the tracker.
+      void this._dashboardTracker.add(this._dashboard);
+    };
+    let button = new ToolbarButton({
+      className: 'dashboardButton',
+      icon: Icons.greyDashboard,
+      iconClass: 'dashboard',
+      onClick: callback,
+      tooltip: 'Create Dashboard'
+    });
+
+    panel.toolbar.insertItem(9, 'dashboard', button);
+    return new DisposableDelegate(() => {
+      button.dispose();
+    });
+  }
+}
 
 export default extension;
