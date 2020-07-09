@@ -1,0 +1,11 @@
+.pr-DashboardWidget {
+    border: 1px solid black;
+}
+
+.pr-DashboardWidget:focus {
+    border: 1px solid #2196F3;
+}
+.pr-JupyterDashboard.pr-DropTarget {
+    border: var(--jp-border-width) solid var(--jp-input-active-border-color);
+    box-shadow: var(--jp-input-box-shadow);
+  }
