@@ -20,17 +20,29 @@ import {
   BoxLayout
 } from '@lumino/widgets';
 
-import { CodeCell } from '@jupyterlab/cells';
+import {
+  CodeCell
+} from '@jupyterlab/cells';
 
-import { LabIcon } from '@jupyterlab/ui-components';
+import {
+  LabIcon
+} from '@jupyterlab/ui-components';
 
-import { ArrayExt } from '@lumino/algorithm';
+import {
+  ArrayExt, toArray
+} from '@lumino/algorithm';
 
-import { Message } from '@lumino/messaging';
+import {
+  Message
+} from '@lumino/messaging';
 
-import { MimeData } from '@lumino/coreutils';
+import {
+  MimeData
+} from '@lumino/coreutils';
 
-import { IDragEvent } from '@lumino/dragdrop';
+import 
+{ IDragEvent,
+ } from '@lumino/dragdrop';
 
 import whiteDashboardSvgstr from '../style/icons/dashboard_icon_filled_white.svg';
 import greyDashboardSvgstr from '../style/icons/dashboard_icon_filled_grey.svg';
@@ -46,8 +58,12 @@ import {
   showErrorMessage,
 } from '@jupyterlab/apputils';
 
+const DRAG_THRESHOLD = 5;
+
 // For unimplemented server component
 // import { requestAPI } from './jupyterlabvoilaext';
+
+// HTML element classes
 
 const RENAME_DIALOG_CLASS = 'pr-RenameDialog';
 
@@ -57,7 +73,13 @@ const DASHBOARD_CLASS = 'pr-JupyterDashboard';
 
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
 
+const DASHBOARD_AREA_CLASS = 'pr-DashboardArea';
+
 const DROP_TARGET_CLASS = 'pr-DropTarget';
+
+const DROP_TOP_CLASS = 'pr-DropTop';
+
+const DROP_BOTTOM_CLASS = 'pr-DropBottom';
 
 /**
  * Command IDs used
@@ -187,10 +209,12 @@ class DashboardArea extends BoxPanel {
   constructor(options: DashboardArea.IOptions) {
     super({...options, layout: new DashboardLayout(options)});
     this._outputTracker = options.outputTracker;
+    this.addClass(DASHBOARD_AREA_CLASS);
   }
 
   placeWidget(index: number, widget: DashboardWidget): void {
     (this.layout as DashboardLayout).placeWidget(index, widget);
+    this._outputTracker.add(widget);
   }
 
   /**
@@ -215,7 +239,7 @@ class DashboardArea extends BoxPanel {
     this.node.removeEventListener('lm-drop', this);
   }
 
-    /**
+  /**
    * Handle the `'lm-dragenter'` event for the widget.
    */
   private _evtDragEnter(event: IDragEvent): void {
@@ -225,7 +249,6 @@ class DashboardArea extends BoxPanel {
     }
     event.preventDefault();
     event.stopPropagation();
-    console.log('dragenter');
     this.addClass('pr-DropTarget');
   }
 
@@ -240,7 +263,6 @@ class DashboardArea extends BoxPanel {
     }
     event.preventDefault();
     event.stopPropagation();
-    console.log('dragleave');
   }
 
   /**
@@ -269,7 +291,6 @@ class DashboardArea extends BoxPanel {
     this.removeClass(DROP_TARGET_CLASS);
     event.preventDefault();
     event.stopPropagation();
-    console.log('dropped!', event);
 
     const notebook = event.source.parent as NotebookPanel;
     const cell = notebook.content.activeCell as CodeCell;
@@ -281,24 +302,15 @@ class DashboardArea extends BoxPanel {
       index
     });
     
-    this._outputTracker.add(widget);
     // FIXME:
     // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
-    const dropIndex = this._calculateDropIndex(event);
-    this.insertWidget(dropIndex, widget);
+    this.placeWidget(0, widget);
     this.update();
 
     if (event.proposedAction === 'none') {
       event.dropAction = 'none';
       return;
     }
-  }
-
-  private _calculateDropIndex(event: IDragEvent): number {
-    if (this._outputTracker.size === 0) {
-      return 0;
-    }
-    //unfinished
   }
 
   handleEvent(event: Event): void {
@@ -341,6 +353,7 @@ class Dashboard extends MainAreaWidget<Widget> {
     this._maxStackSize = options.maxStackSize !== undefined ? options.maxStackSize : Dashboard.DEFAULT_MAX_STACK_SIZE;
     
     this.addClass(DASHBOARD_CLASS);
+    this.node.setAttribute('style', 'overflow:auto');
   }
 
   /**
@@ -466,6 +479,11 @@ class DashboardWidget extends Panel {
     super.onAfterAttach(msg);
     this.node.addEventListener('click', this);
     this.node.addEventListener('contextmenu', this);
+    this.node.addEventListener('lm-dragenter', this);
+    this.node.addEventListener('lm-dragleave', this);
+    this.node.addEventListener('lm-dragover', this);
+    this.node.addEventListener('lm-drop', this);
+    this.node.addEventListener('mousedown', this);
   }
 
   /**
@@ -475,10 +493,36 @@ class DashboardWidget extends Panel {
     super.onBeforeDetach(msg);
     this.node.removeEventListener('click', this);
     this.node.removeEventListener('contextmenu', this);
+    this.node.removeEventListener('lm-dragenter', this);
+    this.node.removeEventListener('lm-dragleave', this);
+    this.node.removeEventListener('lm-dragover', this);
+    this.node.removeEventListener('lm-drop', this);
+    this.node.removeEventListener('mousedown', this);
   }
 
   handleEvent(event: Event): void {
     switch(event.type) {
+      case 'lm-dragenter':
+        this._evtDragEnter(event as IDragEvent);
+        break;
+      case 'lm-dragleave':
+        this._evtDragLeave(event as IDragEvent);
+        break;
+      case 'lm-dragover':
+        this._evtDragOver(event as IDragEvent);
+        break;
+      case 'lm-drop':
+        this._evtDrop(event as IDragEvent);
+        break;
+      case 'mousedown':
+        this._evtMouseDown(event as MouseEvent);
+        break;
+      case 'mouseup':
+        this._evtMouseUp(event as MouseEvent);
+        break;
+      case 'mousemove':
+        this._evtMouseMove(event as MouseEvent);
+        break;
       case 'click':
       case 'contextmenu':
         // Focuses on clicked output and blurs all others
@@ -489,9 +533,106 @@ class DashboardWidget extends Panel {
     }
   }
 
+  private _evtDragEnter(event: IDragEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  private _evtDragLeave(event: IDragEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.removeClass(DROP_BOTTOM_CLASS);
+    this.removeClass(DROP_TOP_CLASS);
+  }
+
+  private _evtDragOver(event: IDragEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+    event.dropAction = 'copy';
+    if (event.offsetY > this.node.offsetHeight / 2) {
+      this.removeClass(DROP_TOP_CLASS);
+      this.addClass(DROP_BOTTOM_CLASS);
+    } else {
+      this.removeClass(DROP_BOTTOM_CLASS);
+      this.addClass(DROP_TOP_CLASS);
+    }
+  }
+
+  private _evtDrop(event: IDragEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    // Get the index of this widget in its parent's array.
+    let insertIndex = toArray(this.parent.children()).indexOf(this);
+
+    // Something went wrong.
+    if (insertIndex === -1) {
+      return;
+    }
+
+    // Modify the insert index depending on if the drop area is closer to the
+    // bottom of this widget.
+    if (this.hasClass(DROP_TOP_CLASS)) {
+      this.removeClass(DROP_TOP_CLASS);
+    } else {
+      this.removeClass(DROP_BOTTOM_CLASS);
+      insertIndex++;
+    }
+
+    const notebook = event.source.parent as NotebookPanel;
+    const cell = notebook.content.activeCell as CodeCell;
+    const index = notebook.content.activeCellIndex;
+
+    // Create the DashboardWidget.
+    const widget = new DashboardWidget({
+      notebook,
+      cell,
+      index
+    });
+
+    // Insert the new DashboardWidget next to this widget.
+    (this.parent as DashboardArea).placeWidget(insertIndex, widget);
+    this.parent.update();
+  }
+
+  private _evtMouseDown(event: MouseEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    this.node.addEventListener('mouseup', this);
+    this.node.addEventListener('mousemove', this);
+    this._pressX = event.clientX;
+    this._pressY = event.clientY;
+  }
+
+  private _evtMouseUp(event: MouseEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    this.node.removeEventListener('mouseup', this);
+    this.node.removeEventListener('mousemove', this);
+  }
+
+  private _evtMouseMove(event: MouseEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    const dx = Math.abs(event.clientX - this._pressX);
+    const dy = Math.abs(event.clientY - this._pressY);
+
+    if (dx >= DRAG_THRESHOLD || dy >= DRAG_THRESHOLD) {
+      this.node.removeEventListener('mouseup', this);
+      this.node.removeEventListener('mousemove', this);
+      //TODO: Initiate lumino drag!
+      console.log('drag started!');
+    }
+  }
+
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
+  private _pressX: number;
+  private _pressY: number;
 }
 
 /**
@@ -761,9 +902,6 @@ function addCommands(
 
     currentNotebook.context.pathChanged.connect(updateOutputs);
     currentNotebook.context.model?.cells.changed.connect(updateOutputs);
-
-    // Add the output to the output tracker.
-    outputTracker.add(widget);
 
     // Close the output when the parent notebook is closed.
     // FIXME: This doesn't work!
