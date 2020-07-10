@@ -5,5 +5,5 @@ An account of tasks and features planned and completed
 - [ ] Custom Layout
 - [ ] Dragable outputs
 - [ ] Toolbar
-- [ ] Save
+- [ ] Save to cell metadata
 
