@@ -23,31 +23,6 @@ pip install jupyterlab_interactive_dashboard_editor
 jupyter lab build
 ```
 
-## Troubleshoot
-
-If you are seeing the frontend extension but it is not working, check
-that the server extension is enabled:
-
-```bash
-jupyter serverextension list
-```
-
-If the server extension is installed and enabled but you are not seeing
-the frontend, check the frontend is installed:
-
-```bash
-jupyter labextension list
-```
-
-If it is installed, try:
-
-```bash
-jupyter lab clean
-jupyter lab build
-```
-
-## Contributing
-
 ### Install
 
 The `jlpm` command is JupyterLab's pinned version of
@@ -57,11 +32,6 @@ The `jlpm` command is JupyterLab's pinned version of
 ```bash
 # Clone the repo to your local environment
 # Move to jupyterlab-interactive-dashboard-editor directory
-
-# Install server extension
-pip install -e .
-# Register server extension
-jupyter serverextension enable --py jupyterlab_interactive_dashboard_editor --sys-prefix
 
 # Install dependencies
 jlpm
@@ -89,6 +59,5 @@ Now every change will be built locally and bundled into JupyterLab. Be sure to r
 ### Uninstall
 
 ```bash
-pip uninstall jupyterlab_interactive_dashboard_editor
 jupyter labextension uninstall jupyterlab-interactive-dashboard-editor
 ```
