@@ -6,4 +6,4 @@ An account of tasks and features planned and completed
 - [ ] Dragable outputs
 - [ ] Toolbar
 - [ ] Save to cell metadata
-
+- [ ] Dashboard from cell metadata
