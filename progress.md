@@ -1,4 +1,4 @@
-# Jupyter Interactive Dashboard Editor DashbExtension Progress
+# Jupyter Interactive Dashboard Editor Extension Progress
 An account of tasks and features planned and completed
 
 ## Features To Be Added
