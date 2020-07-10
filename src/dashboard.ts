@@ -1,46 +1,22 @@
-import {
-  NotebookPanel
-} from '@jupyterlab/notebook';
+import { NotebookPanel } from '@jupyterlab/notebook';
 
-import {
-  CodeCell
-} from '@jupyterlab/cells';
+import { CodeCell } from '@jupyterlab/cells';
 
-import {
-  MainAreaWidget,
-  WidgetTracker
-} from '@jupyterlab/apputils';
+import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
-import {
-  BoxPanel,
-  Widget,
-} from '@lumino/widgets';
+import { BoxPanel, Widget } from '@lumino/widgets';
 
-import {
-  Message
-} from '@lumino/messaging';
+import { Message } from '@lumino/messaging';
 
-import {
-  IDragEvent
-} from '@lumino/dragdrop';
+import { IDragEvent } from '@lumino/dragdrop';
 
-import {
-  UUID
-} from '@lumino/coreutils';
+import { UUID } from '@lumino/coreutils';
 
-import {
-  DashboardLayout
-} from './layout';
+import { DashboardLayout } from './layout';
 
-import {
-  DashboardWidget
-} from './widget';
+import { DashboardWidget } from './widget';
 
-import {
-  Icons
-} from './icons';
-
-
+import { Icons } from './icons';
 
 // HTML element classes
 
@@ -50,14 +26,12 @@ const DASHBOARD_AREA_CLASS = 'pr-DashboardArea';
 
 const DROP_TARGET_CLASS = 'pr-DropTarget';
 
-
 /**
  * Main content widget for the Dashboard widget.
  */
-export
-class DashboardArea extends BoxPanel {
+export class DashboardArea extends BoxPanel {
   constructor(options: DashboardArea.IOptions) {
-    super({...options, layout: new DashboardLayout(options)});
+    super({ ...options, layout: new DashboardLayout(options) });
     this._outputTracker = options.outputTracker;
     this.addClass(DASHBOARD_AREA_CLASS);
   }
@@ -131,9 +105,9 @@ class DashboardArea extends BoxPanel {
     const widget = new DashboardWidget({
       notebook,
       cell,
-      index
+      index,
     });
-    
+
     // FIXME:
     // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
     this.placeWidget(0, widget);
@@ -146,7 +120,7 @@ class DashboardArea extends BoxPanel {
   }
 
   handleEvent(event: Event): void {
-    switch(event.type) {
+    switch (event.type) {
       case 'lm-dragenter':
         this._evtDragEnter(event as IDragEvent);
         break;
@@ -165,22 +139,27 @@ class DashboardArea extends BoxPanel {
   private _outputTracker: WidgetTracker<DashboardWidget>;
 }
 
-
 /**
  * Main Dashboard display widget. Currently extends MainAreaWidget (May change)
  */
-export
-class Dashboard extends MainAreaWidget<Widget> {
+export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const dashboardArea = new DashboardArea({ spacing: 0, outputTracker: options.outputTracker, layout: new DashboardLayout({}) })
-    super({...options, content: options.content !== undefined ? options.content : dashboardArea });
+    const dashboardArea = new DashboardArea({
+      spacing: 0,
+      outputTracker: options.outputTracker,
+      layout: new DashboardLayout({}),
+    });
+    super({
+      ...options,
+      content: options.content !== undefined ? options.content : dashboardArea,
+    });
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
     // Add caption?
-    
+
     this.addClass(DASHBOARD_CLASS);
     this.node.setAttribute('style', 'overflow:auto');
   }
@@ -190,7 +169,7 @@ class Dashboard extends MainAreaWidget<Widget> {
    * Inserting at index -1 places the widget at the end of the dashboard.
    */
   insertWidget(index: number, widget: DashboardWidget): void {
-    (this.content as DashboardArea).placeWidget(index, widget)
+    (this.content as DashboardArea).placeWidget(index, widget);
   }
 
   rename(newName: string): void {
@@ -202,12 +181,10 @@ class Dashboard extends MainAreaWidget<Widget> {
   private _name: string;
 }
 
-
 /**
  * Namespace for Dashboard options
  */
-export
-namespace Dashboard {
+export namespace Dashboard {
   export interface IOptions extends MainAreaWidget.IOptionsOptionalContent {
     /**
      * Dashboard name.
@@ -218,25 +195,19 @@ namespace Dashboard {
      * Tracker for child widgets.
      */
     outputTracker: WidgetTracker<DashboardWidget>;
-
   }
-
-  export const DEFAULT_MAX_STACK_SIZE = 10;
 }
 
 /**
  * Namespace for DashboardArea options.
  */
-export
-namespace DashboardArea {
+export namespace DashboardArea {
   export interface IOptions extends BoxPanel.IOptions {
-
     /**
      * Tracker for child widgets.
      */
     outputTracker: WidgetTracker<DashboardWidget>;
   }
 }
-
 
 export default Dashboard;

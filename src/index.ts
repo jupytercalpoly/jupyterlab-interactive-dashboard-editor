@@ -1,55 +1,37 @@
 import {
   JupyterFrontEnd,
-  JupyterFrontEndPlugin
+  JupyterFrontEndPlugin,
 } from '@jupyterlab/application';
 
 import {
   INotebookTracker,
   NotebookPanel,
-  INotebookModel
+  INotebookModel,
 } from '@jupyterlab/notebook';
 
-import {
-  CodeCell
-} from '@jupyterlab/cells';
+import { CodeCell } from '@jupyterlab/cells';
 
-import {
-  DocumentRegistry
-} from '@jupyterlab/docregistry';
+import { DocumentRegistry } from '@jupyterlab/docregistry';
 
 import {
   WidgetTracker,
   Dialog,
   showDialog,
   showErrorMessage,
-  ToolbarButton
+  ToolbarButton,
 } from '@jupyterlab/apputils';
 
-import {
-  ReadonlyPartialJSONObject
-} from '@lumino/coreutils';
+import { ReadonlyPartialJSONObject } from '@lumino/coreutils';
 
-import {
-  Widget
-} from '@lumino/widgets';
+import { Widget } from '@lumino/widgets';
 
-import {
-  IDisposable, 
-  DisposableDelegate
-} from '@lumino/disposable';
+import { IDisposable, DisposableDelegate } from '@lumino/disposable';
 
-import {
-  Icons
-} from './icons';
+import { Icons } from './icons';
 
-import {
-  Dashboard
-} from './dashboard';
+import { Dashboard } from './dashboard';
 
-import {
-  DashboardWidget
-} from './widget';
-
+import { DashboardWidget } from './widget';
 
 // HTML element classes
 
@@ -57,12 +39,10 @@ const RENAME_DIALOG_CLASS = 'pr-RenameDialog';
 
 const RENAME_TITLE_CLASS = 'pr-RenameTitle';
 
-
 /**
-* Command IDs used
-*/
+ * Command IDs used
+ */
 namespace CommandIDs {
-
   export const printTracker = 'notebook:print-tracker';
 
   export const addToDashboard = 'notebook:add-to-dashboard';
@@ -72,36 +52,26 @@ namespace CommandIDs {
   export const deleteOutput = 'dashboard:delete-dashboard-widget';
 
   export const insert = 'dashboard:insert';
-
 }
-
 
 const extension: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
   requires: [INotebookTracker],
-  activate: (
-    app: JupyterFrontEnd,
-    tracker: INotebookTracker,
-  ): void => {
+  activate: (app: JupyterFrontEnd, tracker: INotebookTracker): void => {
     console.log('JupyterLab extension presto is activated!');
 
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({
-      namespace: 'dashboards'
+      namespace: 'dashboards',
     });
 
     //Tracker for DashboardWidgets
     const outputTracker = new WidgetTracker<DashboardWidget>({
-      namespace: 'dashboard-outputs'
+      namespace: 'dashboard-outputs',
     });
 
-    addCommands(
-      app,
-      tracker,
-      dashboardTracker,
-      outputTracker
-    );
+    addCommands(app, tracker, dashboardTracker, outputTracker);
 
     // Adds commands to code cell context menu.
     // Puts command entries in a weird place in the right-click menu--
@@ -111,43 +81,43 @@ const extension: JupyterFrontEndPlugin<void> = {
     app.contextMenu.addItem({
       command: CommandIDs.printTracker,
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 13
+      rank: 13,
     });
 
     app.contextMenu.addItem({
       type: 'separator',
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 11.9
-    })
+      rank: 11.9,
+    });
 
     app.contextMenu.addItem({
       command: CommandIDs.addToDashboard,
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 11.9
+      rank: 11.9,
     });
 
     app.contextMenu.addItem({
       type: 'separator',
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 11.9
-    })
+      rank: 11.9,
+    });
 
     app.contextMenu.addItem({
       command: CommandIDs.renameDashboard,
       selector: '.pr-JupyterDashboard',
-      rank: 0
+      rank: 0,
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.deleteOutput,
       selector: '.pr-DashboardWidget',
-      rank: 0
+      rank: 0,
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.insert,
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 15
+      rank: 15,
     });
 
     // Add commands to key bindings
@@ -155,16 +125,13 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.deleteOutput,
       args: {},
       keys: ['Backspace'],
-      selector: '.pr-DashboardWidget'
+      selector: '.pr-DashboardWidget',
     });
 
-    app.docRegistry.addWidgetExtension('Notebook',
-      new Private.DashboardButton(
-          app,
-          outputTracker,
-          dashboardTracker,
-          tracker
-      ));
+    app.docRegistry.addWidgetExtension(
+      'Notebook',
+      new Private.DashboardButton(app, outputTracker, dashboardTracker, tracker)
+    );
 
     // Server component currently unimplemented. Unneeded?
     //
@@ -177,7 +144,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     //       `The jupyterlab_voila_ext server extension appears to be missing.\n${reason}`
     //     );
     //   });
-  }
+  },
 };
 
 function addCommands(
@@ -192,7 +159,9 @@ function addCommands(
    * Get the current widget and activate unless the args specify otherwise.
    * jupyterlab/packages/notebook-extension/src/index.ts
    */
-  function getCurrentNotebook(args: ReadonlyPartialJSONObject): NotebookPanel | null {
+  function getCurrentNotebook(
+    args: ReadonlyPartialJSONObject
+  ): NotebookPanel | null {
     const widget = tracker.currentWidget;
     const activate = args['activate'] !== false;
 
@@ -216,7 +185,7 @@ function addCommands(
     return new DashboardWidget({
       notebook: currentNotebook,
       cell,
-      index
+      index,
     });
   }
 
@@ -227,21 +196,31 @@ function addCommands(
     return dashboardTracker.currentWidget;
   }
 
-
   /**
    * Inserts a widget into a dashboard.
    * If dashboard isn't defined, it's the most recently focused or added Dashboard.
    * If widget isn't defined, it's a widget created from the most recently focused code cell.
    * If index isn't defined, it's -1 (inserted at the end of the dashboard).
    */
-  async function insertWidget(options: DashboardInsert.IOptions) {
-    let dashboard = options.dashboard !== undefined ? options.dashboard : getCurrentDashboard();
+  async function insertWidget(
+    options: DashboardInsert.IOptions
+  ): Promise<void> {
+    let dashboard =
+      options.dashboard !== undefined
+        ? options.dashboard
+        : getCurrentDashboard();
     if (!dashboard && !options.createNew) {
       return;
     }
 
-    const currentNotebook: NotebookPanel | undefined | null = getCurrentNotebook( {activate: false } );
-    const widget = options.widget !== undefined ? options.widget : getCurrentWidget(currentNotebook);
+    const currentNotebook:
+      | NotebookPanel
+      | undefined
+      | null = getCurrentNotebook({ activate: false });
+    const widget =
+      options.widget !== undefined
+        ? options.widget
+        : getCurrentWidget(currentNotebook);
     if (!widget) {
       return;
     }
@@ -253,7 +232,7 @@ function addCommands(
       dashboard.insertWidget(-1, widget);
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-bottom'
+        mode: 'split-bottom',
       });
 
       // Add the new dashboard to the tracker.
@@ -263,9 +242,9 @@ function addCommands(
       dashboard.update();
     }
 
-    const updateOutputs = () => {
+    const updateOutputs = (): void => {
       void outputTracker.save(widget);
-    }
+    };
 
     currentNotebook.context.pathChanged.connect(updateOutputs);
     currentNotebook.context.model?.cells.changed.connect(updateOutputs);
@@ -315,7 +294,7 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.deleteOutput, {
     label: 'Delete Output',
-    execute: args => outputTracker.currentWidget.dispose(),
+    execute: (args) => outputTracker.currentWidget.dispose(),
   });
 
   /**
@@ -323,37 +302,34 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.insert, {
     label: 'Insert in Dashboard',
-    execute: args => {
+    execute: (args) => {
       showDialog({
         title: 'Insert at index',
         body: new Private.InsertHandler(),
         focusNodeSelector: 'input',
-        buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Insert' })]
-      }).then(result => {
+        buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Insert' })],
+      }).then((result) => {
         const value = +result.value;
         if (isNaN(value)) {
           void showErrorMessage(
             'Not A Number',
-            Error(
-              `"${result.value}" cannot be converted to a number.`
-            )
+            Error(`"${result.value}" cannot be converted to a number.`)
           );
           return;
         }
         if (value < 0) {
           void showErrorMessage(
             'Index Error',
-            Error(
-              `"${result.value}" is less than zero.`
-            )
+            Error(`"${result.value}" is less than zero.`)
           );
           return;
         }
         insertWidget({ index: +result.value });
       });
     },
-    isEnabled: () => isEnabledAndSingleSelected() && !!dashboardTracker.currentWidget,
-    isVisible: () => false
+    isEnabled: () =>
+      isEnabledAndSingleSelected() && !!dashboardTracker.currentWidget,
+    isVisible: () => false,
   });
 
   /**
@@ -361,15 +337,18 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.renameDashboard, {
     label: 'Rename Dashboard',
-    execute: args => {
+    execute: (args) => {
       // Should this be async? Still kind of unclear on when that needs to be used.
       if (dashboardTracker.currentWidget) {
         showDialog({
           title: 'Rename Dashboard',
           body: new Private.RenameHandler(),
           focusNodeSelector: 'input',
-          buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Rename' })]
-        }).then(result => {
+          buttons: [
+            Dialog.cancelButton(),
+            Dialog.okButton({ label: 'Rename' }),
+          ],
+        }).then((result) => {
           if (!result.value) {
             return;
           }
@@ -378,18 +357,16 @@ function addCommands(
           if (!validName) {
             void showErrorMessage(
               'Rename Error',
-              Error(
-                `"${result.value}" is not a valid name for a dashboard.`
-              )
+              Error(`"${result.value}" is not a valid name for a dashboard.`)
             );
             return;
           }
-          // Need to cast value to string for some reason. Makes me feel sus. 
+          // Need to cast value to string for some reason. Makes me feel sus.
           dashboardTracker.currentWidget.rename(result.value as string);
           dashboardTracker.currentWidget.update();
         });
       }
-    }
+    },
   });
 
   /**
@@ -397,37 +374,35 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.printTracker, {
     label: 'Print Tracker',
-    execute: args => {
+    execute: (args) => {
       console.log(outputTracker);
     },
     isEnabled: isEnabledAndSingleSelected,
-    isVisible: () => false
+    isVisible: () => false,
   });
 
   /**
-   * Adds the currently selected cell's output to the dashboard. 
+   * Adds the currently selected cell's output to the dashboard.
    * Currently only supports a single dashboard view at a time.
    */
   commands.addCommand(CommandIDs.addToDashboard, {
     label: 'Add to Dashboard',
-    execute: args => {
+    execute: (args) => {
       if (!getCurrentDashboard()) {
-        insertWidget( {createNew: true} );
+        insertWidget({ createNew: true });
       } else {
         insertWidget({});
       }
     },
-    isEnabled: isEnabledAndSingleSelected
+    isEnabled: isEnabledAndSingleSelected,
   });
 }
 
-
 /**
  * Namespace for inserting dashboard widgets.
  */
 namespace DashboardInsert {
   export interface IOptions {
-
     dashboard?: Dashboard;
 
     widget?: DashboardWidget;
@@ -438,13 +413,11 @@ namespace DashboardInsert {
   }
 }
 
-
 /**
  * Namespace for inserting dashboard widgets.
  */
 namespace DashboardInsert {
   export interface IOptions {
-
     dashboard?: Dashboard;
 
     widget?: DashboardWidget;
@@ -455,57 +428,46 @@ namespace DashboardInsert {
   }
 }
 
-
 /**
-* A namespace for private data.
-*/
+ * A namespace for private data.
+ */
 namespace Private {
-
   /**
    * A widget used to rename dashboards.
    * jupyterlab/packages/docmanager/src/dialog.ts
    */
   export class RenameHandler extends Widget {
+    /**
+     * Construct a new "rename" dialog.
+     */
+    constructor() {
+      const node = document.createElement('div');
 
-      /**
-       * Construct a new "rename" dialog.
-       */
-      constructor() {
-          // TODO: Display notebooks that are part of dashboard in dialog.
-          super({ node: createRenameNode() });
-          this.addClass(RENAME_DIALOG_CLASS);
-      }
-  
-      /**
-       * Get the input text node.
-       */
-      get inputNode(): HTMLInputElement {
-          return this.node.getElementsByTagName('input')[0] as HTMLInputElement;
-      }
-  
-      /**
-       * Get the value of the widget.
-       */
-      getValue(): string {
-          return this.inputNode.value;
-      }
-  }
-
-  /**
-   * Create the node for a rename handler.
-   * jupyterlab/packages/docmanager/src/dialog.ts
-   */
-  function createRenameNode(): HTMLElement {
-      const body = document.createElement('div');
-  
       const nameTitle = document.createElement('label');
       nameTitle.textContent = 'New Name';
       nameTitle.className = RENAME_TITLE_CLASS;
       const name = document.createElement('input');
-  
-      body.appendChild(nameTitle);
-      body.appendChild(name);
-      return body;
+
+      node.appendChild(nameTitle);
+      node.appendChild(name);
+
+      super({ node });
+      this.addClass(RENAME_DIALOG_CLASS);
+    }
+
+    /**
+     * Get the input text node.
+     */
+    get inputNode(): HTMLInputElement {
+      return this.node.getElementsByTagName('input')[0] as HTMLInputElement;
+    }
+
+    /**
+     * Get the value of the widget.
+     */
+    getValue(): string {
+      return this.inputNode.value;
+    }
   }
 
   /**
@@ -513,7 +475,15 @@ namespace Private {
    */
   export class InsertHandler extends Widget {
     constructor() {
-      super({ node: createInsertNode() });
+      const node = document.createElement('div');
+      const nameTitle = document.createElement('label');
+      nameTitle.textContent = 'Index';
+      const index = document.createElement('input');
+
+      node.appendChild(nameTitle);
+      node.appendChild(index);
+
+      super({ node });
     }
 
     get inputNode(): HTMLInputElement {
@@ -526,36 +496,30 @@ namespace Private {
   }
 
   /**
-   * Create the node for an insert handler.
+   * Adds a button to the toolbar.
    */
-  function createInsertNode(): HTMLElement {
-    const body = document.createElement('div');
-
-    const nameTitle = document.createElement('label');
-    nameTitle.textContent = 'Index';
-    const index = document.createElement('input');
-
-    body.appendChild(nameTitle);
-    body.appendChild(index);
-    return body;
-}
-
-  /**
-  * Adds a button to the toolbar.
-  */
-  export
-  class DashboardButton implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
-    constructor(app: JupyterFrontEnd, outputTracker: WidgetTracker<DashboardWidget>, dashboardTracker: WidgetTracker<Dashboard>, tracker: INotebookTracker) {
+  export class DashboardButton
+    implements
+      DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
+    constructor(
+      app: JupyterFrontEnd,
+      outputTracker: WidgetTracker<DashboardWidget>,
+      dashboardTracker: WidgetTracker<Dashboard>,
+      tracker: INotebookTracker
+    ) {
       this._app = app;
       this._outputTracker = outputTracker;
       this._dashboardTracker = dashboardTracker;
       this._tracker = tracker;
     }
 
-    createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): IDisposable {
+    createNew(
+      panel: NotebookPanel,
+      context: DocumentRegistry.IContext<INotebookModel>
+    ): IDisposable {
       const outputTracker = this._outputTracker;
       const dashboard = new Dashboard({ outputTracker });
-      let callback = () => {
+      const callback = (): void => {
         const currentNotebook = this._tracker.currentWidget;
         if (currentNotebook) {
           this._app.shell.activateById(currentNotebook.id);
@@ -563,18 +527,18 @@ namespace Private {
 
         currentNotebook.context.addSibling(dashboard, {
           ref: currentNotebook.id,
-          mode: 'split-bottom'
+          mode: 'split-bottom',
         });
 
         // Add the new dashboard to the tracker.
         void this._dashboardTracker.add(dashboard);
       };
-      let button = new ToolbarButton({
+      const button = new ToolbarButton({
         className: 'dashboardButton',
         icon: Icons.greyDashboard,
         iconClass: 'dashboard',
         onClick: callback,
-        tooltip: 'Create Dashboard'
+        tooltip: 'Create Dashboard',
       });
 
       panel.toolbar.insertItem(9, 'dashboard', button);
@@ -588,8 +552,6 @@ namespace Private {
     private _tracker: INotebookTracker;
     private _outputTracker: WidgetTracker<DashboardWidget>;
   }
-
 }
-
 
 export default extension;
