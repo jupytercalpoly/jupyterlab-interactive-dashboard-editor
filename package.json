@@ -67,16 +67,6 @@
     "style/*.css"
   ],
   "jupyterlab": {
-    "discovery": {
-      "server": {
-        "managers": [
-          "pip"
-        ],
-        "base": {
-          "name": "jupyterlab_interactive_dashboard_editor"
-        }
-      }
-    },
     "extension": true
   },
   "husky": {
