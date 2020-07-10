@@ -76,5 +76,13 @@
       }
     },
     "extension": true
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js, *.jsx, *.ts, *.tsx": "eslint --cache --fix"
   }
 }
