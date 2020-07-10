@@ -57,7 +57,7 @@
     "eslint-config-prettier": "^6.10.1",
     "eslint-plugin-prettier": "^3.1.2",
     "mkdirp": "^1.0.3",
-    "prettier": "1.16.4",
+    "prettier": "2.0.5",
     "rimraf": "^2.6.1",
     "typescript": "~3.7.0"
   },

@@ -1,18 +1,11 @@
-import {
-  BoxLayout,
-  BoxPanel
-} from '@lumino/widgets';
+import { BoxLayout, BoxPanel } from '@lumino/widgets';
 
-import {
-  DashboardWidget
-} from './widget';
-
+import { DashboardWidget } from './widget';
 
 /**
  * Layout for DashboardArea widget.
  */
-export
-class DashboardLayout extends BoxLayout {
+export class DashboardLayout extends BoxLayout {
   constructor(options: BoxPanel.IOptions) {
     super(options);
   }

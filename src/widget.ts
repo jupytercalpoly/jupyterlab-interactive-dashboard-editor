@@ -1,41 +1,22 @@
-import {
-  NotebookPanel
-} from '@jupyterlab/notebook';
+import { NotebookPanel } from '@jupyterlab/notebook';
 
-import {
-  CodeCell
-} from '@jupyterlab/cells';
+import { CodeCell } from '@jupyterlab/cells';
 
-import {
-  Panel
-} from '@lumino/widgets';
+import { Panel } from '@lumino/widgets';
 
-import {
-  UUID
-} from '@lumino/coreutils';
+import { UUID } from '@lumino/coreutils';
 
-import {
-  ArrayExt,
-  toArray
-} from '@lumino/algorithm';
+import { ArrayExt, toArray } from '@lumino/algorithm';
 
-import {
-  Message
-} from '@lumino/messaging';
+import { Message } from '@lumino/messaging';
 
-import {
-  IDragEvent
-} from '@lumino/dragdrop';
+import { IDragEvent } from '@lumino/dragdrop';
 
 // Circular import
-import {
-  DashboardArea
-} from './dashboard';
-
+import { DashboardArea } from './dashboard';
 
 // Number of pixels a widget needs to be dragged to trigger a drag event.
 const DRAG_THRESHOLD = 5;
-
 
 // HTML element classes
 
@@ -45,15 +26,12 @@ const DROP_TOP_CLASS = 'pr-DropTop';
 
 const DROP_BOTTOM_CLASS = 'pr-DropBottom';
 
-
 /**
- * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future). 
- * Currently just a slight modification of ClonedOutpuArea. 
+ * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
+ * Currently just a slight modification of ClonedOutpuArea.
  * jupyterlab/packages/notebook-extension/src/index.ts
  */
-export
-class DashboardWidget extends Panel {
-
+export class DashboardWidget extends Panel {
   constructor(options: DashboardWidget.IOptions) {
     super();
     this._notebook = options.notebook;
@@ -87,7 +65,7 @@ class DashboardWidget extends Panel {
     return this._cell
       ? ArrayExt.findFirstIndex(
           this._notebook.content.widgets,
-          c => c === this._cell
+          (c) => c === this._cell
         )
       : this._index;
   }
@@ -128,7 +106,7 @@ class DashboardWidget extends Panel {
   }
 
   handleEvent(event: Event): void {
-    switch(event.type) {
+    switch (event.type) {
       case 'lm-dragenter':
         this._evtDragEnter(event as IDragEvent);
         break;
@@ -154,8 +132,9 @@ class DashboardWidget extends Panel {
       case 'contextmenu':
         // Focuses on clicked output and blurs all others
         // Is there a more efficient way to blur other outputs?
-        Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS))
-             .map(blur);
+        Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS)).map(
+          blur
+        );
         this.node.focus();
     }
   }
@@ -214,7 +193,7 @@ class DashboardWidget extends Panel {
     const widget = new DashboardWidget({
       notebook,
       cell,
-      index
+      index,
     });
 
     // Insert the new DashboardWidget next to this widget.
@@ -262,12 +241,10 @@ class DashboardWidget extends Panel {
   private _pressY: number;
 }
 
-
 /**
  * Namespace for DashboardWidget options
  */
-export
-namespace DashboardWidget {
+export namespace DashboardWidget {
   export interface IOptions {
     /**
      * The notebook associated with the cloned output area.

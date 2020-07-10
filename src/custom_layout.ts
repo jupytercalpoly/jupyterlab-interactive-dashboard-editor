@@ -13,16 +13,15 @@
 //     ArrayExt, IIterator, each, iter
 // } from '@lumino/algorithm';
 
-
 // export default
 // class DashboardLayout extends PanelLayout {
 //     constructor(options: Layout.IOptions = {}) {
 //         super(options);
 //     }
 
-//     /** 
+//     /**
 //      * Disposes of resources held by the layout.
-//      * 
+//      *
 //      * This method is called automatically when the parent is disposed.
 //      */
 //     dispose(): void {
@@ -35,4 +34,3 @@
 
 //     private _items: LayoutItem[] = [];
 // }
-
