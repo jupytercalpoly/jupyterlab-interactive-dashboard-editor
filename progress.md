@@ -4,6 +4,6 @@ An account of tasks and features planned and completed
 ## Features To Be Added
 - [ ] Custom Layout
 - [ ] Dragable outputs
-- [ ] Toolbar
-- [ ] Save to cell metadata
+- [X] Toolbar
+- [X] Save to cell metadata
 - [ ] Dashboard from cell metadata
