@@ -32,6 +32,7 @@ const DROP_BOTTOM_CLASS = 'pr-DropBottom';
  * jupyterlab/packages/notebook-extension/src/index.ts
  */
 export class DashboardWidget extends Panel {
+
   constructor(options: DashboardWidget.IOptions) {
     super();
     this._notebook = options.notebook;
@@ -61,11 +62,18 @@ export class DashboardWidget extends Panel {
   /**
    * The index of the cell in the notebook.
    */
+  get cell(): CodeCell {
+    return this._cell;
+  }
+
+  /**
+   * The index of the cell in the notebook.
+   */
   get index(): number {
     return this._cell
       ? ArrayExt.findFirstIndex(
           this._notebook.content.widgets,
-          (c) => c === this._cell
+          c => c === this._cell
         )
       : this._index;
   }
@@ -106,7 +114,7 @@ export class DashboardWidget extends Panel {
   }
 
   handleEvent(event: Event): void {
-    switch (event.type) {
+    switch(event.type) {
       case 'lm-dragenter':
         this._evtDragEnter(event as IDragEvent);
         break;
@@ -132,9 +140,8 @@ export class DashboardWidget extends Panel {
       case 'contextmenu':
         // Focuses on clicked output and blurs all others
         // Is there a more efficient way to blur other outputs?
-        Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS)).map(
-          blur
-        );
+        Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS))
+             .map(blur);
         this.node.focus();
     }
   }
@@ -193,7 +200,7 @@ export class DashboardWidget extends Panel {
     const widget = new DashboardWidget({
       notebook,
       cell,
-      index,
+      index
     });
 
     // Insert the new DashboardWidget next to this widget.
@@ -244,7 +251,7 @@ export class DashboardWidget extends Panel {
 /**
  * Namespace for DashboardWidget options
  */
-export namespace DashboardWidget {
+namespace DashboardWidget {
   export interface IOptions {
     /**
      * The notebook associated with the cloned output area.
@@ -263,3 +270,5 @@ export namespace DashboardWidget {
     index?: number;
   }
 }
+
+export default DashboardWidget;

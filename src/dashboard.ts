@@ -4,19 +4,21 @@ import { CodeCell } from '@jupyterlab/cells';
 
 import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
-import { BoxPanel, Widget } from '@lumino/widgets';
+import { Widget, Panel} from '@lumino/widgets';
 
 import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
 
-import { UUID } from '@lumino/coreutils';
+import { UUID, MimeData} from '@lumino/coreutils';
 
-import { DashboardLayout } from './layout';
+import { DashboardLayout } from './custom_layout';
 
 import { DashboardWidget } from './widget';
 
 import { Icons } from './icons';
+
+import {ToolbarItems} from './toolbar';
 
 // HTML element classes
 
@@ -27,11 +29,41 @@ const DASHBOARD_AREA_CLASS = 'pr-DashboardArea';
 const DROP_TARGET_CLASS = 'pr-DropTarget';
 
 /**
+ * Namespace for DashboardArea options.
+ */
+export namespace DashboardArea {
+  export interface IOptions extends Panel.IOptions {
+    /**
+     * Tracker for child widgets.
+     */
+    outputTracker: WidgetTracker<DashboardWidget>;
+  }
+}
+
+/**
+ * A namespace for private functionality.
+ */
+export namespace Private {
+  /**
+   * Given a MimeData instance, extract the first text data, if any.
+   */
+  export function findTextData(mime: MimeData): string | undefined {
+    const types = mime.types();
+    const textType = types.find(t => t.indexOf('text') === 0);
+    if (textType === undefined) {
+      return "undefined" as string;
+    }
+    
+    return mime.getData(textType) as string;
+  }
+}
+
+/**
  * Main content widget for the Dashboard widget.
  */
-export class DashboardArea extends BoxPanel {
+export class DashboardArea extends Panel {
   constructor(options: DashboardArea.IOptions) {
-    super({ ...options, layout: new DashboardLayout(options) });
+    super({...options, layout: new DashboardLayout()});
     this._outputTracker = options.outputTracker;
     this.addClass(DASHBOARD_AREA_CLASS);
   }
@@ -67,6 +99,10 @@ export class DashboardArea extends BoxPanel {
    * Handle the `'lm-dragenter'` event for the widget.
    */
   private _evtDragEnter(event: IDragEvent): void {
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     this.addClass('pr-DropTarget');
@@ -76,6 +112,11 @@ export class DashboardArea extends BoxPanel {
    * Handle the `'lm-dragleave'` event for the widget.
    */
   private _evtDragLeave(event: IDragEvent): void {
+    this.removeClass(DROP_TARGET_CLASS);
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
   }
@@ -84,6 +125,11 @@ export class DashboardArea extends BoxPanel {
    * Handle the `'lm-dragover'` event for the widget.
    */
   private _evtDragOver(event: IDragEvent): void {
+    this.removeClass(DROP_TARGET_CLASS);
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     event.dropAction = 'copy';
@@ -94,20 +140,25 @@ export class DashboardArea extends BoxPanel {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
+    const data = Private.findTextData(event.mimeData);
+    if (data === undefined) {
+      return;
+    }
     this.removeClass(DROP_TARGET_CLASS);
     event.preventDefault();
     event.stopPropagation();
 
     const notebook = event.source.parent as NotebookPanel;
+    // const activeCell = notebook.content.activeCell;
     const cell = notebook.content.activeCell as CodeCell;
     const index = notebook.content.activeCellIndex;
 
     const widget = new DashboardWidget({
       notebook,
       cell,
-      index,
+      index
     });
-
+    
     // FIXME:
     // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
     this.placeWidget(0, widget);
@@ -120,7 +171,7 @@ export class DashboardArea extends BoxPanel {
   }
 
   handleEvent(event: Event): void {
-    switch (event.type) {
+    switch(event.type) {
       case 'lm-dragenter':
         this._evtDragEnter(event as IDragEvent);
         break;
@@ -145,23 +196,20 @@ export class DashboardArea extends BoxPanel {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const dashboardArea = new DashboardArea({
-      spacing: 0,
-      outputTracker: options.outputTracker,
-      layout: new DashboardLayout({}),
-    });
-    super({
-      ...options,
-      content: options.content !== undefined ? options.content : dashboardArea,
-    });
+    const dashboardArea = new DashboardArea({outputTracker: options.outputTracker, layout: new DashboardLayout({}) })
+    super({...options, content: options.content !== undefined ? options.content : dashboardArea });
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
     // Add caption?
-
+    
     this.addClass(DASHBOARD_CLASS);
     this.node.setAttribute('style', 'overflow:auto');
+
+    // Adds save button to dashboard toolbar
+    this.toolbar.addItem("save", ToolbarItems.createSaveButton(this, options.panel));
+    console.log("added toolbar");
   }
 
   /**
@@ -181,9 +229,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
   private _name: string;
 }
 
-/**
- * Namespace for Dashboard options
- */
 export namespace Dashboard {
   export interface IOptions extends MainAreaWidget.IOptionsOptionalContent {
     /**
@@ -192,22 +237,18 @@ export namespace Dashboard {
     name?: string;
 
     /**
-     * Tracker for child widgets.
+     * Maximum size of the undo/redo stack.
      */
-    outputTracker: WidgetTracker<DashboardWidget>;
-  }
-}
+    maxStackSize?: number;
 
-/**
- * Namespace for DashboardArea options.
- */
-export namespace DashboardArea {
-  export interface IOptions extends BoxPanel.IOptions {
     /**
      * Tracker for child widgets.
      */
     outputTracker: WidgetTracker<DashboardWidget>;
+
+    /**
+     * NotebookPanel.
+     */
+    panel: NotebookPanel;
   }
 }
-
-export default Dashboard;
