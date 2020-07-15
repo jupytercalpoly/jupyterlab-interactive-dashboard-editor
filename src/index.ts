@@ -61,6 +61,9 @@ const extension: JupyterFrontEndPlugin<void> = {
   activate: (app: JupyterFrontEnd, tracker: INotebookTracker): void => {
     console.log('JupyterLab extension presto is activated!');
 
+    // Datastore for Dashboard info
+    // TODO
+
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({
       namespace: 'dashboards',
@@ -132,18 +135,6 @@ const extension: JupyterFrontEndPlugin<void> = {
       'Notebook',
       new Private.DashboardButton(app, outputTracker, dashboardTracker, tracker)
     );
-
-    // Server component currently unimplemented. Unneeded?
-    //
-    // requestAPI<any>('get_example')
-    //   .then(data => {
-    //     console.log(data);
-    //   })
-    //   .catch(reason => {
-    //     console.error(
-    //       `The jupyterlab_voila_ext server extension appears to be missing.\n${reason}`
-    //     );
-    //   });
   },
 };
 
