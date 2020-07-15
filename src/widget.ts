@@ -203,8 +203,9 @@ export class DashboardWidget extends Panel {
       index
     });
 
+    const pos = [event.offsetX, event.offsetY, 500, 100];
     // Insert the new DashboardWidget next to this widget.
-    (this.parent as DashboardArea).placeWidget(insertIndex, widget);
+    (this.parent as DashboardArea).placeWidget(insertIndex, widget, pos);
     this.parent.update();
   }
 

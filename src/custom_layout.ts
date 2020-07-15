@@ -5,10 +5,6 @@
     LayoutItem, 
     PanelLayout
   } from '@lumino/widgets';
-  
-  import {
-    Cell
-  } from '@jupyterlab/cells';
 
   import {
     ArrayExt, IIterator, map
@@ -26,6 +22,8 @@
  * Layout for DashboardArea widget.
  */
 export class DashboardLayout extends PanelLayout {
+
+    _dropLocation: number[];
     /**
      * Construct a new dashboard layout.
      *
@@ -33,18 +31,6 @@ export class DashboardLayout extends PanelLayout {
      */
     constructor(options: DashboardLayout.IOptions = {}) {
       super(options);
-      // if (options.rowCount !== undefined) {
-      //   Private.reallocSizers(this._rowSizers, options.rowCount);
-      // }
-      // if (options.columnCount !== undefined) {
-      //   Private.reallocSizers(this._columnSizers, options.columnCount);
-      // }
-      // if (options.rowSpacing !== undefined) {
-      //   this._rowSpacing = Private.clampValue(options.rowSpacing);
-      // }
-      // if (options.columnSpacing !== undefined) {
-      //   this._columnSpacing = Private.clampValue(options.columnSpacing);
-      // }
     }
   
     /**
@@ -85,8 +71,9 @@ export class DashboardLayout extends PanelLayout {
       // Attach the widget to the parent.
       if (this.parent) {
         this.attachWidget(-1, widget);
-        let pos = ((widget.cell as Cell).model.metadata.get("pos")) as string[];
-        this._update(pos, item);
+
+        let numPos = this._dropLocation;
+        this._update(numPos, item);
       }
     }
   
@@ -98,27 +85,25 @@ export class DashboardLayout extends PanelLayout {
     iter(): IIterator<Widget> {
       return map(this._items, item => item.widget);
     }
-  
-    private _update(pos: string[], item: LayoutItem){
+    
+    /**
+     * Update the item given postion in the layout.
+     *
+     */
+    private _update(pos: number[], item: LayoutItem){
       if(pos == undefined){
   
       }else{
-        item.update(Number(pos[0]), Number(pos[1]), Number(pos[2]), Number(pos[3])); 
+        item.update(pos[0], pos[1], pos[2], pos[3]); 
       }
     }
   
     /**
-     * Insert a widget at a specified position in the list view.
-     * Near-synonym for the protected insertWidget method.
-     * Adds widget to the last possible posiiton if index is set to -1.
+     * Insert a widget at position specified.
      */
-    placeWidget(index: number, widget: DashboardWidget): void {
-      if (index === -1) {
+    placeWidget(index: number, widget: DashboardWidget, pos: number[]): void {
+        this._dropLocation = pos;
         this.addWidget(widget);
-      } else {
-        this.addWidget(widget);
-        // this.insertWidget(index, widget);
-      }
     }
   
     /**
@@ -170,16 +155,8 @@ export class DashboardLayout extends PanelLayout {
       // Dispose the layout item.
       item.dispose();
     }
-  
-    // private _dirty = false;
-    // private _rowSpacing = 4;
-    // private _columnSpacing = 4;
+
     private _items: LayoutItem[] = [];
-    // private _rowStarts: number[] = [];
-    // private _columnStarts: number[] = [];
-    // private _rowSizers: BoxSizer[] = [new BoxSizer()];
-    // private _columnSizers: BoxSizer[] = [new BoxSizer()];
-    // private _box: ElementExt.IBoxSizing | null = null;
   }
 
   /**
@@ -188,37 +165,10 @@ export class DashboardLayout extends PanelLayout {
 export
 namespace DashboardLayout {
   /**
-   * An options object for initializing a grid layout.
+   * An options object for initializing a Dashboard layout.
    */
-  
+
   export
   interface IOptions extends Layout.IOptions {
-    /**
-     * The initial row count for the layout.
-     *
-     * The default is `1`.
-     */
-    rowCount?: number;
-
-    /**
-     * The initial column count for the layout.
-     *
-     * The default is `1`.
-     */
-    columnCount?: number;
-
-    /**
-     * The spacing between rows in the layout.
-     *
-     * The default is `4`.
-     */
-    rowSpacing?: number;
-
-    /**
-     * The spacing between columns in the layout.
-     *
-     * The default is `4`.
-     */
-    columnSpacing?: number;
   }
 }

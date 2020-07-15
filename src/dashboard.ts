@@ -37,6 +37,11 @@ export namespace DashboardArea {
      * Tracker for child widgets.
      */
     outputTracker: WidgetTracker<DashboardWidget>;
+
+    // /**
+    //  * Dashboard used for position.
+    //  */
+    // dashboard: Dashboard;
   }
 }
 
@@ -66,10 +71,11 @@ export class DashboardArea extends Panel {
     super({...options, layout: new DashboardLayout()});
     this._outputTracker = options.outputTracker;
     this.addClass(DASHBOARD_AREA_CLASS);
+    // console.log("area style", this.node.style);
   }
 
-  placeWidget(index: number, widget: DashboardWidget): void {
-    (this.layout as DashboardLayout).placeWidget(index, widget);
+  placeWidget(index: number, widget: DashboardWidget, pos: number[]): void {
+    (this.layout as DashboardLayout).placeWidget(index, widget, pos);
     this._outputTracker.add(widget);
   }
 
@@ -161,7 +167,10 @@ export class DashboardArea extends Panel {
     
     // FIXME:
     // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
-    this.placeWidget(0, widget);
+    
+    //default width 500, default height 100
+    const pos = [event.offsetX, event.offsetY, 500, 100];
+    this.placeWidget(0, widget, pos);
     this.update();
 
     if (event.proposedAction === 'none') {
@@ -209,7 +218,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     // Adds save button to dashboard toolbar
     this.toolbar.addItem("save", ToolbarItems.createSaveButton(this, options.panel));
-    console.log("added toolbar");
   }
 
   /**
@@ -217,7 +225,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
    * Inserting at index -1 places the widget at the end of the dashboard.
    */
   insertWidget(index: number, widget: DashboardWidget): void {
-    (this.content as DashboardArea).placeWidget(index, widget);
+    (this.content as DashboardArea).placeWidget(index, widget, [0, 0, 500, 100]);
   }
 
   rename(newName: string): void {

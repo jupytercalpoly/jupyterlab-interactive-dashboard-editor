@@ -23,6 +23,8 @@ import {
   import {
     WidgetTracker,
   } from '@jupyterlab/apputils';
+
+  import { CodeCell, Cell} from '@jupyterlab/cells';
   
   import {
     Icons
@@ -33,8 +35,9 @@ import {
   }from './widget';
 
   import{
-    Dashboard
+    Dashboard, DashboardArea
   }from './dashboard';
+
 /**
  * Adds a button to the main toolbar.
  */
@@ -70,20 +73,20 @@ export class DashboardButton implements DocumentRegistry.IWidgetExtension<Notebo
       for(let i = 0; i < panel.content.widgets.length; i++){
         // console.log("cell ", i, " at pos", (panel.content.widgets[i] as Cell).model.metadata.get("pos"));
         // CodeCell.execute(panel.content.widgets[i] as CodeCell, sessionContext: ISessionContext, metadata?: JSONObject):
-        // var pos  = (panel.content.widgets[i] as Cell).model.metadata.get("pos");
-        // if(pos){
-        //   let cell = panel.content.widgets[i] as CodeCell;
-        //   let index = i;
-        //   let widget = new DashboardWidget({
-        //     notebook: panel,
-        //     cell,
-        //     index
-        //   });
-        //   (dashboard.content as DashboardArea).addWidget(widget);
-        //   // widget.update(pos[0] as number, )
-        //   // update(left: number, top: number, width: number, height: number)
-
-        // }
+        var pos  = (panel.content.widgets[i] as Cell).model.metadata.get("pos") as (number[])[];
+        let cell = panel.content.widgets[i] as CodeCell;
+          let index = i;
+          let widget = new DashboardWidget({
+            notebook: panel,
+            cell,
+            index
+          });
+        if(pos != undefined){
+           pos.forEach(function (p) {
+               console.log("found pos", p);
+            (dashboard.content as DashboardArea).placeWidget(-1, widget, p);
+           });
+        }
       }
       dashboard.update();
       void this._dashboardTracker.add(dashboard);
