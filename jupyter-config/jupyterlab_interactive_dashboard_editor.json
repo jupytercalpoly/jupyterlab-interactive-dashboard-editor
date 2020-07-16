@@ -1,7 +1,0 @@
-{
-  "NotebookApp": {
-    "nbserver_extensions": {
-      "jupyterlab_interactive_dashboard_editor": true
-    }
-  }
-}
