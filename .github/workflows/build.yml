@@ -28,7 +28,8 @@ jobs:
         jlpm
         jlpm run eslint:check
 
-        jupyter lab build
+        jupyter labextension install .
+        
         jupyter labextension list 1>labextensions 2>&1
         cat labextensions | grep "jupyterlab-interactive-dashboard-editor.*OK"
 
