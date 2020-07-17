@@ -65,6 +65,8 @@ export class DashboardWidget extends Panel {
     this.node.setAttribute('tabindex', '-1');
     // Make widget draggable
     this.node.setAttribute('draggable', 'true');
+    this._cellId = 'dummy';
+    this._notebookId = 'dummy2';
 
     // Wait for the notebook to be loaded before cloning the output area.
     void this._notebook.context.ready.then(() => {
@@ -366,11 +368,17 @@ export class DashboardWidget extends Panel {
     this.node.removeEventListener('mousemove', this);
   }
 
+  get cellId(): string {
+    return this._cellId;
+  }
+
+  get notebookId(): string {
+    return this._notebookId;
+  }
+
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
-  // private _pressX: number;
-  // private _pressY: number;
   private _dragData: {
     pressX: number;
     pressY: number;
@@ -379,6 +387,8 @@ export class DashboardWidget extends Panel {
     // index: number;
   } | null = null;
   private _drag: Drag | null = null;
+  private _cellId: string;
+  private _notebookId: string;
 }
 
 /**

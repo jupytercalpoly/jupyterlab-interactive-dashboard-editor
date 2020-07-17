@@ -1,18 +1,18 @@
 .pr-DashboardWidget {
-    border: 1px solid black;
+    border: var(--jp-border-width) solid var(--jp-layout-color0);
     overflow: auto;
 }
 
 .pr-DashboardWidget:focus {
-    border: 1px solid #2196F3;
+    border: var(--jp-border-width) solid var(--jp-brand-color1);
 }
 
 .pr-DashboardWidget.pr-DropTop {
-    box-shadow: inset 1px 4px 0 0 #2196F3;
+    box-shadow: inset 1px 4px 0 0 var(--jp-brand-color1);
 }
 
 .pr-DashboardWidget.pr-DropBottom {
-    box-shadow: inset 1px -4px 0 0 #2196F3;
+    box-shadow: inset 1px -4px 0 0 var(--jp-brand-color1);
 }
 
 .pr-JupyterDashboard.pr-DropTarget {

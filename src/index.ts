@@ -52,6 +52,9 @@ const extension: JupyterFrontEndPlugin<void> = {
   activate: (app: JupyterFrontEnd, tracker: INotebookTracker): void => {
     console.log('JupyterLab extension presto is activated!');
 
+    // Datastore for Dashboard info
+    // TODO
+
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({
       namespace: 'dashboards'
@@ -123,19 +126,7 @@ const extension: JupyterFrontEndPlugin<void> = {
       'Notebook',
       new DashboardButton(app, outputTracker, dashboardTracker, tracker)
     );
-
-    // Server component currently unimplemented. Unneeded?
-    //
-    // requestAPI<any>('get_example')
-    //   .then(data => {
-    //     console.log(data);
-    //   })
-    //   .catch(reason => {
-    //     console.error(
-    //       `The jupyterlab_voila_ext server extension appears to be missing.\n${reason}`
-    //     );
-    //   });
-  }
+  },
 };
 
 function addCommands(
@@ -200,6 +191,7 @@ function addCommands(
       options.dashboard !== undefined
         ? options.dashboard
         : getCurrentDashboard();
+
     if (!dashboard && !options.createNew) {
       return;
     }
@@ -208,13 +200,16 @@ function addCommands(
       | NotebookPanel
       | undefined
       | null = getCurrentNotebook({ activate: false });
+
     const widget =
       options.widget !== undefined
         ? options.widget
         : getCurrentWidget(currentNotebook);
+
     if (!widget) {
       return;
     }
+
     const index = options.index !== undefined ? options.index : -1;
 
     if (options.createNew) {
