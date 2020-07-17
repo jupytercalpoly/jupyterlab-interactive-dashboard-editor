@@ -1,4 +1,4 @@
-import { filter, each, IIterator } from '@lumino/algorithm';
+import { filter, each, IIterator, ArrayExt, toArray } from '@lumino/algorithm';
 
 import { Litestore } from './litestore';
 
@@ -7,6 +7,12 @@ import { Datastore, Fields, Record } from '@lumino/datastore';
 import { Widget } from '@lumino/widgets';
 
 import { DashboardWidget } from './widget';
+
+import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
+
+import { UUID } from '@lumino/coreutils';
+
+import { Cell } from '@jupyterlab/cells';
 
 /**
  * Alias for widget schema type.
@@ -128,6 +134,82 @@ export class Widgetstore extends Litestore {
       width,
       height,
     };
+  }
+
+  static addNotebookId(notebook: NotebookPanel): string {
+    const metadata: any | undefined = notebook.model.metadata.get('presto');
+    let id: string;
+
+    if (metadata !== undefined) {
+      if (metadata.id !== undefined) {
+        return metadata.id;
+      }
+      id = UUID.uuid4();
+      notebook.model.metadata.set('presto', { ...metadata, id });
+    } else {
+      id = UUID.uuid4();
+      notebook.model.metadata.set('presto', { id });
+    }
+
+    return id;
+  }
+
+  static getNotebookId(notebook: NotebookPanel): string | undefined {
+    const metadata: any | undefined = notebook.model.metadata.get('presto');
+    if (metadata === undefined || metadata.id === undefined) {
+      return undefined;
+    }
+    return metadata.id;
+  }
+
+  static getNotebookById(
+    id: string,
+    tracker: INotebookTracker
+  ): NotebookPanel | undefined {
+    return tracker.find(
+      (notebook) => Widgetstore.getNotebookId(notebook) === id
+    );
+  }
+
+  static addCellId(cell: Cell): string {
+    const metadata: any | undefined = cell.model.metadata.get('presto');
+    let id: string;
+
+    if (metadata !== undefined) {
+      if (metadata.id !== undefined) {
+        return metadata.id;
+      }
+      id = UUID.uuid4();
+      cell.model.metadata.set('presto', { ...metadata, id });
+    } else {
+      id = UUID.uuid4();
+      cell.model.metadata.set('presto', { id });
+    }
+
+    return id;
+  }
+
+  static getCellId(cell: Cell): string | undefined {
+    const metadata: any | undefined = cell.model.metadata.get('presto');
+    if (metadata === undefined || metadata.id === undefined) {
+      return undefined;
+    }
+    return metadata.id;
+  }
+
+  static getCellById(id: string, tracker: INotebookTracker): Cell | undefined {
+    const notebooks = toArray(tracker.filter(() => true));
+    for (const notebook of notebooks) {
+      const cells = notebook.content.widgets;
+      const value = ArrayExt.findFirstValue(
+        cells,
+        (cell) => this.getCellId(cell) === id
+      );
+      if (value !== undefined) {
+        return value;
+      }
+    }
+    return undefined;
   }
 }
 
