@@ -1,22 +1,32 @@
-import { NotebookPanel } from '@jupyterlab/notebook';
+import {
+  NotebookPanel
+  // , Notebook
+} from '@jupyterlab/notebook';
 
-import { CodeCell } from '@jupyterlab/cells';
+import {
+  CodeCell
+  // , ICodeCellModel
+} from '@jupyterlab/cells';
 
 import { Panel } from '@lumino/widgets';
 
-import { UUID } from '@lumino/coreutils';
+import { UUID, MimeData } from '@lumino/coreutils';
 
 import { ArrayExt, toArray } from '@lumino/algorithm';
 
 import { Message } from '@lumino/messaging';
 
-import { IDragEvent } from '@lumino/dragdrop';
+import { IDragEvent, Drag } from '@lumino/dragdrop';
 
 // Circular import
 import { DashboardArea } from './dashboard';
 
+import { shouldStartDrag } from './widgetdragutils';
+
+// import * as nbformat from '@jupyterlab/nbformat';
+
 // Number of pixels a widget needs to be dragged to trigger a drag event.
-const DRAG_THRESHOLD = 5;
+// const DRAG_THRESHOLD = 5;
 
 // HTML element classes
 
@@ -27,11 +37,22 @@ const DROP_TOP_CLASS = 'pr-DropTop';
 const DROP_BOTTOM_CLASS = 'pr-DropBottom';
 
 /**
+ * The mimetype used for DashboardWidget.
+ */
+const DASHBOARD_WIDGET_MIME = 'pr-DashboardWidgetMine';
+// const JUPYTER_CELL_MIME  = 'application/vnd.jupyter.cells';
+
+/**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
  * Currently just a slight modification of ClonedOutpuArea.
  * jupyterlab/packages/notebook-extension/src/index.ts
  */
 export class DashboardWidget extends Panel {
+  /**
+   * The left, top, width and height relative to
+   * the top left of dashboard.
+   */
+  _pos: number[];
 
   constructor(options: DashboardWidget.IOptions) {
     super();
@@ -57,6 +78,22 @@ export class DashboardWidget extends Panel {
       const clone = this._cell.cloneOutputArea();
       this.addWidget(clone);
     });
+  }
+
+  /**
+   * Get the position of widget relative to the
+   * top left of dashboard.
+   */
+  public get pos(): number[] {
+    return this._pos;
+  }
+
+  /**
+   * Set the position of widget relative to the
+   * top left of dashboard.
+   */
+  public set pos(newPos: number[]) {
+    this._pos = newPos;
   }
 
   /**
@@ -114,7 +151,7 @@ export class DashboardWidget extends Panel {
   }
 
   handleEvent(event: Event): void {
-    switch(event.type) {
+    switch (event.type) {
       case 'lm-dragenter':
         this._evtDragEnter(event as IDragEvent);
         break;
@@ -140,8 +177,9 @@ export class DashboardWidget extends Panel {
       case 'contextmenu':
         // Focuses on clicked output and blurs all others
         // Is there a more efficient way to blur other outputs?
-        Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS))
-             .map(blur);
+        Array.from(document.getElementsByClassName(DASHBOARD_WIDGET_CLASS)).map(
+          blur
+        );
         this.node.focus();
     }
   }
@@ -209,17 +247,118 @@ export class DashboardWidget extends Panel {
     this.parent.update();
   }
 
+  /**
+   * Handle `mousedown` events for the widget.
+   */
   private _evtMouseDown(event: MouseEvent): void {
-    event.stopPropagation();
-    event.preventDefault();
+    console.log('mouse down!');
+    const { button, shiftKey } = event;
+
+    // We only handle main or secondary button actions.
+    if (
+      !(button === 0 || button === 2) ||
+      // Shift right-click gives the browser default behavior.
+      (shiftKey && button === 2)
+    ) {
+      return;
+    }
+
+    console.log('event', event);
+    console.log('target', event.target);
+    const target = event.target as HTMLElement;
+    const cell = this.cell;
+
+    this._dragData = {
+      pressX: event.clientX,
+      pressY: event.clientY,
+      cell: cell,
+      target: target
+    };
+    // event.stopPropagation();
+    // event.preventDefault();
 
     this.node.addEventListener('mouseup', this);
     this.node.addEventListener('mousemove', this);
-    this._pressX = event.clientX;
-    this._pressY = event.clientY;
+    // this._pressX = event.clientX;
+    // this._pressY = event.clientY;
+    event.preventDefault();
+  }
+
+  /**
+   * Handle `mousemove` event of widget
+   */
+  private _evtMouseMove(event: MouseEvent): void {
+    console.log('mouse move!');
+    // event.stopPropagation();
+    // event.preventDefault();
+    const data = this._dragData;
+    if (
+      data &&
+      shouldStartDrag(data.pressX, data.pressY, event.clientX, event.clientY)
+    ) {
+      void this._startDrag(
+        data.cell,
+        data.target,
+        event.clientX,
+        event.clientY
+      );
+    }
+
+    // const dx = Math.abs(event.clientX - this._pressX);
+    // const dy = Math.abs(event.clientY - this._pressY);
+
+    // if (dx >= DRAG_THRESHOLD || dy >= DRAG_THRESHOLD) {
+    //   this.node.removeEventListener('mouseup', this);
+    //   this.node.removeEventListener('mousemove', this);
+    //   //TODO: Initiate lumino drag!
+    //   console.log('drag started!');
+    // }
+  }
+
+  /**
+   * Start a drag event
+   */
+  private _startDrag(
+    cell: CodeCell,
+    target: HTMLElement,
+    clientX: number,
+    clientY: number
+  ): Promise<void> {
+    console.log('start drag!');
+    // const cellModel = cell.model as ICodeCellModel;
+    // const selected: nbformat.ICell[] = [cellModel.toJSON()];
+
+    const dragImage = target;
+
+    this._drag = new Drag({
+      mimeData: new MimeData(),
+      dragImage,
+      proposedAction: 'copy',
+      supportedActions: 'copy',
+      source: this
+    });
+
+    // this._drag.mimeData.setData
+
+    this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
+    // const textContent = cellModel.value.text;
+    // this._drag.mimeData.setData('text/plain', textContent);
+
+    // this._focusedCell = null;
+
+    document.removeEventListener('mousemove', this, true);
+    document.removeEventListener('mouseup', this, true);
+    return this._drag.start(clientX, clientY).then(() => {
+      if (this.isDisposed) {
+        return;
+      }
+      this._drag = null;
+      this._dragData = null;
+    });
   }
 
   private _evtMouseUp(event: MouseEvent): void {
+    console.log('mouse up!');
     event.stopPropagation();
     event.preventDefault();
 
@@ -227,26 +366,19 @@ export class DashboardWidget extends Panel {
     this.node.removeEventListener('mousemove', this);
   }
 
-  private _evtMouseMove(event: MouseEvent): void {
-    event.stopPropagation();
-    event.preventDefault();
-
-    const dx = Math.abs(event.clientX - this._pressX);
-    const dy = Math.abs(event.clientY - this._pressY);
-
-    if (dx >= DRAG_THRESHOLD || dy >= DRAG_THRESHOLD) {
-      this.node.removeEventListener('mouseup', this);
-      this.node.removeEventListener('mousemove', this);
-      //TODO: Initiate lumino drag!
-      console.log('drag started!');
-    }
-  }
-
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
-  private _pressX: number;
-  private _pressY: number;
+  // private _pressX: number;
+  // private _pressY: number;
+  private _dragData: {
+    pressX: number;
+    pressY: number;
+    target: HTMLElement;
+    cell: CodeCell;
+    // index: number;
+  } | null = null;
+  private _drag: Drag | null = null;
 }
 
 /**

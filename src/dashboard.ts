@@ -4,13 +4,13 @@ import { CodeCell } from '@jupyterlab/cells';
 
 import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
-import { Widget, Panel} from '@lumino/widgets';
+import { Widget, Panel } from '@lumino/widgets';
 
 import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
 
-import { UUID, MimeData} from '@lumino/coreutils';
+import { UUID, MimeData } from '@lumino/coreutils';
 
 import { DashboardLayout } from './custom_layout';
 
@@ -18,7 +18,7 @@ import { DashboardWidget } from './widget';
 
 import { Icons } from './icons';
 
-import {ToolbarItems} from './toolbar';
+import { createSaveButton } from './toolbar';
 
 // HTML element classes
 
@@ -46,21 +46,16 @@ export namespace DashboardArea {
 }
 
 /**
- * A namespace for private functionality.
+ * Given a MimeData instance, extract the first text data, if any.
  */
-export namespace Private {
-  /**
-   * Given a MimeData instance, extract the first text data, if any.
-   */
-  export function findTextData(mime: MimeData): string | undefined {
-    const types = mime.types();
-    const textType = types.find(t => t.indexOf('text') === 0);
-    if (textType === undefined) {
-      return "undefined" as string;
-    }
-    
-    return mime.getData(textType) as string;
+export function findTextData(mime: MimeData): string | undefined {
+  const types = mime.types();
+  const textType = types.find(t => t.indexOf('text') === 0);
+  if (textType === undefined) {
+    return 'undefined' as string;
   }
+
+  return mime.getData(textType) as string;
 }
 
 /**
@@ -68,10 +63,9 @@ export namespace Private {
  */
 export class DashboardArea extends Panel {
   constructor(options: DashboardArea.IOptions) {
-    super({...options, layout: new DashboardLayout()});
+    super({ ...options, layout: new DashboardLayout() });
     this._outputTracker = options.outputTracker;
     this.addClass(DASHBOARD_AREA_CLASS);
-    // console.log("area style", this.node.style);
   }
 
   placeWidget(index: number, widget: DashboardWidget, pos: number[]): void {
@@ -105,7 +99,7 @@ export class DashboardArea extends Panel {
    * Handle the `'lm-dragenter'` event for the widget.
    */
   private _evtDragEnter(event: IDragEvent): void {
-    const data = Private.findTextData(event.mimeData);
+    const data = findTextData(event.mimeData);
     if (data === undefined) {
       return;
     }
@@ -119,7 +113,7 @@ export class DashboardArea extends Panel {
    */
   private _evtDragLeave(event: IDragEvent): void {
     this.removeClass(DROP_TARGET_CLASS);
-    const data = Private.findTextData(event.mimeData);
+    const data = findTextData(event.mimeData);
     if (data === undefined) {
       return;
     }
@@ -132,7 +126,7 @@ export class DashboardArea extends Panel {
    */
   private _evtDragOver(event: IDragEvent): void {
     this.removeClass(DROP_TARGET_CLASS);
-    const data = Private.findTextData(event.mimeData);
+    const data = findTextData(event.mimeData);
     if (data === undefined) {
       return;
     }
@@ -146,7 +140,7 @@ export class DashboardArea extends Panel {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
-    const data = Private.findTextData(event.mimeData);
+    const data = findTextData(event.mimeData);
     if (data === undefined) {
       return;
     }
@@ -164,10 +158,10 @@ export class DashboardArea extends Panel {
       cell,
       index
     });
-    
+
     // FIXME:
     // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
-    
+
     //default width 500, default height 100
     const pos = [event.offsetX, event.offsetY, 500, 100];
     this.placeWidget(0, widget, pos);
@@ -180,7 +174,7 @@ export class DashboardArea extends Panel {
   }
 
   handleEvent(event: Event): void {
-    switch(event.type) {
+    switch (event.type) {
       case 'lm-dragenter':
         this._evtDragEnter(event as IDragEvent);
         break;
@@ -205,19 +199,32 @@ export class DashboardArea extends Panel {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const dashboardArea = new DashboardArea({outputTracker: options.outputTracker, layout: new DashboardLayout({}) })
-    super({...options, content: options.content !== undefined ? options.content : dashboardArea });
+    const dashboardArea = new DashboardArea({
+      outputTracker: options.outputTracker,
+      layout: new DashboardLayout({})
+    });
+    super({
+      ...options,
+      content: options.content !== undefined ? options.content : dashboardArea
+    });
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
     // Add caption?
-    
+
     this.addClass(DASHBOARD_CLASS);
     this.node.setAttribute('style', 'overflow:auto');
 
     // Adds save button to dashboard toolbar
-    this.toolbar.addItem("save", ToolbarItems.createSaveButton(this, options.panel));
+    this.toolbar.addItem('save', createSaveButton(this, options.panel));
+  }
+
+  /**
+   * The name of the Dashboard.
+   */
+  get name(): string {
+    return this._name;
   }
 
   /**
@@ -225,7 +232,12 @@ export class Dashboard extends MainAreaWidget<Widget> {
    * Inserting at index -1 places the widget at the end of the dashboard.
    */
   insertWidget(index: number, widget: DashboardWidget): void {
-    (this.content as DashboardArea).placeWidget(index, widget, [0, 0, 500, 100]);
+    (this.content as DashboardArea).placeWidget(index, widget, [
+      0,
+      0,
+      500,
+      100
+    ]);
   }
 
   rename(newName: string): void {

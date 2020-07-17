@@ -1,12 +1,9 @@
 import {
   JupyterFrontEnd,
-  JupyterFrontEndPlugin,
+  JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
-import {
-  INotebookTracker,
-  NotebookPanel
-} from '@jupyterlab/notebook';
+import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 
 import { CodeCell } from '@jupyterlab/cells';
 
@@ -25,7 +22,7 @@ import { Dashboard } from './dashboard';
 
 import { DashboardWidget } from './widget';
 
-import {DashboardButton} from './button';
+import { DashboardButton } from './button';
 
 // HTML element classes
 
@@ -57,12 +54,12 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({
-      namespace: 'dashboards',
+      namespace: 'dashboards'
     });
 
     //Tracker for DashboardWidgets
     const outputTracker = new WidgetTracker<DashboardWidget>({
-      namespace: 'dashboard-outputs',
+      namespace: 'dashboard-outputs'
     });
 
     addCommands(app, tracker, dashboardTracker, outputTracker);
@@ -75,43 +72,43 @@ const extension: JupyterFrontEndPlugin<void> = {
     app.contextMenu.addItem({
       command: CommandIDs.printTracker,
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 13,
+      rank: 13
     });
 
     app.contextMenu.addItem({
       type: 'separator',
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 11.9,
+      rank: 11.9
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.addToDashboard,
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 11.9,
+      rank: 11.9
     });
 
     app.contextMenu.addItem({
       type: 'separator',
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 11.9,
+      rank: 11.9
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.renameDashboard,
       selector: '.pr-JupyterDashboard',
-      rank: 0,
+      rank: 0
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.deleteOutput,
       selector: '.pr-DashboardWidget',
-      rank: 0,
+      rank: 0
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.insert,
       selector: '.jp-Notebook .jp-CodeCell',
-      rank: 15,
+      rank: 15
     });
 
     // Add commands to key bindings
@@ -119,7 +116,7 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.deleteOutput,
       args: {},
       keys: ['Backspace'],
-      selector: '.pr-DashboardWidget',
+      selector: '.pr-DashboardWidget'
     });
 
     app.docRegistry.addWidgetExtension(
@@ -138,7 +135,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     //       `The jupyterlab_voila_ext server extension appears to be missing.\n${reason}`
     //     );
     //   });
-  },
+  }
 };
 
 function addCommands(
@@ -179,7 +176,7 @@ function addCommands(
     return new DashboardWidget({
       notebook: currentNotebook,
       cell,
-      index,
+      index
     });
   }
 
@@ -223,11 +220,11 @@ function addCommands(
     if (options.createNew) {
       // Create a new dashboard and add the widget.
       const panel = currentNotebook;
-      dashboard = new Dashboard({ outputTracker, panel});
+      dashboard = new Dashboard({ outputTracker, panel });
       dashboard.insertWidget(-1, widget);
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-bottom',
+        mode: 'split-bottom'
       });
 
       // Add the new dashboard to the tracker.
@@ -242,13 +239,13 @@ function addCommands(
     };
 
     currentNotebook.context.pathChanged.connect(updateOutputs);
-    currentNotebook.context.model?.cells.changed.connect(updateOutputs);
+    currentNotebook.context.model.cells.changed.connect(updateOutputs);
 
     // Close the output when the parent notebook is closed.
     // FIXME: This doesn't work!
     currentNotebook.content.disposed.connect(() => {
       currentNotebook!.context.pathChanged.disconnect(updateOutputs);
-      currentNotebook!.context.model?.cells.changed.disconnect(updateOutputs);
+      currentNotebook!.context.model.cells.changed.disconnect(updateOutputs);
       widget.dispose;
     });
   }
@@ -289,7 +286,7 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.deleteOutput, {
     label: 'Delete Output',
-    execute: (args) => outputTracker.currentWidget.dispose(),
+    execute: args => outputTracker.currentWidget.dispose()
   });
 
   /**
@@ -297,13 +294,13 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.insert, {
     label: 'Insert in Dashboard',
-    execute: (args) => {
+    execute: args => {
       showDialog({
         title: 'Insert at index',
         body: new Private.InsertHandler(),
         focusNodeSelector: 'input',
-        buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Insert' })],
-      }).then((result) => {
+        buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Insert' })]
+      }).then(result => {
         const value = +result.value;
         if (isNaN(value)) {
           void showErrorMessage(
@@ -324,7 +321,7 @@ function addCommands(
     },
     isEnabled: () =>
       isEnabledAndSingleSelected() && !!dashboardTracker.currentWidget,
-    isVisible: () => false,
+    isVisible: () => false
   });
 
   /**
@@ -332,18 +329,15 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.renameDashboard, {
     label: 'Rename Dashboard',
-    execute: (args) => {
+    execute: args => {
       // Should this be async? Still kind of unclear on when that needs to be used.
       if (dashboardTracker.currentWidget) {
         showDialog({
           title: 'Rename Dashboard',
           body: new Private.RenameHandler(),
           focusNodeSelector: 'input',
-          buttons: [
-            Dialog.cancelButton(),
-            Dialog.okButton({ label: 'Rename' }),
-          ],
-        }).then((result) => {
+          buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Rename' })]
+        }).then(result => {
           if (!result.value) {
             return;
           }
@@ -361,7 +355,7 @@ function addCommands(
           dashboardTracker.currentWidget.update();
         });
       }
-    },
+    }
   });
 
   /**
@@ -369,11 +363,11 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.printTracker, {
     label: 'Print Tracker',
-    execute: (args) => {
+    execute: args => {
       console.log(outputTracker);
     },
     isEnabled: isEnabledAndSingleSelected,
-    isVisible: () => false,
+    isVisible: () => false
   });
 
   /**
@@ -382,14 +376,14 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.addToDashboard, {
     label: 'Add to Dashboard',
-    execute: (args) => {
+    execute: args => {
       if (!getCurrentDashboard()) {
         insertWidget({ createNew: true });
       } else {
         insertWidget({});
       }
     },
-    isEnabled: isEnabledAndSingleSelected,
+    isEnabled: isEnabledAndSingleSelected
   });
 }
 
