@@ -200,6 +200,7 @@ function addCommands(
       options.dashboard !== undefined
         ? options.dashboard
         : getCurrentDashboard();
+
     if (!dashboard && !options.createNew) {
       return;
     }
@@ -208,13 +209,16 @@ function addCommands(
       | NotebookPanel
       | undefined
       | null = getCurrentNotebook({ activate: false });
+
     const widget =
       options.widget !== undefined
         ? options.widget
         : getCurrentWidget(currentNotebook);
+
     if (!widget) {
       return;
     }
+
     const index = options.index !== undefined ? options.index : -1;
 
     if (options.createNew) {
