@@ -134,6 +134,9 @@ export class DashboardWidget extends Panel {
     this.node.addEventListener('lm-dragover', this);
     this.node.addEventListener('lm-drop', this);
     this.node.addEventListener('mousedown', this);
+    this.node.addEventListener('resize', () => {
+      this.update();
+    });
   }
 
   /**
@@ -263,16 +266,27 @@ export class DashboardWidget extends Panel {
       return;
     }
 
-    console.log('event', event);
-    console.log('target', event.target);
-    const target = event.target as HTMLElement;
-    const cell = this.cell;
+    // console.log('event', event);
+    // console.log('target', event.target);
+    // const target = event.target as HTMLElement;
+    const cell = this.cell; 
+    const notebook = this._notebook;
+    const index = this._index;
+
+    const widget = new DashboardWidget({
+      notebook,
+      cell,
+      index
+    });
+
+    // const target = (widget.node as HTMLElement);
+    // target.style.width = "50px";
 
     this._dragData = {
       pressX: event.clientX,
       pressY: event.clientY,
-      cell: cell,
-      target: target
+      widget: widget,
+      target: widget.node as HTMLElement
     };
     // event.stopPropagation();
     // event.preventDefault();
@@ -297,29 +311,19 @@ export class DashboardWidget extends Panel {
       shouldStartDrag(data.pressX, data.pressY, event.clientX, event.clientY)
     ) {
       void this._startDrag(
-        data.cell,
+        data.widget,
         data.target,
         event.clientX,
         event.clientY
       );
     }
-
-    // const dx = Math.abs(event.clientX - this._pressX);
-    // const dy = Math.abs(event.clientY - this._pressY);
-
-    // if (dx >= DRAG_THRESHOLD || dy >= DRAG_THRESHOLD) {
-    //   this.node.removeEventListener('mouseup', this);
-    //   this.node.removeEventListener('mousemove', this);
-    //   //TODO: Initiate lumino drag!
-    //   console.log('drag started!');
-    // }
   }
 
   /**
    * Start a drag event
    */
   private _startDrag(
-    cell: CodeCell,
+    widget: DashboardWidget,
     target: HTMLElement,
     clientX: number,
     clientY: number
@@ -335,12 +339,12 @@ export class DashboardWidget extends Panel {
       dragImage,
       proposedAction: 'copy',
       supportedActions: 'copy',
-      source: this
+      source: widget
     });
 
     // this._drag.mimeData.setData
 
-    this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
+    this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, widget);
     // const textContent = cellModel.value.text;
     // this._drag.mimeData.setData('text/plain', textContent);
 
@@ -375,7 +379,7 @@ export class DashboardWidget extends Panel {
     pressX: number;
     pressY: number;
     target: HTMLElement;
-    cell: CodeCell;
+    widget: DashboardWidget;
     // index: number;
   } | null = null;
   private _drag: Drag | null = null;

@@ -73,6 +73,10 @@ export class DashboardArea extends Panel {
     this._outputTracker.add(widget);
   }
 
+  cutWidget(widget: DashboardWidget): void {
+    (this.layout as DashboardLayout).cutWidget(widget);
+  }
+
   /**
    * Create click listeners on attach
    */
@@ -95,12 +99,38 @@ export class DashboardArea extends Panel {
     this.node.removeEventListener('lm-drop', this);
   }
 
+//   refresh(): void{
+//     for (let i = 0; i < panel.content.widgets.length; i++) {
+//       // console.log("cell ", i, " at pos", (panel.content.widgets[i] as Cell).model.metadata.get("pos"));
+//       // CodeCell.execute(panel.content.widgets[i] as CodeCell, sessionContext: ISessionContext, metadata?: JSONObject):
+//       const pos = (panel.content.widgets[i] as Cell).model.metadata.get(
+//         dashboard.name
+//       ) as (number[])[];
+//       const cell = panel.content.widgets[i] as CodeCell;
+//       const index = i;
+//       const widget = new DashboardWidget({
+//         notebook: panel,
+//         cell,
+//         index
+//       });
+//       if (pos !== undefined) {
+//         pos.forEach(p => {
+//           //    console.log("found pos", p);
+//           (dashboard.content as DashboardArea).placeWidget(-1, widget, p);
+//         });
+//       }
+//     }
+//     dashboard.update();
+//     return
+// }
+
   /**
    * Handle the `'lm-dragenter'` event for the widget.
    */
   private _evtDragEnter(event: IDragEvent): void {
     const data = findTextData(event.mimeData);
     if (data === undefined) {
+      //  
       return;
     }
     event.preventDefault();
@@ -115,6 +145,7 @@ export class DashboardArea extends Panel {
     this.removeClass(DROP_TARGET_CLASS);
     const data = findTextData(event.mimeData);
     if (data === undefined) {
+      // console.log("drag leave returns");
       return;
     }
     event.preventDefault();
@@ -128,6 +159,7 @@ export class DashboardArea extends Panel {
     this.removeClass(DROP_TARGET_CLASS);
     const data = findTextData(event.mimeData);
     if (data === undefined) {
+      // console.log("Drag over returns");
       return;
     }
     event.preventDefault();
@@ -142,33 +174,48 @@ export class DashboardArea extends Panel {
   private _evtDrop(event: IDragEvent): void {
     const data = findTextData(event.mimeData);
     if (data === undefined) {
+      // console.log("drop returns");
       return;
     }
     this.removeClass(DROP_TARGET_CLASS);
     event.preventDefault();
     event.stopPropagation();
 
-    const notebook = event.source.parent as NotebookPanel;
-    // const activeCell = notebook.content.activeCell;
-    const cell = notebook.content.activeCell as CodeCell;
-    const index = notebook.content.activeCellIndex;
+    // console.log("source of drop event", event.source);
+    
+    let widget : DashboardWidget;
+    if(event.source instanceof DashboardWidget){
+      widget = event.source as DashboardWidget;
+      // this.cutWidget(widget);
+      console.log("one here", widget);
+    }else{
+      const notebook = event.source.parent as NotebookPanel;
+      // const activeCell = notebook.content.activeCell;
+      const cell = notebook.content.activeCell as CodeCell;
+      const index = notebook.content.activeCellIndex;
 
-    const widget = new DashboardWidget({
-      notebook,
-      cell,
-      index
-    });
+      widget = new DashboardWidget({
+        notebook,
+        cell,
+        index
+      });
+      console.log("two", widget);
+    }
 
     // FIXME:
     // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
 
     //default width 500, default height 100
     const pos = [event.offsetX, event.offsetY, 500, 100];
+    // console.log("added in ", pos);
     this.placeWidget(0, widget, pos);
     this.update();
+    
+    //refresh()
 
     if (event.proposedAction === 'none') {
       event.dropAction = 'none';
+      // console.log("drop action none");
       return;
     }
   }

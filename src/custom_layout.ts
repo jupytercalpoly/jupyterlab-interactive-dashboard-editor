@@ -28,6 +28,8 @@ export class DashboardLayout extends PanelLayout {
   protected attachWidget(index: number, widget: Widget): void {
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
+        // console.log("parent attached");
+        // console.log(parent);
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);
     }
 
@@ -139,6 +141,53 @@ export class DashboardLayout extends PanelLayout {
     // Dispose the layout item.
     item.dispose();
   }
+
+  /**
+   * Cut a widget from Dashboard layout without disposing it.
+   *
+   * @param widget - The widget to cut from the layout.
+   *
+   */
+  cutWidget(widget: Widget): void {
+    // Look up the index for the widget.
+    const i = ArrayExt.findFirstIndex(this._items, it => it.widget === widget);
+
+    // Bail if the widget is not in the layout.
+    if (i === -1) {
+      return;
+    }
+
+    // Remove the widget from the layout.
+    ArrayExt.removeAt(this._items, i)!;
+
+    // Detach the widget from the parent.
+    if (this.parent) {
+      this.detachWidget(-1, widget);
+    }
+  }
+
+//   refresh():void{
+    //from stored locations not metadata
+//     const pos = (panel.content.widgets[i] as Cell).model.metadata.get(
+//         dashboard.name
+//       ) as (number[])[];
+//       const cell = panel.content.widgets[i] as CodeCell;
+//       const index = i;
+//       const widget = new DashboardWidget({
+//         notebook: panel,
+//         cell,
+//         index
+//       });
+//       if (pos !== undefined) {
+//         pos.forEach(p => {
+//           //    console.log("found pos", p);
+//           (dashboard.content as DashboardArea).placeWidget(-1, widget, p);
+//         });
+//       }
+//     }
+//     dashboard.update();
+//     void this._dashboardTracker.add(dashboard);
+//   }
 
   private _items: LayoutItem[] = [];
 }

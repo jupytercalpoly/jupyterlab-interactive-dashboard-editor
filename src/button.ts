@@ -16,6 +16,10 @@ import { WidgetTracker } from '@jupyterlab/apputils';
 
 import { CodeCell, Cell } from '@jupyterlab/cells';
 
+// import {FileDialog, IFileBrowserFactory} from '@jupyterlab/filebrowser';
+
+// import { IDocumentManager } from '@jupyterlab/docmanager';
+
 import { Icons } from './icons';
 
 import { DashboardWidget } from './widget';
@@ -31,6 +35,7 @@ export class DashboardButton
   _outputTracker: WidgetTracker<DashboardWidget>;
   _dashboardTracker: WidgetTracker<Dashboard>;
   _tracker: INotebookTracker;
+//   _manager: IDocumentManager;
   constructor(
     app: JupyterFrontEnd,
     outputTracker: WidgetTracker<DashboardWidget>,
@@ -60,6 +65,22 @@ export class DashboardButton
         mode: 'split-bottom'
       });
 
+    //   const dialog = FileDialog.getOpenFiles({
+    //     manager, // IDocumentManager
+    //     filter: model => model.type == 'notebook' // optional (model: Contents.IModel) => boolean
+    //   });
+      
+    //   const result = await dialog;
+      
+    //   if(result.button.accept){
+    //     let files = result.value;
+    //   }
+
+    services.contents.newUntitled({
+        type: 'file',
+        ext: '.txt'
+      });
+
       //populate new dashboard based off metadata?
       for (let i = 0; i < panel.content.widgets.length; i++) {
         // console.log("cell ", i, " at pos", (panel.content.widgets[i] as Cell).model.metadata.get("pos"));
@@ -83,6 +104,8 @@ export class DashboardButton
       }
       dashboard.update();
       void this._dashboardTracker.add(dashboard);
+
+
     };
     const button = new ToolbarButton({
       className: 'dashboardButton',
