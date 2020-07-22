@@ -14,6 +14,8 @@ import { ISignal } from '@lumino/signaling';
 
 import { Message } from '@lumino/messaging';
 
+import { toHex } from './utils';
+
 export type DatastoreFn = ((transaction: Datastore.Transaction) => void) | null;
 
 /**
@@ -449,6 +451,8 @@ export class Litestore implements IDisposable, IIterable<Table<Schema>> {
     if (transaction === undefined) {
       return undefined;
     }
+    console.log('new transaction', transaction);
+
     return transaction.id;
   }
 
@@ -516,8 +520,10 @@ export class Litestore implements IDisposable, IIterable<Table<Schema>> {
         return;
       }
       promise = this._dataStore.undo(lastTransaction.id);
+      console.log('undoing', toHex(lastTransaction.id));
     } else {
       promise = this._dataStore.undo(transactionId);
+      console.log('undoing', toHex(transactionId));
     }
     return promise;
   }
@@ -544,8 +550,10 @@ export class Litestore implements IDisposable, IIterable<Table<Schema>> {
         return;
       }
       promise = this._dataStore.redo(lastUndo.id);
+      console.log('redoing', toHex(lastUndo.id));
     } else {
       promise = this._dataStore.redo(transactionId);
+      console.log('redoing', toHex(transactionId));
     }
     return promise;
   }

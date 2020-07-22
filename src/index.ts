@@ -128,6 +128,20 @@ const extension: JupyterFrontEndPlugin<void> = {
       selector: '.pr-DashboardWidget',
     });
 
+    app.commands.addKeyBinding({
+      command: CommandIDs.undo,
+      args: {},
+      keys: ['Z'],
+      selector: '.pr-JupyterDashboard',
+    });
+
+    app.commands.addKeyBinding({
+      command: CommandIDs.redo,
+      args: {},
+      keys: ['Shift Z'],
+      selector: '.pr-JupyterDashboard',
+    });
+
     app.docRegistry.addWidgetExtension(
       'Notebook',
       new DashboardButton(app, outputTracker, dashboardTracker, tracker)
@@ -265,7 +279,10 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.undo, {
     label: 'Undo',
-    execute: (args) => dashboardTracker.currentWidget.undo(),
+    execute: (args) => {
+      dashboardTracker.currentWidget.undo();
+      console.log('undo');
+    },
     isEnabled: () =>
       dashboardTracker.currentWidget &&
       dashboardTracker.currentWidget.store.hasUndo(),
@@ -276,7 +293,10 @@ function addCommands(
    */
   commands.addCommand(CommandIDs.redo, {
     label: 'Redo',
-    execute: (args) => dashboardTracker.currentWidget.redo(),
+    execute: (args) => {
+      dashboardTracker.currentWidget.redo();
+      console.log('redo');
+    },
     isEnabled: () =>
       dashboardTracker.currentWidget &&
       dashboardTracker.currentWidget.store.hasRedo(),
