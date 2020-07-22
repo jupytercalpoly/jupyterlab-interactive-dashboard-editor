@@ -154,6 +154,20 @@ export class TransactionStore {
     return this.get(id);
   }
 
+  /**
+   * Whether there is a transaction to undo in the store.
+   */
+  hasUndo(): boolean {
+    return this._undoStack.length > 0;
+  }
+
+  /**
+   * Whether there is a transaction to redo in the store.
+   */
+  hasRedo(): boolean {
+    return this._redoStack.length > 0;
+  }
+
   private _order: string[];
   private _transactions: { [id: string]: Datastore.Transaction };
   private _cemetery: { [id: string]: number } = {};
@@ -704,6 +718,20 @@ export class Litestore implements IDisposable, IIterable<Table<Schema>> {
    */
   withTransaction(update: (id: string) => void): string {
     return Datastore.withTransaction(this._dataStore, update);
+  }
+
+  /**
+   * Whether there is a transaction to undo in the store.
+   */
+  hasUndo(): boolean {
+    return this._transactionStore.hasUndo();
+  }
+
+  /**
+   * Whether there is a transaction to redo in the store.
+   */
+  hasRedo(): boolean {
+    return this._transactionStore.hasRedo();
   }
 
   private _transactionStore: TransactionStore | null;
