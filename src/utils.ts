@@ -82,3 +82,10 @@ export function getCellById(
   }
   return undefined;
 }
+
+export function toHex(str: string): string {
+  return str
+    .split('')
+    .map((c) => c.charCodeAt(0).toString(16))
+    .join('');
+}

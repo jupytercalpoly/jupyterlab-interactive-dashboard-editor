@@ -182,6 +182,11 @@ export class Widgetstore extends Litestore {
     return changed;
   }
 
+  getWidgets(): IIterator<Record<WidgetSchema>> {
+    const table = this.get(Widgetstore.WIDGET_SCHEMA);
+    return filter(table, (record) => true);
+  }
+
   /**
    * Gets a cell by id using the instances' notebook tracker.
    */

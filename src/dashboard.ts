@@ -61,10 +61,6 @@ export class DashboardArea extends Widget {
     this.addClass(DASHBOARD_AREA_CLASS);
   }
 
-  onUpdateRequest(msg: Message): void {
-    this.layout.processParentMessage(msg);
-  }
-
   /**
    * Create click listeners on attach
    */
@@ -210,12 +206,16 @@ export class Dashboard extends MainAreaWidget<Widget> {
     // Adds save button to dashboard toolbar.
     this.toolbar.addItem('save', createSaveButton(this, panel));
 
-    // Add a listener to update the layout whenever the widgetstore changes.
-    this._store.listenTable(
-      { schema: Widgetstore.WIDGET_SCHEMA },
-      this.update,
-      this
-    );
+    // TODO: Figure out if this is worth it. Right now it's disabled to prevent
+    // double updating, and I figure manually calling this.update() whenever the
+    // widgetstore is modified isn't so bad.
+    //
+    // Attach listener to update on table changes.
+    // this._store.listenTable(
+    //   { schema: Widgetstore.WIDGET_SCHEMA },
+    //   this.update,
+    //   this
+    // );
   }
 
   /**
@@ -225,6 +225,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
    */
   addWidget(info: Widgetstore.WidgetInfo): void {
     this._store.addWidget(info);
+    this.update();
   }
 
   /**
@@ -244,7 +245,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition
   ): boolean {
-    return this._store.moveWidget(widget, pos);
+    const success = this._store.moveWidget(widget, pos);
+    this.update();
+    return success;
   }
 
   /**
@@ -255,7 +258,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
    * @returns whether the deletion was successful.
    */
   deleteWidget(widget: DashboardWidget): boolean {
-    return this._store.deleteWidget(widget);
+    const success = this._store.deleteWidget(widget);
+    this.update();
+    return success;
   }
 
   /**
@@ -268,8 +273,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    * @throws - an exception if `undo` is called during a transaction.
    */
-  undo(transactionId?: string): Promise<void> {
-    return this._store.undo(transactionId);
+  undo(): void {
+    this._store.undo();
+    this.update();
   }
 
   /**
@@ -282,8 +288,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    * @throws - an exception if `undo` is called during a transaction.
    */
-  redo(transactionId?: string): Promise<void> {
-    return this._store.redo(transactionId);
+  redo(): void {
+    this._store.redo();
+    this.update();
   }
 
   get store(): Widgetstore {
