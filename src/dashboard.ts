@@ -1,16 +1,16 @@
-import { NotebookPanel } from '@jupyterlab/notebook';
+import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
 import { CodeCell } from '@jupyterlab/cells';
 
 import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
-import { Widget, Panel } from '@lumino/widgets';
+import { Widget } from '@lumino/widgets';
 
 import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
 
-import { UUID, MimeData } from '@lumino/coreutils';
+import { UUID } from '@lumino/coreutils';
 
 import { DashboardLayout } from './custom_layout';
 
@@ -19,6 +19,10 @@ import { DashboardWidget } from './widget';
 import { Icons } from './icons';
 
 import { createSaveButton } from './toolbar';
+
+import { Widgetstore } from './widgetstore';
+
+import { addCellId, addNotebookId } from './utils';
 
 // HTML element classes
 
@@ -32,11 +36,13 @@ const DROP_TARGET_CLASS = 'pr-DropTarget';
  * Namespace for DashboardArea options.
  */
 export namespace DashboardArea {
-  export interface IOptions extends Panel.IOptions {
+  export interface IOptions extends Widget.IOptions {
     /**
      * Tracker for child widgets.
      */
     outputTracker: WidgetTracker<DashboardWidget>;
+
+    layout: DashboardLayout;
 
     // /**
     //  * Dashboard used for position.
@@ -46,31 +52,17 @@ export namespace DashboardArea {
 }
 
 /**
- * Given a MimeData instance, extract the first text data, if any.
- */
-export function findTextData(mime: MimeData): string | undefined {
-  const types = mime.types();
-  const textType = types.find(t => t.indexOf('text') === 0);
-  if (textType === undefined) {
-    return 'undefined' as string;
-  }
-
-  return mime.getData(textType) as string;
-}
-
-/**
  * Main content widget for the Dashboard widget.
  */
-export class DashboardArea extends Panel {
+export class DashboardArea extends Widget {
   constructor(options: DashboardArea.IOptions) {
-    super({ ...options, layout: new DashboardLayout() });
-    this._outputTracker = options.outputTracker;
+    super(options);
+    this.layout = options.layout;
     this.addClass(DASHBOARD_AREA_CLASS);
   }
 
-  placeWidget(index: number, widget: DashboardWidget, pos: number[]): void {
-    (this.layout as DashboardLayout).placeWidget(index, widget, pos);
-    this._outputTracker.add(widget);
+  onUpdateRequest(msg: Message): void {
+    this.layout.processParentMessage(msg);
   }
 
   /**
@@ -99,13 +91,8 @@ export class DashboardArea extends Panel {
    * Handle the `'lm-dragenter'` event for the widget.
    */
   private _evtDragEnter(event: IDragEvent): void {
-    const data = findTextData(event.mimeData);
-    if (data === undefined) {
-      return;
-    }
     event.preventDefault();
     event.stopPropagation();
-    this.addClass('pr-DropTarget');
   }
 
   /**
@@ -113,10 +100,6 @@ export class DashboardArea extends Panel {
    */
   private _evtDragLeave(event: IDragEvent): void {
     this.removeClass(DROP_TARGET_CLASS);
-    const data = findTextData(event.mimeData);
-    if (data === undefined) {
-      return;
-    }
     event.preventDefault();
     event.stopPropagation();
   }
@@ -125,52 +108,56 @@ export class DashboardArea extends Panel {
    * Handle the `'lm-dragover'` event for the widget.
    */
   private _evtDragOver(event: IDragEvent): void {
-    this.removeClass(DROP_TARGET_CLASS);
-    const data = findTextData(event.mimeData);
-    if (data === undefined) {
-      return;
-    }
+    this.addClass(DROP_TARGET_CLASS);
     event.preventDefault();
     event.stopPropagation();
     event.dropAction = 'copy';
-    this.addClass(DROP_TARGET_CLASS);
   }
 
   /**
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
-    const data = findTextData(event.mimeData);
-    if (data === undefined) {
+    // dragging from dashboard -> dashboard.
+    if (event.proposedAction === 'move') {
+      const widget = event.source as DashboardWidget;
+
+      const pos: Widgetstore.WidgetPosition = {
+        left: event.offsetX,
+        top: event.offsetY,
+        width: widget.node.offsetWidth,
+        height: widget.node.offsetHeight,
+      };
+
+      // Should probably try to avoid calling methods of the parent.
+      (this.parent as Dashboard).moveWidget(widget, pos);
+
+      // dragging from notebook -> dashboard.
+    } else if (event.proposedAction === 'copy') {
+      const notebook = event.source.parent as NotebookPanel;
+      const cell = notebook.content.activeCell as CodeCell;
+
+      const info: Widgetstore.WidgetInfo = {
+        widgetId: DashboardWidget.createDashboardWidgetId(),
+        notebookId: addNotebookId(notebook),
+        cellId: addCellId(cell),
+        left: event.offsetX,
+        top: event.offsetY,
+        width: Widgetstore.DEFAULT_WIDTH,
+        height: Widgetstore.DEFAULT_HEIGHT,
+        changed: true,
+        removed: false,
+      };
+
+      // Should probably try to avoid calling methods of the parent.
+      (this.parent as Dashboard).addWidget(info);
+    } else {
       return;
     }
+
     this.removeClass(DROP_TARGET_CLASS);
     event.preventDefault();
     event.stopPropagation();
-
-    const notebook = event.source.parent as NotebookPanel;
-    // const activeCell = notebook.content.activeCell;
-    const cell = notebook.content.activeCell as CodeCell;
-    const index = notebook.content.activeCellIndex;
-
-    const widget = new DashboardWidget({
-      notebook,
-      cell,
-      index
-    });
-
-    // FIXME:
-    // Doesn't do the disposing on notebook close that the insertWidget function in addCommands does.
-
-    //default width 500, default height 100
-    const pos = [event.offsetX, event.offsetY, 500, 100];
-    this.placeWidget(0, widget, pos);
-    this.update();
-
-    if (event.proposedAction === 'none') {
-      event.dropAction = 'none';
-      return;
-    }
   }
 
   handleEvent(event: Event): void {
@@ -189,8 +176,6 @@ export class DashboardArea extends Panel {
         break;
     }
   }
-
-  private _outputTracker: WidgetTracker<DashboardWidget>;
 }
 
 /**
@@ -199,14 +184,20 @@ export class DashboardArea extends Panel {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
+    const { notebookTracker, content, outputTracker, panel } = options;
+    const store = options.store || new Widgetstore({ id: 0, notebookTracker });
+
     const dashboardArea = new DashboardArea({
-      outputTracker: options.outputTracker,
-      layout: new DashboardLayout({})
+      outputTracker,
+      layout: new DashboardLayout({ store, outputTracker }),
     });
     super({
       ...options,
-      content: options.content !== undefined ? options.content : dashboardArea
+      content: content || dashboardArea,
     });
+
+    // Having all widgetstores across dashboards have the same id might cause issues.
+    this._store = store;
     this._name = options.name || 'Unnamed Dashboard';
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
@@ -216,37 +207,105 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.addClass(DASHBOARD_CLASS);
     this.node.setAttribute('style', 'overflow:auto');
 
-    // Adds save button to dashboard toolbar
-    this.toolbar.addItem('save', createSaveButton(this, options.panel));
+    // Adds save button to dashboard toolbar.
+    this.toolbar.addItem('save', createSaveButton(this, panel));
+
+    // Add a listener to update the layout whenever the widgetstore changes.
+    this._store.listenTable(
+      { schema: Widgetstore.WIDGET_SCHEMA },
+      this.update,
+      this
+    );
+  }
+
+  /**
+   * Adds a dashboard widget to the widgetstore.
+   *
+   * @param info - the information to add to the widgetstore.
+   */
+  addWidget(info: Widgetstore.WidgetInfo): void {
+    this._store.addWidget(info);
+  }
+
+  /**
+   * Updates the position of a widget already in the widgetstore.
+   *
+   * @param widget - the widget to update.
+   *
+   * @param pos - the new widget position.
+   *
+   * @returns whether the update was successful.
+   *
+   * ### Notes
+   * The update will be unsuccesful if the widget isn't in the store or was
+   * previously removed.
+   */
+  moveWidget(
+    widget: DashboardWidget,
+    pos: Widgetstore.WidgetPosition
+  ): boolean {
+    return this._store.moveWidget(widget, pos);
+  }
+
+  /**
+   * Mark a widget as removed.
+   *
+   * @param widget - widget to delete.
+   *
+   * @returns whether the deletion was successful.
+   */
+  deleteWidget(widget: DashboardWidget): boolean {
+    return this._store.deleteWidget(widget);
+  }
+
+  /**
+   * Undo a dashboard change.
+   *
+   * @param transactionId - the ID of the transaction to undo, or undefined
+   * to undo the last transaction.
+   *
+   * @returns - a promise which resolves when the action is complete.
+   *
+   * @throws - an exception if `undo` is called during a transaction.
+   */
+  undo(transactionId?: string): Promise<void> {
+    return this._store.undo(transactionId);
+  }
+
+  /**
+   * Redo a dashboard change.
+   *
+   * @param transactionId - the ID of the transaction to redo, or undefined
+   * to redo the last transaction.
+   *
+   * @returns - a promise which resolves when the action is complete.
+   *
+   * @throws - an exception if `undo` is called during a transaction.
+   */
+  redo(transactionId?: string): Promise<void> {
+    return this._store.redo(transactionId);
+  }
+
+  get store(): Widgetstore {
+    return this._store;
   }
 
   /**
    * The name of the Dashboard.
    */
-  get name(): string {
+  getName(): string {
+    // get/set function isnt't working for some reason...
+    // getting a not callable error when I try to set the name of a dashboard
+    // when I have two methods 'get name()' and 'set name()'
     return this._name;
   }
-
-  /**
-   * Adds a DashboardWidget to a specific position on the dashboard.
-   * Inserting at index -1 places the widget at the end of the dashboard.
-   */
-  insertWidget(index: number, widget: DashboardWidget): void {
-    (this.content as DashboardArea).placeWidget(index, widget, [
-      0,
-      0,
-      500,
-      100
-    ]);
-  }
-
-  rename(newName: string): void {
-    // Have to call .update() after to see changes. Include update in function?
+  setName(newName: string): void {
     this._name = newName;
     this.title.label = newName;
   }
 
   private _name: string;
+  private _store: Widgetstore;
 }
 
 export namespace Dashboard {
@@ -257,18 +316,23 @@ export namespace Dashboard {
     name?: string;
 
     /**
-     * Maximum size of the undo/redo stack.
-     */
-    maxStackSize?: number;
-
-    /**
      * Tracker for child widgets.
      */
     outputTracker: WidgetTracker<DashboardWidget>;
 
     /**
+     * Tracker for notebooks.
+     */
+    notebookTracker: INotebookTracker;
+
+    /**
      * NotebookPanel.
      */
     panel: NotebookPanel;
+
+    /**
+     * Optional widgetstore to restore state from.
+     */
+    store?: Widgetstore;
   }
 }

@@ -1,18 +1,16 @@
-import { filter, each, IIterator, ArrayExt, toArray } from '@lumino/algorithm';
+import { filter, IIterator } from '@lumino/algorithm';
 
 import { Litestore } from './litestore';
 
 import { Datastore, Fields, Record } from '@lumino/datastore';
 
-import { Widget } from '@lumino/widgets';
-
 import { DashboardWidget } from './widget';
 
-import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
+import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 
-import { UUID } from '@lumino/coreutils';
+import { Cell, CodeCell } from '@jupyterlab/cells';
 
-import { Cell } from '@jupyterlab/cells';
+import { getNotebookById, getCellById } from './utils';
 
 /**
  * Alias for widget schema type.
@@ -41,32 +39,103 @@ export class Widgetstore extends Litestore {
   constructor(options: Widgetstore.IOptions) {
     const schemas = [Widgetstore.DASHBOARD_SCHEMA, Widgetstore.WIDGET_SCHEMA];
     super({ ...options, schemas });
+    this._notebookTracker = options.notebookTracker;
+    this._inBatch = false;
   }
 
-  updateWidgetPos(widget: DashboardWidget): void {
-    const loc = this._getWidgetLocation(widget);
-
-    this.beginTransaction();
+  /**
+   * Adds a dashboard widget to the widgetstore.
+   *
+   * @param info - the information to add to the widgetstore.
+   */
+  addWidget(info: Widgetstore.WidgetInfo): void {
+    if (!this._inBatch) {
+      this.beginTransaction();
+    }
 
     this.updateRecord(
       {
         schema: Widgetstore.WIDGET_SCHEMA,
-        record: widget.id,
+        record: info.widgetId,
       },
       {
-        cellId: widget.cellId,
-        notebookId: widget.notebookId,
-        ...loc,
+        ...info,
         removed: false,
         changed: true,
       }
     );
 
-    this.endTransaction();
+    if (!this._inBatch) {
+      this.endTransaction();
+    }
   }
 
-  deleteWidget(widget: DashboardWidget): void {
-    this.beginTransaction();
+  /**
+   * Updates the position of a widget already in the widgetstore.
+   *
+   * @param widget - the widget to update.
+   *
+   * @param pos - the new widget position.
+   *
+   * @returns whether the update was successful.
+   *
+   * ### Notes
+   * The update will be unsuccesful if the widget isn't in the store or was
+   * previously removed.
+   */
+  moveWidget(
+    widget: DashboardWidget,
+    pos: Widgetstore.WidgetPosition
+  ): boolean {
+    if (!this._inBatch) {
+      this.beginTransaction();
+    }
+
+    const recordLoc = {
+      schema: Widgetstore.WIDGET_SCHEMA,
+      record: widget.id,
+    };
+
+    const oldRecord = this.getRecord(recordLoc);
+
+    if (oldRecord === undefined || oldRecord.removed) {
+      return false;
+    }
+
+    this.updateRecord(recordLoc, {
+      ...pos,
+      changed: true,
+    });
+
+    if (!this._inBatch) {
+      this.endTransaction();
+    }
+
+    return true;
+  }
+
+  /**
+   * Mark a widget as removed.
+   *
+   * @param widget - widget to delete.
+   *
+   * @returns whether the deletion was successful.
+   */
+  deleteWidget(widget: DashboardWidget): boolean {
+    if (!this._inBatch) {
+      this.beginTransaction();
+    }
+
+    const recordLoc = {
+      schema: Widgetstore.WIDGET_SCHEMA,
+      record: widget.id,
+    };
+
+    const oldRecord = this.getRecord(recordLoc);
+
+    if (oldRecord === undefined) {
+      return false;
+    }
 
     this.updateRecord(
       {
@@ -79,12 +148,21 @@ export class Widgetstore extends Litestore {
       }
     );
 
-    this.endTransaction();
+    if (!this._inBatch) {
+      this.endTransaction();
+    }
+
+    return true;
   }
 
-  getWidgetInfo(
-    widget: DashboardWidget
-  ): Record.Value<WidgetSchema> | undefined {
+  /**
+   * Retrieves a dashboard widget's info.
+   *
+   * @param widget - Widget to retrieve info for.
+   *
+   * @returns the widget's info, or undefined if it's not in the store.
+   */
+  getWidget(widget: DashboardWidget): Widgetstore.WidgetInfo | undefined {
     const record = this.getRecord({
       schema: Widgetstore.WIDGET_SCHEMA,
       record: widget.id,
@@ -92,125 +170,82 @@ export class Widgetstore extends Litestore {
     if (record === undefined) {
       return undefined;
     }
-    return record;
+    return record as Widgetstore.WidgetInfo;
   }
 
+  /**
+   * Returns an iterator over contained widgets marked as changed.
+   */
   getChangedWidgets(): IIterator<Record<WidgetSchema>> {
     const table = this.get(Widgetstore.WIDGET_SCHEMA);
     const changed = filter(table, (record) => record.changed);
     return changed;
   }
 
-  markAllAsUnchanged(): void {
-    const changedRecords = this.getChangedWidgets();
+  /**
+   * Gets a cell by id using the instances' notebook tracker.
+   */
+  getCellById(id: string): Cell {
+    return getCellById(id, this._notebookTracker);
+  }
 
+  /**
+   * Gets a notebook by id using the instances' notebook tracker.
+   */
+  getNotebookById(id: string): NotebookPanel {
+    return getNotebookById(id, this._notebookTracker);
+  }
+
+  /**
+   * Creates a dashboard widget from a widgetinfo object.
+   *
+   * @param info - info to create widget from.
+   *
+   * @returns - the created widget.
+   *
+   * @throws - an error if a notebook or cell isn't found from the ids in the
+   * widgetinfo object.
+   */
+  createWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
+    const notebook = this.getNotebookById(info.notebookId);
+    if (notebook === undefined) {
+      throw new Error('notebook not found');
+    }
+    const cell = this.getCellById(info.cellId) as CodeCell;
+    if (cell === undefined) {
+      throw new Error('cell not found');
+    }
+    const widget = new DashboardWidget({ notebook, cell });
+    widget.id = info.widgetId;
+
+    return widget;
+  }
+
+  /**
+   * Starts a batch transfer. Functions modifying widgets won't start or end
+   * a new transaction.
+   */
+  startBatch(): void {
+    if (this._inBatch) {
+      return;
+    }
+    this._inBatch = true;
     this.beginTransaction();
+  }
 
-    each(changedRecords, (record) =>
-      this.updateRecord(
-        {
-          schema: Widgetstore.WIDGET_SCHEMA,
-          record: record.$id,
-        },
-        {
-          ...record,
-          changed: false,
-        }
-      )
-    );
-
+  /**
+   * Ends a batch transfer. Functions modifying widgets will start/end transactions.
+   */
+  endBatch(): void {
+    if (!this._inBatch) {
+      return;
+    }
+    this._inBatch = false;
     this.endTransaction();
   }
 
-  private _getWidgetLocation(widget: Widget): WidgetPosition {
-    const left = widget.node.offsetLeft;
-    const top = widget.node.offsetTop;
-    const width = widget.node.offsetWidth;
-    const height = widget.node.offsetHeight;
-
-    return {
-      left,
-      top,
-      width,
-      height,
-    };
-  }
-
-  static addNotebookId(notebook: NotebookPanel): string {
-    const metadata: any | undefined = notebook.model.metadata.get('presto');
-    let id: string;
-
-    if (metadata !== undefined) {
-      if (metadata.id !== undefined) {
-        return metadata.id;
-      }
-      id = UUID.uuid4();
-      notebook.model.metadata.set('presto', { ...metadata, id });
-    } else {
-      id = UUID.uuid4();
-      notebook.model.metadata.set('presto', { id });
-    }
-
-    return id;
-  }
-
-  static getNotebookId(notebook: NotebookPanel): string | undefined {
-    const metadata: any | undefined = notebook.model.metadata.get('presto');
-    if (metadata === undefined || metadata.id === undefined) {
-      return undefined;
-    }
-    return metadata.id;
-  }
-
-  static getNotebookById(
-    id: string,
-    tracker: INotebookTracker
-  ): NotebookPanel | undefined {
-    return tracker.find(
-      (notebook) => Widgetstore.getNotebookId(notebook) === id
-    );
-  }
-
-  static addCellId(cell: Cell): string {
-    const metadata: any | undefined = cell.model.metadata.get('presto');
-    let id: string;
-
-    if (metadata !== undefined) {
-      if (metadata.id !== undefined) {
-        return metadata.id;
-      }
-      id = UUID.uuid4();
-      cell.model.metadata.set('presto', { ...metadata, id });
-    } else {
-      id = UUID.uuid4();
-      cell.model.metadata.set('presto', { id });
-    }
-
-    return id;
-  }
-
-  static getCellId(cell: Cell): string | undefined {
-    const metadata: any | undefined = cell.model.metadata.get('presto');
-    if (metadata === undefined || metadata.id === undefined) {
-      return undefined;
-    }
-    return metadata.id;
-  }
-
-  static getCellById(id: string, tracker: INotebookTracker): Cell | undefined {
-    const notebooks = toArray(tracker.filter(() => true));
-    for (const notebook of notebooks) {
-      const cells = notebook.content.widgets;
-      const value = ArrayExt.findFirstValue(
-        cells,
-        (cell) => this.getCellId(cell) === id
-      );
-      if (value !== undefined) {
-        return value;
-      }
-    }
-    return undefined;
-  }
+  private _notebookTracker: INotebookTracker;
+  private _inBatch: boolean;
 }
 
 export namespace Widgetstore {
@@ -220,6 +255,7 @@ export namespace Widgetstore {
   export const WIDGET_SCHEMA = {
     id: 'widgets',
     fields: {
+      widgetId: Fields.String(),
       cellId: Fields.String(),
       notebookId: Fields.String(),
       top: Fields.Number(),
@@ -244,6 +280,53 @@ export namespace Widgetstore {
   export type WidgetSchema = typeof WIDGET_SCHEMA;
 
   export type DashboardSchema = typeof DASHBOARD_SCHEMA;
+
+  export type WidgetInfo = {
+    /**
+     * The widget ID.
+     */
+    widgetId: string;
+
+    /**
+     * The cell ID the widget is created from.
+     */
+    cellId: string;
+
+    /**
+     * The notebook ID the widget is created from.
+     */
+    notebookId: string;
+
+    /**
+     * The top edge position of the widget.
+     */
+    top: number;
+
+    /**
+     * The left edge position of the widget.
+     */
+    left: number;
+
+    /**
+     * The width of the widget.
+     */
+    width: number;
+
+    /**
+     * The height of the widget.
+     */
+    height: number;
+
+    /**
+     * Whether the widget has been changed since last read.
+     */
+    changed?: boolean;
+
+    /**
+     * Whether the widget has been removed.
+     */
+    removed?: boolean;
+  };
 
   export type WidgetPosition = {
     /**
@@ -285,5 +368,20 @@ export namespace Widgetstore {
      * An optional transaction id factory to override the default.
      */
     transactionIdFactory?: Datastore.TransactionIdFactory;
+
+    /**
+     * The notbook tracker used by Jupyterlab.
+     */
+    notebookTracker: INotebookTracker;
   }
+
+  /**
+   * Default width of added widgets.
+   */
+  export const DEFAULT_WIDTH = 500;
+
+  /**
+   * Default height of added widgets.
+   */
+  export const DEFAULT_HEIGHT = 100;
 }
