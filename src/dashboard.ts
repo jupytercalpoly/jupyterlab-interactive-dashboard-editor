@@ -14,6 +14,8 @@ import { UUID } from '@lumino/coreutils';
 
 import { ContentsManager, Contents} from '@jupyterlab/services';
 
+import {showDialog, Dialog} from '@jupyterlab/apputils';
+
 import { DashboardLayout } from './custom_layout';
 
 import { DashboardWidget } from './widget';
@@ -253,6 +255,20 @@ export class Dashboard extends MainAreaWidget<Widget> {
   addWidget(info: Widgetstore.WidgetInfo): void {
     this._store.addWidget(info);
     this.update();
+  }
+
+  dispose(){
+    return showDialog({
+      title: 'Close without saving?',
+      body: "\"" + this.getName() + ".dashboard\"" + " has unsaved changes, close without saving?",
+      buttons: [
+        Dialog.cancelButton(),
+        Dialog.okButton({
+          label: 'OK'
+        })
+      ]
+    })
+    super.dispose()
   }
 
   /**
