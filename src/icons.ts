@@ -12,27 +12,27 @@ import greyDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_gr
 export namespace Icons {
   export const whiteDashboard = new LabIcon({
     name: 'pr-icons:white-dashboard',
-    svgstr: whiteDashboardSvgstr
+    svgstr: whiteDashboardSvgstr,
   });
 
   export const greyDashboard = new LabIcon({
     name: 'pr-icons:grey-dashboard',
-    svgstr: greyDashboardSvgstr
+    svgstr: greyDashboardSvgstr,
   });
 
   export const blueDashboard = new LabIcon({
     name: 'pr-icons:blue-dashboard',
-    svgstr: blueDashboardSvgstr
+    svgstr: blueDashboardSvgstr,
   });
 
   export const whiteDashboardOutline = new LabIcon({
     name: 'pr-icons:white-dashboard-icon',
-    svgstr: whiteDashboardOutlineSvgstr
+    svgstr: whiteDashboardOutlineSvgstr,
   });
 
   export const greyDashboardOutline = new LabIcon({
     name: 'pr-icons:grey-dashboard-outline',
-    svgstr: greyDashboardOutlineSvgstr
+    svgstr: greyDashboardOutlineSvgstr,
   });
 }
 
