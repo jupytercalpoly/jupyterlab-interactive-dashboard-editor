@@ -61,7 +61,7 @@ export function createSaveButton(
       dashboard.contents.rename(dashboard.file.path, "/" + dashboard.getName() + ".dashboard");
       void showDialog({
         title: 'Dashboard saved',
-        body: "All changes to " + dashboard.getName() + ".dashboard" + " is saved",
+        body: "All changes to \"" + dashboard.getName() + ".dashboard\"" + " is saved",
         buttons: [Dialog.okButton()]
       });
       console.log(dashboard.file.path);
