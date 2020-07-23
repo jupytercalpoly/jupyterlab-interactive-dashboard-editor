@@ -67,7 +67,7 @@ export class DashboardButton
         ref: currentNotebook.id,
         mode: 'split-bottom',
       });
-
+      
       //populate new dashboard based off metadata?
       for (let i = 0; i < panel.content.widgets.length; i++) {
         // console.log("cell ", i, " at pos", (panel.content.widgets[i] as Cell).model.metadata.get("pos"));

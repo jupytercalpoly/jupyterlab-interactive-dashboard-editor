@@ -333,6 +333,7 @@ function addCommands(
           }
           dashboardTracker.currentWidget.setName(result.value as string);
           dashboardTracker.currentWidget.update();
+          
         });
       }
     },
