@@ -8,18 +8,13 @@ import { Cell } from '@jupyterlab/cells';
 
 import { saveIcon } from '@jupyterlab/ui-components';
 
-// import { UUID } from '@lumino/coreutils';
-
-// import {writeFileSync} from 'fs-extra';
-
-// import {writePackageData} from '@jupyterlab/buildutils';
-
 import {Contents} from '@jupyterlab/services';
 
 import { Dashboard } from './dashboard';
 
 import { DashboardWidget } from './widget';
 
+import {showDialog, Dialog} from '@jupyterlab/apputils'
 
 /**
  * Create save button toolbar item.
@@ -54,13 +49,6 @@ export function createSaveButton(
       }
       //saving the cell metadata needs to save notebook?
 
-      // dashboard.contents.rename(dashboard.file.path, "/" + dashboard.getName() + ".dashboard");
-
-      // writeFileSync(dashboard.file.path, "save to file one", 'utf8');
-      // writePackageData(dashboard.file.path, "save to file two");
-            /**
-       * The common image model.
-       */
       const DASHBOARD: Partial<Contents.IModel> = {
         path: dashboard.file.path,
         type: 'file',
@@ -71,7 +59,11 @@ export function createSaveButton(
 
       dashboard.contents.save(dashboard.file.path, DASHBOARD);
       dashboard.contents.rename(dashboard.file.path, "/" + dashboard.getName() + ".dashboard");
-
+      void showDialog({
+        title: 'Dashboard saved',
+        body: "All changes to " + dashboard.getName() + ".dashboard" + " is saved",
+        buttons: [Dialog.okButton()]
+      });
       console.log(dashboard.file.path);
     },
     tooltip: 'Save Dashboard',
