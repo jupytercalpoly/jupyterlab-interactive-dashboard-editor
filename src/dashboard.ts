@@ -28,6 +28,8 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
+import {newfile} from './fsutils';
+
 // HTML element classes
 
 const DASHBOARD_CLASS = 'pr-JupyterDashboard';
@@ -180,15 +182,6 @@ export class DashboardArea extends Widget {
   }
 }
 
-async function newfile (contents: ContentsManager){
-  const file = await contents.newUntitled({
-    path: '/',
-    type: 'file',
-    ext: 'dashboard'
-  });
-  return file;
-}
-
 /**
  * Main Dashboard display widget. Currently extends MainAreaWidget (May change)
  */
@@ -199,8 +192,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
     const contents = new ContentsManager();
 
+    //creates and attachs a new untitled .dashboard file to dashboard
     newfile(contents).then(f => {
       this._file = f;
+      this._path = this._file.path;
     })
 
     const dashboardArea = new DashboardArea({
@@ -239,12 +234,30 @@ export class Dashboard extends MainAreaWidget<Widget> {
     // );
   }
 
+  /**
+   * Gets the contents of dashboard
+   *
+   * @returns ContentsManage
+   */
   public get contents() : ContentsManager{
     return this._contents; 
   }
 
-  public get file() : Contents.IModel{
-    return this._file;
+  /**
+   * Gets the path as string of dashboard
+   *
+   */
+  public get path() : string{
+    return this._path;
+  }
+
+
+  /**
+   * Sets the path of dashboard
+   *
+   */
+  public set path(v : string) {
+    this.path = v;
   }
   
   /**
@@ -363,6 +376,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   private _store: Widgetstore;
   private _contents: ContentsManager;
   private _file: Contents.IModel;
+  private _path: string;
 }
 
 export namespace Dashboard {
