@@ -6,6 +6,8 @@ import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
 import { Widget } from '@lumino/widgets';
 
+// import { max, map } from '@lumino/algorithm';
+
 import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
@@ -185,7 +187,12 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     const dashboardArea = new DashboardArea({
       outputTracker,
-      layout: new DashboardLayout({ store, outputTracker }),
+      layout: new DashboardLayout({
+        store,
+        outputTracker,
+        width: 1000,
+        height: 1000,
+      }),
     });
     super({
       ...options,

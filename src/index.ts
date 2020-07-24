@@ -14,11 +14,13 @@ import {
 
 import { Widget } from '@lumino/widgets';
 
-import { Dashboard } from './dashboard';
+import { Dashboard, DashboardArea } from './dashboard';
 
 import { DashboardWidget } from './widget';
 
 import { DashboardButton } from './button';
+
+import { MessageLoop } from '@lumino/messaging';
 
 // HTML element classes
 
@@ -78,24 +80,6 @@ const extension: JupyterFrontEndPlugin<void> = {
       rank: 13,
     });
 
-    // app.contextMenu.addItem({
-    //   type: 'separator',
-    //   selector: '.jp-Notebook .jp-CodeCell',
-    //   rank: 11.9,
-    // });
-
-    // app.contextMenu.addItem({
-    //   command: CommandIDs.addToDashboard,
-    //   selector: '.jp-Notebook .jp-CodeCell',
-    //   rank: 11.9,
-    // });
-
-    // app.contextMenu.addItem({
-    //   type: 'separator',
-    //   selector: '.jp-Notebook .jp-CodeCell',
-    //   rank: 11.9,
-    // });
-
     app.contextMenu.addItem({
       command: CommandIDs.renameDashboard,
       selector: '.pr-JupyterDashboard',
@@ -118,6 +102,18 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.deleteOutput,
       selector: '.pr-DashboardWidget',
       rank: 0,
+    });
+
+    app.contextMenu.addItem({
+      command: 'printFile',
+      selector: '.pr-JupyterDashboard',
+      rank: 5,
+    });
+
+    app.contextMenu.addItem({
+      command: 'resize',
+      selector: '.pr-JupyterDashboard',
+      rank: 6,
     });
 
     // Add commands to key bindings
@@ -348,6 +344,20 @@ function addCommands(
     },
     isEnabled: isEnabledAndSingleSelected,
     isVisible: () => false,
+  });
+
+  commands.addCommand('printFile', {
+    label: 'Print File',
+    execute: (args) => dashboardTracker.currentWidget.store.save('myPath'),
+  });
+
+  commands.addCommand('resize', {
+    label: 'Resize',
+    execute: (args) => {
+      const msg = new Widget.ResizeMessage(1920, 1080);
+      const widget = dashboardTracker.currentWidget.content as DashboardArea;
+      MessageLoop.sendMessage(widget, msg);
+    },
   });
 
   /**
