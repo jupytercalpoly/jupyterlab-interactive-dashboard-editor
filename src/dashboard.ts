@@ -6,15 +6,15 @@ import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
 import { Widget } from '@lumino/widgets';
 
+import { ContentsManager, Contents} from '@jupyterlab/services';
+
+// import { max, map } from '@lumino/algorithm';
+
 import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
 
 import { UUID } from '@lumino/coreutils';
-
-import { ContentsManager, Contents} from '@jupyterlab/services';
-
-import {showDialog, Dialog} from '@jupyterlab/apputils';
 
 import { DashboardLayout } from './custom_layout';
 
@@ -50,8 +50,6 @@ export namespace DashboardArea {
 
     layout: DashboardLayout;
 
-
-
     // /**
     //  * Dashboard used for position.
     //  */
@@ -65,9 +63,10 @@ export namespace DashboardArea {
 export class DashboardArea extends Widget {
   constructor(options: DashboardArea.IOptions) {
     super(options);
-    this.layout = options.layout; 
+    this.layout = options.layout;
     this.addClass(DASHBOARD_AREA_CLASS);
   }
+
   /**
    * Create click listeners on attach
    */
@@ -191,20 +190,25 @@ export class Dashboard extends MainAreaWidget<Widget> {
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
     const contents = new ContentsManager();
 
-    //creates and attachs a new untitled .dashboard file to dashboard
-    newfile(contents).then(f => {
-      this._file = f;
-      this._path = this._file.path;
-    })
-
     const dashboardArea = new DashboardArea({
       outputTracker,
-      layout: new DashboardLayout({ store, outputTracker }),
+      layout: new DashboardLayout({
+        store,
+        outputTracker,
+        width: 1000,
+        height: 1000,
+      }),
     });
     super({
       ...options,
       content: content || dashboardArea,
     });
+
+    //creates and attachs a new untitled .dashboard file to dashboard
+    newfile(contents).then(f => {
+      this._file = f;
+      this._path = this._file.path;
+    })
 
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
@@ -267,25 +271,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
   addWidget(info: Widgetstore.WidgetInfo): void {
     this._store.addWidget(info);
     this.update();
-  }
-
-  dispose(){
-    void showDialog({
-      title: 'Close without saving?',
-      body: "\"" + this.getName() + ".dashboard\"" + " has unsaved changes, close without saving?",
-      buttons: [
-        Dialog.cancelButton(),
-        Dialog.okButton({
-          label: 'OK'
-        })
-      ]
-    }).then(result => {
-      // return result.button.accept;
-      if(result.button.accept){
-        Dialog.flush();
-        return super.dispose();
-      }
-    });
   }
 
   /**

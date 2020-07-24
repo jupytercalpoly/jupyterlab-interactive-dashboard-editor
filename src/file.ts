@@ -1,3 +1,5 @@
+export const DASHBOARD_VERSION = 1;
+
 /**
  * A type that's serialized to create a dashboard file.
  */
