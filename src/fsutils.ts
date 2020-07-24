@@ -13,8 +13,7 @@ export async function newfile (contents: ContentsManager){
       ext: 'dashboard'
     });
     return file;
-  }
-
+  } 
 /**
  * Saves content as string to dashboard file
  *

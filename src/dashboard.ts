@@ -65,10 +65,9 @@ export namespace DashboardArea {
 export class DashboardArea extends Widget {
   constructor(options: DashboardArea.IOptions) {
     super(options);
-    this.layout = options.layout;
+    this.layout = options.layout; 
     this.addClass(DASHBOARD_AREA_CLASS);
   }
-
   /**
    * Create click listeners on attach
    */
