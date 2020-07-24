@@ -6,7 +6,7 @@ import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
 import { Widget } from '@lumino/widgets';
 
-import { ContentsManager, Contents} from '@jupyterlab/services';
+import { ContentsManager, Contents } from '@jupyterlab/services';
 
 // import { max, map } from '@lumino/algorithm';
 
@@ -28,7 +28,7 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-import {newfile} from './fsutils';
+import { newfile } from './fsutils';
 
 // HTML element classes
 
@@ -205,10 +205,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
     });
 
     //creates and attachs a new untitled .dashboard file to dashboard
-    newfile(contents).then(f => {
+    newfile(contents).then((f) => {
       this._file = f;
       this._path = this._file.path;
-    })
+    });
 
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
@@ -242,27 +242,26 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    * @returns ContentsManage
    */
-  public get contents() : ContentsManager{
-    return this._contents; 
+  public get contents(): ContentsManager {
+    return this._contents;
   }
 
   /**
    * Gets the path as string of dashboard
    *
    */
-  public get path() : string{
+  public get path(): string {
     return this._path;
   }
-
 
   /**
    * Sets the path of dashboard
    *
    */
-  public set path(v : string) {
+  public set path(v: string) {
     this.path = v;
   }
-  
+
   /**
    * Adds a dashboard widget to the widgetstore.
    *

@@ -1,34 +1,34 @@
-import {Contents, ContentsManager} from '@jupyterlab/services';
-import {Dashboard} from './dashboard';
+import { Contents, ContentsManager } from '@jupyterlab/services';
+import { Dashboard } from './dashboard';
 
 /**
  * Creates a new untitled .dashboard in current dir
  *
  * @return file created
  */
-export async function newfile (contents: ContentsManager){
-    const file = await contents.newUntitled({
-      path: '/',
-      type: 'file',
-      ext: 'dashboard'
-    });
-    return file;
-  } 
+export async function newfile(contents: ContentsManager) {
+  const file = await contents.newUntitled({
+    path: '/',
+    type: 'file',
+    ext: 'dashboard',
+  });
+  return file;
+}
 /**
  * Saves content as string to dashboard file
  *
- * @param content - content of any type to save as a string 
+ * @param content - content of any type to save as a string
  * @param dashboard - dashboard with its path to be saved
  */
-export function dashboard2file(dashboard: Dashboard, content:any){
-    const DASHBOARD: Partial<Contents.IModel> = {
-        path: dashboard.path,
-        type: 'file',
-        mimetype: 'text/plain',
-        content: JSON.stringify(content),
-        format: 'text'
-      };
-      dashboard.contents.save(dashboard.path, DASHBOARD);
+export function dashboard2file(dashboard: Dashboard, content: any) {
+  const DASHBOARD: Partial<Contents.IModel> = {
+    path: dashboard.path,
+    type: 'file',
+    mimetype: 'text/plain',
+    content: JSON.stringify(content),
+    format: 'text',
+  };
+  dashboard.contents.save(dashboard.path, DASHBOARD);
 }
 
 /**
@@ -36,10 +36,10 @@ export function dashboard2file(dashboard: Dashboard, content:any){
  *
  * @param dashboard - dashboard with its path to be renamed
  */
-export function renameDashboardFile(dashboard: Dashboard){
-    const newPath = "/" + dashboard.getName() + ".dashboard";
-    dashboard.contents.rename(dashboard.path, newPath);
-    dashboard.path = newPath;
+export function renameDashboardFile(dashboard: Dashboard) {
+  const newPath = '/' + dashboard.getName() + '.dashboard';
+  dashboard.contents.rename(dashboard.path, newPath);
+  dashboard.path = newPath;
 }
 
 /**
@@ -48,6 +48,6 @@ export function renameDashboardFile(dashboard: Dashboard){
  * But new dashboard is not saved later
  * @param dashboard - dashboard with its path to be deleted
  */
-export function deleteDashboardFile(dashboard: Dashboard){
-    dashboard.contents.delete(dashboard.path);
+export function deleteDashboardFile(dashboard: Dashboard) {
+  dashboard.contents.delete(dashboard.path);
 }

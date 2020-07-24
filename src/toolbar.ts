@@ -8,13 +8,13 @@ import { ToolbarButton } from '@jupyterlab/apputils';
 
 import { saveIcon } from '@jupyterlab/ui-components';
 
-import {Contents} from '@jupyterlab/services';
+import { Contents } from '@jupyterlab/services';
 
 import { Dashboard } from './dashboard';
 
 // import { DashboardWidget } from './widget';
 
-import {showDialog, Dialog} from '@jupyterlab/apputils'
+import { showDialog, Dialog } from '@jupyterlab/apputils';
 
 /**
  * Create save button toolbar item.
@@ -55,21 +55,28 @@ export function createSaveButton(
         path: dashboard.path,
         type: 'file',
         mimetype: 'text/plain',
-        content: JSON.stringify("dashboard.store"),
-        format: 'text'
+        content: JSON.stringify('dashboard.store'),
+        format: 'text',
       };
 
       dashboard.contents.save(dashboard.path, DASHBOARD);
-      dashboard.contents.rename(dashboard.path, "/" + dashboard.getName() + ".dashboard");
-      dashboard.path = "/" + dashboard.getName() + ".dashboard"
+      dashboard.contents.rename(
+        dashboard.path,
+        '/' + dashboard.getName() + '.dashboard'
+      );
+      dashboard.path = '/' + dashboard.getName() + '.dashboard';
       void showDialog({
         title: 'Dashboard saved',
-        body: "All changes to \"" + dashboard.getName() + ".dashboard\"" + " is saved",
-        buttons: [Dialog.okButton()]
-      }).then(result => {
+        body:
+          'All changes to "' +
+          dashboard.getName() +
+          '.dashboard"' +
+          ' is saved',
+        buttons: [Dialog.okButton()],
+      }).then((result) => {
         // return result.button.accept;
         console.log(result.button.accept);
-      });;
+      });
     },
     tooltip: 'Save Dashboard',
   });
