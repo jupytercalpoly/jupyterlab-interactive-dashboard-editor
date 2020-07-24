@@ -83,6 +83,14 @@ export function getCellById(
   return undefined;
 }
 
+/**
+ * Should eventually return a file path to a notebook given its id.
+ * For now, just returns a random string.
+ */
+export function getPathFromNotebookId(id: string): string {
+  return `DUMMY_PATH_${UUID.uuid4()}`;
+}
+
 export function toHex(str: string): string {
   return str
     .split('')

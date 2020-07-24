@@ -1,9 +1,12 @@
 .pr-DashboardWidget {
     border: var(--jp-border-width) solid var(--jp-layout-color0);
-    overflow: auto;
 }
 
 .pr-DashboardWidget:focus {
+    border: var(--jp-border-width) solid var(--jp-brand-color1);
+}
+
+.pr-DashboardWidget:hover {
     border: var(--jp-border-width) solid var(--jp-brand-color1);
 }
 
@@ -18,4 +21,23 @@
 .pr-JupyterDashboard.pr-DropTarget {
     border: var(--jp-border-width) solid var(--jp-input-active-border-color);
     box-shadow: var(--jp-input-box-shadow);
+}
+
+.pr-DashboardArea {
+    overflow: auto;
+}
+
+.pr-Resizer {
+    display: none;
+    width: 10px;
+    height: 10px;
+    right: 0;
+    bottom: 0;
+    cursor: se-resize;
+    position: absolute;
+    background: var(--jp-input-active-border-color);
+}
+
+.pr-DashboardWidget:hover .pr-Resizer {
+    display: block;
 }

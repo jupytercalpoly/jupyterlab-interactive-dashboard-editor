@@ -20,6 +20,8 @@ import { Drag } from '@lumino/dragdrop';
 
 import { shouldStartDrag } from './widgetdragutils';
 
+import { Dashboard } from './dashboard';
+
 // HTML element classes
 
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
@@ -50,8 +52,6 @@ export class DashboardWidget extends Panel {
     this.addClass(DASHBOARD_WIDGET_CLASS);
     // Makes widget focusable for WidgetTracker
     this.node.setAttribute('tabindex', '-1');
-    this._cellId = 'dummy';
-    this._notebookId = 'dummy2';
 
     // Wait for the notebook to be loaded before cloning the output area.
     void this._notebook.context.ready.then(() => {
@@ -65,6 +65,11 @@ export class DashboardWidget extends Panel {
       const clone = this._cell.cloneOutputArea();
       this.addWidget(clone);
     });
+
+    const resizer = document.createElement('div');
+    resizer.classList.add('pr-Resizer');
+
+    this.node.appendChild(resizer);
   }
 
   /**
@@ -164,7 +169,7 @@ export class DashboardWidget extends Panel {
    * Handle `mousedown` events for the widget.
    */
   private _evtMouseDown(event: MouseEvent): void {
-    const { button, shiftKey } = event;
+    const { button, shiftKey, target } = event;
 
     // We only handle main or secondary button actions.
     if (
@@ -175,35 +180,69 @@ export class DashboardWidget extends Panel {
       return;
     }
 
+    event.preventDefault();
+
+    window.addEventListener('mouseup', this);
+    window.addEventListener('mousemove', this);
+
+    if ((target as HTMLElement).classList.contains('pr-Resizer')) {
+      this._mouseMode = 'resize';
+    } else {
+      this._mouseMode = 'drag';
+    }
+
     const cell = this.cell;
 
-    this._dragData = {
+    this._clickData = {
       pressX: event.clientX,
       pressY: event.clientY,
       cell,
+      pressWidth: parseInt(this.node.style.width, 10),
+      pressHeight: parseInt(this.node.style.height, 10),
       target: this.node.cloneNode(true) as HTMLElement,
     };
-    // event.stopPropagation();
-    // event.preventDefault();
-
-    this.node.addEventListener('mouseup', this);
-    this.node.addEventListener('mousemove', this);
-    event.preventDefault();
   }
 
   /**
    * Handle `mousemove` event of widget
    */
   private _evtMouseMove(event: MouseEvent): void {
-    // event.stopPropagation();
-    // event.preventDefault();
-    const data = this._dragData;
+    switch (this._mouseMode) {
+      case 'drag':
+        this._dragMouseMove(event);
+        break;
+      case 'resize':
+        this._resizeMouseMove(event);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private _dragMouseMove(event: MouseEvent): void {
+    const data = this._clickData;
     if (
       data &&
       shouldStartDrag(data.pressX, data.pressY, event.clientX, event.clientY)
     ) {
       void this._startDrag(data.target, event.clientX, event.clientY);
     }
+  }
+
+  private _resizeMouseMove(event: MouseEvent): void {
+    const { pressX, pressY, pressWidth, pressHeight } = this._clickData;
+
+    // const newWidth = Math.round((pressWidth + (event.clientX - pressX)) / 100) * 100;
+    // const newHeight = Math.round((pressHeight + (event.clientY - pressY)) / 100) * 100;
+
+    const newWidth = Math.max(pressWidth + (event.clientX - pressX), 60);
+    const newHeight = Math.max(pressHeight + (event.clientY - pressY), 60);
+
+    this.node.style.width = `${newWidth}px`;
+    this.node.style.height = `${newHeight}px`;
+    // Hacky way to clamp dimmensions to child widget dimmensions.
+    this.node.style.width = `${this.widgets[0].node.clientWidth}px`;
+    this.node.style.height = `${this.widgets[0].node.clientHeight}px`;
   }
 
   /**
@@ -215,6 +254,11 @@ export class DashboardWidget extends Panel {
     clientY: number
   ): Promise<void> {
     const dragImage = target;
+
+    // Make drag image partially transparent.
+    dragImage.style.opacity = '0.6';
+    // Make original image invisible.
+    this.node.style.opacity = '0';
 
     this._drag = new Drag({
       mimeData: new MimeData(),
@@ -233,8 +277,10 @@ export class DashboardWidget extends Panel {
       if (this.isDisposed) {
         return;
       }
+      // Make original image visible again.
+      this.node.style.opacity = '1.0';
       this._drag = null;
-      this._dragData = null;
+      this._clickData = null;
     });
   }
 
@@ -242,16 +288,28 @@ export class DashboardWidget extends Panel {
     event.stopPropagation();
     event.preventDefault();
 
-    this.node.removeEventListener('mouseup', this);
-    this.node.removeEventListener('mousemove', this);
-  }
+    switch (this._mouseMode) {
+      case 'resize': {
+        if (this.parent === undefined || this.parent === null) {
+          return;
+        }
+        const pos = {
+          left: parseInt(this.node.style.left, 10),
+          top: parseInt(this.node.style.top, 10),
+          width: parseInt(this.node.style.width, 10),
+          height: parseInt(this.node.style.height, 10),
+        };
+        // FIXME: There has to be a better solution than this!
+        (this.parent.parent as Dashboard).moveWidget(this, pos);
+        break;
+      }
+      default:
+        break;
+    }
 
-  get cellId(): string {
-    return this._cellId;
-  }
-
-  get notebookId(): string {
-    return this._notebookId;
+    this._mouseMode = 'none';
+    window.removeEventListener('mouseup', this);
+    window.removeEventListener('mousemove', this);
   }
 
   static createDashboardWidgetId(): string {
@@ -261,15 +319,18 @@ export class DashboardWidget extends Panel {
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
-  private _dragData: {
+
+  private _clickData: {
     pressX: number;
     pressY: number;
+    pressWidth: number;
+    pressHeight: number;
     target: HTMLElement;
     cell: CodeCell;
   } | null = null;
+
   private _drag: Drag | null = null;
-  private _cellId: string;
-  private _notebookId: string;
+  private _mouseMode: DashboardWidget.MouseMode = 'none';
 }
 
 /**
@@ -293,6 +354,46 @@ namespace DashboardWidget {
      */
     index?: number;
   }
+
+  export type MouseMode = 'drag' | 'resize' | 'none';
 }
+
+/**
+ * A namespace for private functionality.
+ */
+// namespace Private {
+//   export type ResizerOrientation = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+//   export function createResizer(orientation: ResizerOrientation): HTMLElement {
+//     const resizer = document.createElement('div');
+//     resizer.classList.add('pr-Resizer');
+//     resizer.setAttribute('orientation', orientation);
+
+//     switch (orientation) {
+//       case 'top-left':
+//         resizer.style.top = '0';
+//         resizer.style.left = '0';
+//         resizer.style.cursor = 'nw-resize';
+//         break;
+//       case 'top-right':
+//         resizer.style.top = '0';
+//         resizer.style.right = '0';
+//         resizer.style.cursor = 'ne-resize';
+//         break;
+//       case 'bottom-left':
+//         resizer.style.bottom = '0';
+//         resizer.style.left = '0';
+//         resizer.style.cursor = 'sw-resize';
+//         break;
+//       case 'bottom-right':
+//         resizer.style.bottom = '0';
+//         resizer.style.right = '0';
+//         resizer.style.cursor = 'se-resize';
+//         break;
+//     }
+
+//     return resizer;
+//   }
+// }
 
 export default DashboardWidget;

@@ -18,6 +18,18 @@ export class DashboardLayout extends Layout {
     this._items = new Map<string, LayoutItem>();
     this._store = options.store;
     this._outputTracker = options.outputTracker;
+
+    // Puts a dummy widget in the bottom right corner of the
+    // dashboard to create an area with set width/height.
+    const corner = new Widget();
+    this._width = options.width || 0;
+    this._height = options.height || 0;
+    corner.node.style.left = `${this._width}px`;
+    corner.node.style.top = `${this._height}px`;
+    corner.node.style.width = '1px';
+    corner.node.style.height = '1px';
+    corner.node.style.position = 'absolute';
+    this._corner = corner;
   }
 
   /**
@@ -27,6 +39,7 @@ export class DashboardLayout extends Layout {
     this._items.forEach((item) => item.dispose());
     this._outputTracker = null;
     this._store = null;
+    this._corner.dispose();
     super.dispose();
   }
 
@@ -38,7 +51,7 @@ export class DashboardLayout extends Layout {
     each(this, (widget) => {
       this.attachWidget(widget);
     });
-    console.log('initialized');
+    this.attachWidget(this._corner);
   }
 
   /**
@@ -73,7 +86,14 @@ export class DashboardLayout extends Layout {
     }
 
     // Send an update request to the layout item.
-    const { left, top, width, height } = pos;
+    let { left, top } = pos;
+    const { width, height } = pos;
+    if (this._width !== 0 && left + width > this._width) {
+      left = this._width - width;
+    }
+    if (this._height !== 0 && top + height > this._height) {
+      top = this._height - height;
+    }
     item.update(left, top, width, height);
 
     return true;
@@ -142,6 +162,9 @@ export class DashboardLayout extends Layout {
       MessageLoop.sendMessage(widget, Widget.Msg.AfterAttach);
     }
 
+    // Set widget's parent.
+    widget.parent = this.parent;
+
     // Post a fit request for the parent widget.
     this.parent!.fit();
   }
@@ -164,6 +187,8 @@ export class DashboardLayout extends Layout {
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.AfterDetach);
     }
+
+    widget.parent = null;
 
     // Post a fit request for the parent widget.
     this.parent!.fit();
@@ -218,6 +243,9 @@ export class DashboardLayout extends Layout {
   private _items: Map<string, LayoutItem>;
   private _store: Widgetstore;
   private _outputTracker: WidgetTracker<DashboardWidget>;
+  private _corner: Widget;
+  private _width: number;
+  private _height: number;
 }
 
 /**
@@ -238,5 +266,15 @@ export namespace DashboardLayout {
      * The widgetstore to update from.
      */
     store: Widgetstore;
+
+    /**
+     * The static width of the dashboard area.
+     */
+    width?: number;
+
+    /**
+     * The static height of the dashboard area.
+     */
+    height?: number;
   }
 }
