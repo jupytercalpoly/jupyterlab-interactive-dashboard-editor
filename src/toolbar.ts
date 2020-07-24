@@ -63,7 +63,10 @@ export function createSaveButton(
         title: 'Dashboard saved',
         body: "All changes to \"" + dashboard.getName() + ".dashboard\"" + " is saved",
         buttons: [Dialog.okButton()]
-      });
+      }).then(result => {
+        // return result.button.accept;
+        console.log(result.button.accept);
+      });;
       console.log(dashboard.file.path);
     },
     tooltip: 'Save Dashboard',

@@ -258,7 +258,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   }
 
   dispose(){
-    return showDialog({
+    void showDialog({
       title: 'Close without saving?',
       body: "\"" + this.getName() + ".dashboard\"" + " has unsaved changes, close without saving?",
       buttons: [
@@ -267,8 +267,13 @@ export class Dashboard extends MainAreaWidget<Widget> {
           label: 'OK'
         })
       ]
-    })
-    super.dispose()
+    }).then(result => {
+      // return result.button.accept;
+      if(result.button.accept){
+        Dialog.flush();
+        return super.dispose();
+      }
+    });
   }
 
   /**
