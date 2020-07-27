@@ -60,6 +60,6 @@ export function deleteDashboardFile(dashboard: Dashboard) {
  */
 export async function readDashboardFile(dashboard: Dashboard) {
     const content = await dashboard.contents.get(dashboard.path);
-    return content.content;
+    return content.content as string;
 }
 
