@@ -6,8 +6,6 @@ import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
 import { Widget } from '@lumino/widgets';
 
-import { ContentsManager, Contents } from '@jupyterlab/services';
-
 // import { max, map } from '@lumino/algorithm';
 
 import { Message } from '@lumino/messaging';
@@ -15,6 +13,8 @@ import { Message } from '@lumino/messaging';
 import { IDragEvent } from '@lumino/dragdrop';
 
 import { UUID } from '@lumino/coreutils';
+
+import { ContentsManager, Contents } from '@jupyterlab/services';
 
 import { DashboardLayout } from './custom_layout';
 
@@ -28,7 +28,7 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-import { newfile } from './fsutils';
+import { newfile } from './fsutils'; 
 
 // HTML element classes
 

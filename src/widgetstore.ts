@@ -1,4 +1,4 @@
-import { filter, IIterator } from '@lumino/algorithm';
+import { filter, IIterator, each } from '@lumino/algorithm';
 
 import { Litestore } from './litestore';
 
@@ -10,7 +10,9 @@ import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 
 import { Cell, CodeCell } from '@jupyterlab/cells';
 
-import { getNotebookById, getCellById } from './utils';
+import { getNotebookById, getCellById, getPathFromNotebookId } from './utils';
+
+import { DashboardFile, WidgetInfo, DASHBOARD_VERSION } from './file';
 
 /**
  * Alias for widget schema type.
@@ -249,6 +251,54 @@ export class Widgetstore extends Litestore {
     this.endTransaction();
   }
 
+  /**
+   * Saves the store to file.
+   *
+   * @param path - file path to save the store to.
+   *
+   * @throws an error if saving fails.
+   */
+  save(path: string): void {
+    console.log('saving to', path);
+
+    // Get all widgets that haven't been removed or un-added.
+    const widgets = filter(
+      this.getWidgets(),
+      (widget) => widget.widgetId && !widget.removed
+    );
+
+    const file: DashboardFile = {
+      version: DASHBOARD_VERSION,
+      gridSpec: {
+        width: 0,
+        height: 0,
+        padX: 0,
+        padY: 0,
+      },
+      paths: {},
+      outputs: {},
+    };
+
+    each(widgets, (widget) => {
+      // Currently just returns a dummy path.
+      const widgetInfo: WidgetInfo = {
+        id: widget.cellId,
+        left: widget.left,
+        top: widget.top,
+        width: widget.width,
+        height: widget.height,
+      };
+      const path = getPathFromNotebookId(widget.notebookId);
+      file.paths[path] = widget.notebookId;
+      if (file.outputs[widget.notebookId] === undefined) {
+        file.outputs[widget.notebookId] = [];
+      }
+      file.outputs[widget.notebookId].push(widgetInfo);
+    });
+
+    console.log(file);
+  }
+
   private _notebookTracker: INotebookTracker;
   private _inBatch: boolean;
 }
@@ -267,6 +317,7 @@ export namespace Widgetstore {
       left: Fields.Number(),
       width: Fields.Number(),
       height: Fields.Number(),
+      // changed field is currently unused/defunct.
       changed: Fields.Boolean(),
       removed: Fields.Boolean(),
     },

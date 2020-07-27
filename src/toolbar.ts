@@ -4,17 +4,13 @@ import { Widget } from '@lumino/widgets';
 
 import { ToolbarButton } from '@jupyterlab/apputils';
 
-// import { Cell } from '@jupyterlab/cells';
+import { Cell } from '@jupyterlab/cells';
 
 import { saveIcon } from '@jupyterlab/ui-components';
 
-import { Contents } from '@jupyterlab/services';
-
 import { Dashboard } from './dashboard';
 
-// import { DashboardWidget } from './widget';
-
-import { showDialog, Dialog } from '@jupyterlab/apputils';
+import { DashboardWidget } from './widget';
 
 /**
  * Create save button toolbar item.
@@ -27,56 +23,27 @@ export function createSaveButton(
   const button = new ToolbarButton({
     icon: saveIcon,
     onClick: (): void => {
-      // const widgets = dashboard.content.children().iter();
-      // let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      // let newPos = [];
-      // let pos: number[][];
-      // while (widget) {
-      //   cell = widget.cell as Cell;
-      //   newPos = [];
-      //   newPos.push(Number(widget.node.style.left.split('p')[0]));
-      //   newPos.push(Number(widget.node.style.top.split('p')[0]));
-      //   newPos.push(Number(widget.node.style.width.split('p')[0]));
-      //   newPos.push(Number(widget.node.style.height.split('p')[0]));
-      //   pos = cell.model.metadata.get(dashboard.getName()) as number[][];
-      //   if (pos === undefined) {
-      //     pos = [];
-      //   }
-      //   pos.push(newPos);
-      //   cell.model.metadata.set(dashboard.getName(), pos);
-      //   widget = widgets.next() as DashboardWidget;
-      // }
+      const widgets = dashboard.content.children().iter();
+      let widget = widgets.next() as DashboardWidget;
+      let cell: Cell;
+      let newPos = [];
+      let pos: number[][];
+      while (widget) {
+        cell = widget.cell as Cell;
+        newPos = [];
+        newPos.push(Number(widget.node.style.left.split('p')[0]));
+        newPos.push(Number(widget.node.style.top.split('p')[0]));
+        newPos.push(Number(widget.node.style.width.split('p')[0]));
+        newPos.push(Number(widget.node.style.height.split('p')[0]));
+        pos = cell.model.metadata.get(dashboard.getName()) as number[][];
+        if (pos === undefined) {
+          pos = [];
+        }
+        pos.push(newPos);
+        cell.model.metadata.set(dashboard.getName(), pos);
+        widget = widgets.next() as DashboardWidget;
+      }
       //saving the cell metadata needs to save notebook?
-
-      // console.log("store", dashboard.store);
-
-      const DASHBOARD: Partial<Contents.IModel> = {
-        path: dashboard.path,
-        type: 'file',
-        mimetype: 'text/plain',
-        content: JSON.stringify('dashboard.store'),
-        format: 'text',
-      };
-
-      dashboard.contents.save(dashboard.path, DASHBOARD);
-      dashboard.contents.rename(
-        dashboard.path,
-        '/' + dashboard.getName() + '.dashboard'
-      );
-      dashboard.path = '/' + dashboard.getName() + '.dashboard';
-      void showDialog({
-        title: 'Dashboard saved',
-        body:
-          'All changes to "' +
-          dashboard.getName() +
-          '.dashboard"' +
-          ' is saved',
-        buttons: [Dialog.okButton()],
-      }).then((result) => {
-        // return result.button.accept;
-        console.log(result.button.accept);
-      });
     },
     tooltip: 'Save Dashboard',
   });
