@@ -86,11 +86,12 @@ export class DashboardButton
               changed: true,
               removed: false,
             };
-            dashboard.addWidget(info);
+            dashboard.updateWidgetInfo(info);
           });
         }
       }
       dashboard.update();
+      dashboard.updateLayoutFromWidgetstore();
       void this._dashboardTracker.add(dashboard);
     };
     const button = new ToolbarButton({

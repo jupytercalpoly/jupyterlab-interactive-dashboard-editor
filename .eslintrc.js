@@ -12,6 +12,7 @@ module.exports = {
   },
   plugins: ['@typescript-eslint'],
   rules: {
+    'no-inner-declarations': 'off',
     '@typescript-eslint/interface-name-prefix': [
       'error',
       { prefixWithI: 'always' }

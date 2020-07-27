@@ -267,6 +267,7 @@ function addCommands(
     execute: (args) => {
       const widget = outputTracker.currentWidget;
       dashboardTracker.currentWidget.deleteWidget(widget);
+      dashboardTracker.currentWidget.deleteWidgetInfo(widget);
     },
   });
 

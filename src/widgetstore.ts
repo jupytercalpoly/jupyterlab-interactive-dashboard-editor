@@ -12,7 +12,7 @@ import { Cell, CodeCell } from '@jupyterlab/cells';
 
 import { getNotebookById, getCellById, getPathFromNotebookId } from './utils';
 
-import { DashboardFile, WidgetInfo, DASHBOARD_VERSION } from './file';
+import { DashboardSpec, WidgetInfo, DASHBOARD_VERSION } from './file';
 
 /**
  * Alias for widget schema type.
@@ -224,6 +224,10 @@ export class Widgetstore extends Litestore {
     }
     const widget = new DashboardWidget({ notebook, cell });
     widget.id = info.widgetId;
+    widget.node.style.left = `${info.left}px`;
+    widget.node.style.top = `${info.top}px`;
+    widget.node.style.width = `${info.width}px`;
+    widget.node.style.height = `${info.height}px`;
 
     return widget;
   }
@@ -267,14 +271,10 @@ export class Widgetstore extends Litestore {
       (widget) => widget.widgetId && !widget.removed
     );
 
-    const file: DashboardFile = {
+    const file: DashboardSpec = {
       version: DASHBOARD_VERSION,
-      gridSpec: {
-        width: 0,
-        height: 0,
-        padX: 0,
-        padY: 0,
-      },
+      dashboardWidth: 0,
+      dashboardHeight: 0,
       paths: {},
       outputs: {},
     };
