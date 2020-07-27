@@ -22,7 +22,7 @@ import { DashboardWidget } from './widget';
 
 import { Icons } from './icons';
 
-import { createSaveButton } from './toolbar';
+import { buildToolbar } from './toolbar';
 
 import { Widgetstore } from './widgetstore';
 
@@ -222,8 +222,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.addClass(DASHBOARD_CLASS);
     this.node.setAttribute('style', 'overflow:auto');
 
-    // Adds save button to dashboard toolbar.
-    this.toolbar.addItem('save', createSaveButton(this, panel));
+    // Adds buttons to dashboard toolbar.
+    buildToolbar(this, panel);
 
     // TODO: Figure out if this is worth it. Right now it's disabled to prevent
     // double updating, and I figure manually calling this.update() whenever the

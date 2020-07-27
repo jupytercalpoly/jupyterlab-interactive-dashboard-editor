@@ -51,3 +51,14 @@ export function renameDashboardFile(dashboard: Dashboard) {
 export function deleteDashboardFile(dashboard: Dashboard) {
   dashboard.contents.delete(dashboard.path);
 }
+
+/**
+ * Reads the content of .dashboard file
+ *
+ * @param dashboard - dashboard whose .dashboard file to be read
+ * @return content of .dashboard file
+ */
+export async function readDashboardFile(dashboard: Dashboard) {
+    const content = await dashboard.contents.get(dashboard.path);
+    return content.content as string;
+}

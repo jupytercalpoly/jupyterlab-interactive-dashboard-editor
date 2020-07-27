@@ -5,6 +5,7 @@ import greyDashboardSvgstr from '../style/icons/dashboard_icon_filled_grey.svg';
 import blueDashboardSvgstr from '../style/icons/dashboard_icon_filled_blue.svg';
 import whiteDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_white.svg';
 import greyDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_grey.svg';
+import redoIcon from '../style/icons/redo.svg';
 
 /**
  * Dashboard icons
@@ -33,6 +34,11 @@ export namespace Icons {
   export const greyDashboardOutline = new LabIcon({
     name: 'pr-icons:grey-dashboard-outline',
     svgstr: greyDashboardOutlineSvgstr,
+  });
+
+  export const redoToolbarIcon = new LabIcon({
+    name: 'pr-icons:redo-icon',
+    svgstr: redoIcon,
   });
 }
 
