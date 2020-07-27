@@ -28,7 +28,7 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-import { newfile } from './fsutils'; 
+import { newfile } from './fsutils';
 
 // HTML element classes
 
