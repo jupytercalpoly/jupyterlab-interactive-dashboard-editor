@@ -14,6 +14,8 @@ import { IDragEvent } from '@lumino/dragdrop';
 
 import { UUID } from '@lumino/coreutils';
 
+import { ContentsManager, Contents } from '@jupyterlab/services';
+
 import { DashboardLayout } from './custom_layout';
 
 import { DashboardWidget } from './widget';
@@ -25,6 +27,8 @@ import { createSaveButton } from './toolbar';
 import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
+
+import { newfile } from './fsutils';
 
 // HTML element classes
 
@@ -184,6 +188,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   constructor(options: Dashboard.IOptions) {
     const { notebookTracker, content, outputTracker, panel } = options;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
+    const contents = new ContentsManager();
 
     const dashboardArea = new DashboardArea({
       outputTracker,
@@ -199,9 +204,16 @@ export class Dashboard extends MainAreaWidget<Widget> {
       content: content || dashboardArea,
     });
 
+    //creates and attachs a new untitled .dashboard file to dashboard
+    newfile(contents).then((f) => {
+      this._file = f;
+      this._path = this._file.path;
+    });
+
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
     this._name = options.name || 'Unnamed Dashboard';
+    this._contents = contents;
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
@@ -223,6 +235,31 @@ export class Dashboard extends MainAreaWidget<Widget> {
     //   this.update,
     //   this
     // );
+  }
+
+  /**
+   * Gets the contents of dashboard
+   *
+   * @returns ContentsManage
+   */
+  public get contents(): ContentsManager {
+    return this._contents;
+  }
+
+  /**
+   * Gets the path as string of dashboard
+   *
+   */
+  public get path(): string {
+    return this._path;
+  }
+
+  /**
+   * Sets the path of dashboard
+   *
+   */
+  public set path(v: string) {
+    this.path = v;
   }
 
   /**
@@ -320,6 +357,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
   private _name: string;
   private _store: Widgetstore;
+  private _contents: ContentsManager;
+  private _file: Contents.IModel;
+  private _path: string;
 }
 
 export namespace Dashboard {
