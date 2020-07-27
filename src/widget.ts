@@ -278,6 +278,8 @@ export class DashboardWidget extends Panel {
       if (this.isDisposed) {
         return;
       }
+      // Make original image visible again.
+      this.node.style.opacity = '1.0';
       this._drag = null;
       this._clickData = null;
     });
