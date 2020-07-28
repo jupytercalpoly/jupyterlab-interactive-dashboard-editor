@@ -12,6 +12,8 @@ import { IDragEvent } from '@lumino/dragdrop';
 
 import { UUID } from '@lumino/coreutils';
 
+import { ContentsManager, Contents } from '@jupyterlab/services';
+
 import { DashboardLayout } from './custom_layout';
 
 import { DashboardWidget } from './widget';
@@ -30,6 +32,8 @@ import {
 } from './utils';
 
 import { DashboardSpec, DASHBOARD_VERSION, WidgetInfo } from './file';
+
+import { newfile } from './fsutils';
 
 // HTML element classes
 
@@ -301,6 +305,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   constructor(options: Dashboard.IOptions) {
     const { notebookTracker, content, outputTracker, panel } = options;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
+    const contents = new ContentsManager();
 
     const dashboardArea = new DashboardArea({
       outputTracker,
@@ -317,9 +322,16 @@ export class Dashboard extends MainAreaWidget<Widget> {
     });
     this._dbArea = this.content as DashboardArea;
 
+    //creates and attachs a new untitled .dashboard file to dashboard
+    newfile(contents).then((f) => {
+      this._file = f;
+      this._path = this._file.path;
+    });
+
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
     this._name = options.name || 'Unnamed Dashboard';
+    this._contents = contents;
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
@@ -344,7 +356,32 @@ export class Dashboard extends MainAreaWidget<Widget> {
   }
 
   /**
-   * Add a widget to the layout.
+   * Gets the contents of dashboard
+   *
+   * @returns ContentsManage
+   */
+  public get contents(): ContentsManager {
+    return this._contents;
+  }
+
+  /**
+   * Gets the path as string of dashboard
+   *
+   */
+  public get path(): string {
+    return this._path;
+  }
+
+  /**
+   * Sets the path of dashboard
+   *
+   */
+  public set path(v: string) {
+    this.path = v;
+  }
+
+  /**
+   ** Add a widget to the layout.
    *
    * @param widget - the widget to add.
    */
@@ -614,6 +651,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
   // Convenient alias so I don't have to type
   // (this.content as DashboardArea) every time.
   private _dbArea: DashboardArea;
+  private _contents: ContentsManager;
+  private _file: Contents.IModel;
+  private _path: string;
 }
 
 export namespace Dashboard {
