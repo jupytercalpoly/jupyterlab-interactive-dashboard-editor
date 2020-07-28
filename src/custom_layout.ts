@@ -2,7 +2,7 @@ import { Widget, Layout, LayoutItem } from '@lumino/widgets';
 
 import { Record } from '@lumino/datastore';
 
-import { IIterator, map, each } from '@lumino/algorithm';
+import { IIterator, map, each, filter } from '@lumino/algorithm';
 
 import { MessageLoop } from '@lumino/messaging';
 
@@ -12,7 +12,9 @@ import { Widgetstore, WidgetSchema } from './widgetstore';
 
 import { WidgetTracker } from '@jupyterlab/apputils';
 
-import { getCellId, getNotebookId } from './utils';
+import { getCellId, getNotebookId, getPathFromNotebookId } from './utils';
+
+import { DashboardSpec, DASHBOARD_VERSION } from './file';
 
 export class DashboardLayout extends Layout {
   constructor(options: DashboardLayout.IOptions) {
@@ -218,13 +220,12 @@ export class DashboardLayout extends Layout {
       widgetId: widget.id,
       notebookId: getNotebookId(widget.notebook),
       cellId: getCellId(widget.cell),
-      left: parseInt(widget.node.style.left),
-      top: parseInt(widget.node.style.top),
-      width: parseInt(widget.node.style.width),
-      height: parseInt(widget.node.style.height),
+      left: parseInt(widget.node.style.left, 10),
+      top: parseInt(widget.node.style.top, 10),
+      width: parseInt(widget.node.style.width, 10),
+      height: parseInt(widget.node.style.height, 10),
       removed: false,
     };
-    console.log('got widget info', info);
     return info;
   }
 
@@ -234,11 +235,7 @@ export class DashboardLayout extends Layout {
    * @param widget - the widget to mark as deleted.
    */
   deleteWidgetInfo(widget: DashboardWidget): void {
-    const info = this.getWidgetInfo(widget);
-    this.updateWidgetInfo({
-      ...info,
-      removed: true,
-    });
+    this._store.deleteWidget(widget);
   }
 
   /**
@@ -348,6 +345,60 @@ export class DashboardLayout extends Layout {
    */
   createWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
     return this._store.createWidget(info);
+  }
+
+  /**
+   * Saves the dashboard to file.
+   *
+   * @param path - file path to save the dashboard to.
+   *
+   * @throws an error if saving fails.
+   */
+  save(path: string): void {
+    // Get all widgets that haven't been removed.
+    const records = filter(
+      this._store.getWidgets(),
+      (widget) => widget.widgetId && !widget.removed
+    );
+
+    const file: DashboardSpec = {
+      version: DASHBOARD_VERSION,
+      dashboardHeight: this._height,
+      dashboardWidth: this._width,
+      paths: {},
+      outputs: {},
+    };
+
+    each(records, (record) => {
+      const notebookId = record.notebookId;
+      const path = getPathFromNotebookId(notebookId);
+
+      if (path === undefined) {
+        throw new Error(
+          `Notebook path for notebook with id ${notebookId} not found`
+        );
+      }
+
+      if (file.paths[path] !== undefined && file.paths[path] !== notebookId) {
+        throw new Error(`Conflicting paths for same notebook id ${notebookId}`);
+      }
+
+      file.paths[path] = notebookId;
+
+      if (file.outputs[notebookId] === undefined) {
+        file.outputs[notebookId] = [];
+      }
+
+      file.outputs[notebookId].push({
+        cellId: record.cellId,
+        top: record.top,
+        left: record.left,
+        width: record.width,
+        height: record.height,
+      });
+    });
+
+    console.log('saving data to: ', path, file);
   }
 
   // Map from widget ids to LayoutItems

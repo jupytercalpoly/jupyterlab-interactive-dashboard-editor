@@ -5,6 +5,7 @@ import { Cell } from '@jupyterlab/cells';
 import { UUID } from '@lumino/coreutils';
 
 import { ArrayExt, toArray } from '@lumino/algorithm';
+import { DashboardSpec } from './file';
 
 export function addNotebookId(notebook: NotebookPanel): string {
   const metadata: any | undefined = notebook.model.metadata.get('presto');
@@ -96,4 +97,8 @@ export function toHex(str: string): string {
     .split('')
     .map((c) => c.charCodeAt(0).toString(16))
     .join('');
+}
+
+export function loadFileAsString(path: string): string | undefined {
+  return '{}';
 }

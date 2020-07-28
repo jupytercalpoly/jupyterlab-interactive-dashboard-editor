@@ -266,8 +266,8 @@ function addCommands(
     label: 'Delete Output',
     execute: (args) => {
       const widget = outputTracker.currentWidget;
-      dashboardTracker.currentWidget.deleteWidget(widget);
       dashboardTracker.currentWidget.deleteWidgetInfo(widget);
+      dashboardTracker.currentWidget.deleteWidget(widget);
     },
   });
 
@@ -349,7 +349,7 @@ function addCommands(
 
   commands.addCommand('printFile', {
     label: 'Print File',
-    execute: (args) => dashboardTracker.currentWidget.store.save('myPath'),
+    execute: (args) => dashboardTracker.currentWidget.save('myPath'),
   });
 
   commands.addCommand('resize', {

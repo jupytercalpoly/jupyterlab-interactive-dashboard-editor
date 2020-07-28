@@ -37,7 +37,7 @@ export type WidgetInfo = {
   /**
    * The cell ID the widget is created from.
    */
-  id: string;
+  cellId: string;
 
   /**
    * The top edge position of the widget.

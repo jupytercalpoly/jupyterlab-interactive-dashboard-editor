@@ -22,7 +22,14 @@ import { createSaveButton } from './toolbar';
 
 import { Widgetstore } from './widgetstore';
 
-import { addCellId, addNotebookId } from './utils';
+import {
+  addCellId,
+  addNotebookId,
+  loadFileAsString,
+  getPathFromNotebookId,
+} from './utils';
+
+import { DashboardSpec, DASHBOARD_VERSION, WidgetInfo } from './file';
 
 // HTML element classes
 
@@ -270,6 +277,17 @@ export class DashboardArea extends Widget {
     this._dbLayout.redo();
   }
 
+  /**
+   * Saves the dashboard to file.
+   *
+   * @param path - file path to save the dashboard to.
+   *
+   * @throws an error if saving fails.
+   */
+  save(path: string): void {
+    this._dbLayout.save(path);
+  }
+
   // Convenient alias for layout so I don't have to type
   // (this.layout as DashboardLayout) every time.
   private _dbLayout: DashboardLayout;
@@ -437,6 +455,158 @@ export class Dashboard extends MainAreaWidget<Widget> {
   setName(newName: string): void {
     this._name = newName;
     this.title.label = newName;
+  }
+
+  /**
+   * Saves the dashboard to file.
+   *
+   * @param path - file path to save the dashboard to.
+   *
+   * @throws an error if saving fails.
+   */
+  save(path: string): void {
+    this._dbArea.save(path);
+  }
+
+  /**
+   * Load a dashboard from a file.
+   *
+   * UNFINISHED!!
+   */
+  static load(
+    path: string,
+    notebookTracker: INotebookTracker,
+    outputTracker: WidgetTracker<DashboardWidget>,
+    panel: NotebookPanel
+  ): Dashboard {
+    const fileText = loadFileAsString(path);
+
+    if (fileText === undefined) {
+      throw new Error(`Error reading file at ${path}`);
+    }
+
+    const parsed = JSON.parse(fileText);
+
+    if (parsed.version === undefined) {
+      throw new Error("Dashboard file missing required field 'version'");
+    } else if (isNaN(+parsed.version)) {
+      throw new Error('Dashboard version is invalid.');
+    } else if (+parsed.version !== DASHBOARD_VERSION) {
+      console.warn(
+        `Dashboard file version (${+parsed.version}) doesn't match extension version (${DASHBOARD_VERSION})`
+      );
+    }
+
+    if (parsed.paths === undefined) {
+      throw new Error("Dashboard file missing required field 'paths'");
+    } else if (!Array.isArray(parsed.paths)) {
+      throw new Error('Paths field is not an array');
+    }
+
+    for (const [notebookPath, notebookId] of Object.entries(parsed.paths)) {
+      if (notebookId === undefined) {
+        throw new Error(`No notebook id for notebook at ${notebookPath}`);
+      }
+
+      const maybeNotebook = loadFileAsString(path);
+
+      if (maybeNotebook === undefined) {
+        // TODO: Replace with file picker.
+        throw new Error(`Error reading notebook at ${notebookPath}`);
+      }
+
+      const parsedMaybeNotebook = JSON.parse(maybeNotebook);
+
+      const maybeNotebookId = parsedMaybeNotebook.metadata?.presto.id;
+
+      if (maybeNotebookId === undefined) {
+        throw new Error(`No notebook id found for ${notebookPath}`);
+      }
+
+      if (maybeNotebookId !== notebookId) {
+        throw new Error(
+          `Notebook id of ${notebookPath} (${maybeNotebookId}) does not match dashboard file notebook id (${notebookId})`
+        );
+      }
+    }
+
+    const paths = parsed.paths;
+
+    for (const notebookPath of paths) {
+      // Replace this with code to open a notebook.
+      console.log('opening notebook at ', notebookPath);
+    }
+
+    if (parsed.outputs === undefined) {
+      throw new Error("Dashboard file missing required field 'outputs'");
+    }
+
+    const store = new Widgetstore({ id: 0, notebookTracker });
+
+    for (const [notebookId, outputs] of Object.entries(parsed.outputs)) {
+      if (!Array.isArray(outputs)) {
+        throw new Error(`Outputs for notebook ${notebookId} are not an array`);
+      }
+      for (const output of outputs) {
+        Dashboard.verifyOutput(notebookId, output);
+        const info: Widgetstore.WidgetInfo = {
+          ...output,
+          notebookId,
+          widgetId: DashboardWidget.createDashboardWidgetId(),
+        };
+        store.addWidget(info);
+      }
+    }
+
+    const name = parsed.name;
+
+    return new Dashboard({
+      name,
+      notebookTracker,
+      outputTracker,
+      panel,
+      store,
+    });
+  }
+
+  static verifyOutput(notebookId: string, output: any): void {
+    if (output.left === undefined) {
+      throw new Error(
+        `Output of notebook ${notebookId} is missing the 'left' field`
+      );
+    } else if (isNaN(+output.left)) {
+      throw new Error(`'left' field of notebook ${notebookId} is not a number`);
+    }
+    if (output.top === undefined) {
+      throw new Error(
+        `Output of notebook ${notebookId} is missing the 'top' field`
+      );
+    } else if (isNaN(+output.top)) {
+      throw new Error(`'top' field of notebook ${notebookId} is not a number`);
+    }
+    if (output.width === undefined) {
+      throw new Error(
+        `Output of notebook ${notebookId} is missing the 'width' field`
+      );
+    } else if (isNaN(+output.width)) {
+      throw new Error(
+        `'width' field of notebook ${notebookId} is not a number`
+      );
+    }
+    if (output.height === undefined) {
+      throw new Error(
+        `Output of notebook ${notebookId} is missing the 'height' field`
+      );
+    } else if (isNaN(+output.height)) {
+      throw new Error(
+        `'height' field of notebook ${notebookId} is not a number`
+      );
+    }
+    if (output.cellId === undefined) {
+      throw new Error(
+        `Output of notebook ${notebookId} is missing the 'cellId' field`
+      );
+    }
   }
 
   private _name: string;

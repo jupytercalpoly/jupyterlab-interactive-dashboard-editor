@@ -1,4 +1,4 @@
-import { filter, IIterator, each } from '@lumino/algorithm';
+import { filter, IIterator } from '@lumino/algorithm';
 
 import { Litestore } from './litestore';
 
@@ -10,9 +10,7 @@ import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 
 import { Cell, CodeCell } from '@jupyterlab/cells';
 
-import { getNotebookById, getCellById, getPathFromNotebookId } from './utils';
-
-import { DashboardSpec, WidgetInfo, DASHBOARD_VERSION } from './file';
+import { getNotebookById, getCellById } from './utils';
 
 /**
  * Alias for widget schema type.
@@ -253,50 +251,6 @@ export class Widgetstore extends Litestore {
     }
     this._inBatch = false;
     this.endTransaction();
-  }
-
-  /**
-   * Saves the store to file.
-   *
-   * @param path - file path to save the store to.
-   *
-   * @throws an error if saving fails.
-   */
-  save(path: string): void {
-    console.log('saving to', path);
-
-    // Get all widgets that haven't been removed or un-added.
-    const widgets = filter(
-      this.getWidgets(),
-      (widget) => widget.widgetId && !widget.removed
-    );
-
-    const file: DashboardSpec = {
-      version: DASHBOARD_VERSION,
-      dashboardWidth: 0,
-      dashboardHeight: 0,
-      paths: {},
-      outputs: {},
-    };
-
-    each(widgets, (widget) => {
-      // Currently just returns a dummy path.
-      const widgetInfo: WidgetInfo = {
-        id: widget.cellId,
-        left: widget.left,
-        top: widget.top,
-        width: widget.width,
-        height: widget.height,
-      };
-      const path = getPathFromNotebookId(widget.notebookId);
-      file.paths[path] = widget.notebookId;
-      if (file.outputs[widget.notebookId] === undefined) {
-        file.outputs[widget.notebookId] = [];
-      }
-      file.outputs[widget.notebookId].push(widgetInfo);
-    });
-
-    console.log(file);
   }
 
   private _notebookTracker: INotebookTracker;
