@@ -1,9 +1,9 @@
 import { Contents, ContentsManager } from '@jupyterlab/services';
-import {ServiceManager} from '@jupyterlab/services';
+// import {ServiceManager} from '@jupyterlab/services';
 
-import { DocumentManager } from '@jupyterlab/docmanager';
+// import { DocumentManager } from '@jupyterlab/docmanager';
 
-import { DocumentRegistry } from '@jupyterlab/docregistry';
+// import { DocumentRegistry } from '@jupyterlab/docregistry';
 import { Dashboard } from './dashboard';
 
 /**
@@ -66,27 +66,26 @@ export function deleteDashboardFile(dashboard: Dashboard) {
 export async function readDashboardFile(dashboard: Dashboard) {
     const content = await dashboard.contents.get(dashboard.path);
     return content.content as string;
-}
-
-
-function test(){
-    const opener = {
-      open: (widget: Widget) => {
-        // Do nothing for sibling widgets for now.
-      }
-    };
-    
-    const manager = new ServiceManager();
-    void manager.ready.then(() => {
-      createApp(manager);
-    });
-    
-    const docRegistry = new DocumentRegistry();
-    const docManager = new DocumentManager({
-      registry: docRegistry,
-      manager,
-      opener
-    });
-    const nbWidget = docManager.open("./Untitled-Copy1.ipynb") as NotebookPanel;
-    console.log("here", nbWidget)
   }
+
+// function test(){
+//     const opener = {
+//       open: (widget: Widget) => {
+//         // Do nothing for sibling widgets for now.
+//       }
+//     };
+    
+//     const manager = new ServiceManager();
+//     void manager.ready.then(() => {
+//       createApp(manager);
+//     });
+    
+//     const docRegistry = new DocumentRegistry();
+//     const docManager = new DocumentManager({
+//       registry: docRegistry,
+//       manager,
+//       opener
+//     });
+//     const nbWidget = docManager.open("./Untitled-Copy1.ipynb") as NotebookPanel;
+//     console.log("here", nbWidget)
+//   }
