@@ -219,6 +219,7 @@ export class DashboardWidget extends Panel {
 
   private _dragMouseMove(event: MouseEvent): void {
     const data = this._clickData;
+
     if (
       data &&
       shouldStartDrag(data.pressX, data.pressY, event.clientX, event.clientY)
@@ -310,7 +311,9 @@ export class DashboardWidget extends Panel {
     }
 
     this._mouseMode = 'none';
+
     window.removeEventListener('mouseup', this);
+
     window.removeEventListener('mousemove', this);
   }
 
@@ -321,7 +324,6 @@ export class DashboardWidget extends Panel {
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
-
   private _clickData: {
     pressX: number;
     pressY: number;
@@ -330,7 +332,6 @@ export class DashboardWidget extends Panel {
     target: HTMLElement;
     cell: CodeCell;
   } | null = null;
-
   private _drag: Drag | null = null;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
 }
@@ -356,7 +357,6 @@ namespace DashboardWidget {
      */
     index?: number;
   }
-
   export type MouseMode = 'drag' | 'resize' | 'none';
 }
 
