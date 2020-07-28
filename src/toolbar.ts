@@ -76,15 +76,7 @@ export function createUndoButton(
   const button = new ToolbarButton({
     icon: undoIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
-        widget = widgets.next() as DashboardWidget;
-      }
-      //saving the cell metadata needs to save notebook?
+      dashboard.undo();
     },
     tooltip: 'Undo',
   });
@@ -102,15 +94,7 @@ export function createRedoButton(
   const button = new ToolbarButton({
     icon: Icons.redoToolbarIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
-        widget = widgets.next() as DashboardWidget;
-      }
-      //saving the cell metadata needs to save notebook?
+      dashboard.redo();
     },
     tooltip: 'Redo',
   });
@@ -258,14 +242,14 @@ export function createRestartButton(
   const button = new ToolbarButton({
     icon: refreshIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
-        widget = widgets.next() as DashboardWidget;
-      }
+      // const widgets = dashboard.content.children().iter();
+      // let widget = widgets.next() as DashboardWidget;
+      // // let cell: Cell;
+      // while (widget) {
+      //   // cell = widget.cell as Cell;
+      //   // widget.notebook.
+      //   widget = widgets.next() as DashboardWidget;
+      // }
       //saving the cell metadata needs to save notebook?
     },
     tooltip: 'Restart all kernels',
@@ -288,6 +272,7 @@ export function createRunAllButton(
       let widget = widgets.next() as DashboardWidget;
       // let cell: Cell;
       while (widget) {
+        console.log(widget.notebook);
         // cell = widget.cell as Cell;
         // widget.notebook.
         widget = widgets.next() as DashboardWidget;
