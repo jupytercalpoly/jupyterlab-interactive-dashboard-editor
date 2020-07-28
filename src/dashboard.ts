@@ -6,8 +6,6 @@ import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
 import { Widget } from '@lumino/widgets';
 
-// import { max, map } from '@lumino/algorithm';
-
 import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
@@ -64,6 +62,7 @@ export class DashboardArea extends Widget {
   constructor(options: DashboardArea.IOptions) {
     super(options);
     this.layout = options.layout;
+    this._dbLayout = options.layout as DashboardLayout;
     this.addClass(DASHBOARD_AREA_CLASS);
   }
 
@@ -131,8 +130,8 @@ export class DashboardArea extends Widget {
         height: widget.node.offsetHeight,
       };
 
-      // Should probably try to avoid calling methods of the parent.
-      (this.parent as Dashboard).moveWidget(widget, pos);
+      this._dbLayout.updateWidget(widget, pos);
+      this._dbLayout.updateInfoFromWidget(widget);
 
       // dragging from notebook -> dashboard.
     } else if (event.proposedAction === 'copy') {
@@ -147,12 +146,12 @@ export class DashboardArea extends Widget {
         top: event.offsetY,
         width: Widgetstore.DEFAULT_WIDTH,
         height: Widgetstore.DEFAULT_HEIGHT,
-        changed: true,
         removed: false,
       };
 
-      // Should probably try to avoid calling methods of the parent.
-      (this.parent as Dashboard).addWidget(info);
+      const widget = this._dbLayout.createWidget(info);
+      this._dbLayout.addWidget(widget, info);
+      this._dbLayout.updateWidgetInfo(info);
     } else {
       return;
     }
@@ -178,6 +177,106 @@ export class DashboardArea extends Widget {
         break;
     }
   }
+
+  /**
+   * Add a widget to the layout.
+   *
+   * @param widget - the widget to add.
+   */
+  addWidget(widget: DashboardWidget, pos: Widgetstore.WidgetPosition): void {
+    this._dbLayout.addWidget(widget, pos);
+  }
+
+  updateWidget(
+    widget: DashboardWidget,
+    pos: Widgetstore.WidgetPosition
+  ): boolean {
+    return this._dbLayout.updateWidget(widget, pos);
+  }
+
+  /**
+   * Remove a widget from the layout.
+   *
+   * @param widget - the widget to remove.
+   *
+   * ### Notes
+   * This is basically the same as deleteWidget but fulfills the type
+   * signature requirements of the extended class.
+   */
+  removeWidget(widget: DashboardWidget): void {
+    this._dbLayout.removeWidget(widget);
+  }
+
+  /**
+   * Remove a widget from the layout.
+   *
+   * @param widget - the widget to remove.
+   *
+   */
+  deleteWidget(widget: DashboardWidget): boolean {
+    return this._dbLayout.deleteWidget(widget);
+  }
+
+  /**
+   * Adds a dashboard widget's information to the widgetstore.
+   *
+   * @param info - the information to add to the widgetstore.
+   */
+  updateWidgetInfo(info: Widgetstore.WidgetInfo): void {
+    this._dbLayout.updateWidgetInfo(info);
+  }
+
+  /**
+   * Gets information from a widget.
+   *
+   * @param widget - the widget to collect information from.
+   */
+  getWidgetInfo(widget: DashboardWidget): Widgetstore.WidgetInfo {
+    return this._dbLayout.getWidgetInfo(widget);
+  }
+
+  /**
+   * Mark a widget as deleted in the widgetstore.
+   *
+   * @param widget - the widget to mark as deleted.
+   */
+  deleteWidgetInfo(widget: DashboardWidget): void {
+    this._dbLayout.deleteWidgetInfo(widget);
+  }
+
+  /**
+   * Update a widgetstore entry for a widget given that widget.
+   *
+   * @param widget - the widget to update from.
+   */
+  updateInfoFromWidget(widget: DashboardWidget): void {
+    this._dbLayout.updateInfoFromWidget(widget);
+  }
+
+  /**
+   * Updates the layout based on the state of the datastore.
+   */
+  updateLayoutFromWidgetstore(): void {
+    this._dbLayout.updateLayoutFromWidgetstore();
+  }
+
+  /**
+   * Undo the last change to the layout.
+   */
+  undo(): void {
+    this._dbLayout.undo();
+  }
+
+  /**
+   * Redo the last change to the layout.
+   */
+  redo(): void {
+    this._dbLayout.redo();
+  }
+
+  // Convenient alias for layout so I don't have to type
+  // (this.layout as DashboardLayout) every time.
+  private _dbLayout: DashboardLayout;
 }
 
 /**
@@ -203,6 +302,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       ...options,
       content: content || dashboardArea,
     });
+    this._dbArea = this.content as DashboardArea;
 
     //creates and attachs a new untitled .dashboard file to dashboard
     newfile(contents).then((f) => {
@@ -263,78 +363,99 @@ export class Dashboard extends MainAreaWidget<Widget> {
   }
 
   /**
-   * Adds a dashboard widget to the widgetstore.
+   ** Add a widget to the layout.
    *
-   * @param info - the information to add to the widgetstore.
+   * @param widget - the widget to add.
    */
-  addWidget(info: Widgetstore.WidgetInfo): void {
-    this._store.addWidget(info);
-    this.update();
+  addWidget(widget: DashboardWidget, pos: Widgetstore.WidgetPosition): void {
+    this._dbArea.addWidget(widget, pos);
   }
 
-  /**
-   * Updates the position of a widget already in the widgetstore.
-   *
-   * @param widget - the widget to update.
-   *
-   * @param pos - the new widget position.
-   *
-   * @returns whether the update was successful.
-   *
-   * ### Notes
-   * The update will be unsuccesful if the widget isn't in the store or was
-   * previously removed.
-   */
-  moveWidget(
+  updateWidget(
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition
   ): boolean {
-    const success = this._store.moveWidget(widget, pos);
-    this.update();
-    return success;
+    return this._dbArea.updateWidget(widget, pos);
   }
 
   /**
-   * Mark a widget as removed.
+   * Remove a widget from the layout.
    *
-   * @param widget - widget to delete.
+   * @param widget - the widget to remove.
    *
-   * @returns whether the deletion was successful.
+   * ### Notes
+   * This is basically the same as deleteWidget but fulfills the type
+   * signature requirements of the extended class.
+   */
+  removeWidget(widget: DashboardWidget): void {
+    this._dbArea.removeWidget(widget);
+  }
+
+  /**
+   * Remove a widget from the layout.
+   *
+   * @param widget - the widget to remove.
+   *
    */
   deleteWidget(widget: DashboardWidget): boolean {
-    const success = this._store.deleteWidget(widget);
-    this.update();
-    return success;
+    return this._dbArea.deleteWidget(widget);
   }
 
   /**
-   * Undo a dashboard change.
+   * Adds a dashboard widget's information to the widgetstore.
    *
-   * @param transactionId - the ID of the transaction to undo, or undefined
-   * to undo the last transaction.
+   * @param info - the information to add to the widgetstore.
+   */
+  updateWidgetInfo(info: Widgetstore.WidgetInfo): void {
+    this._dbArea.updateWidgetInfo(info);
+  }
+
+  /**
+   * Gets information from a widget.
    *
-   * @returns - a promise which resolves when the action is complete.
+   * @param widget - the widget to collect information from.
+   */
+  getWidgetInfo(widget: DashboardWidget): Widgetstore.WidgetInfo {
+    return this._dbArea.getWidgetInfo(widget);
+  }
+
+  /**
+   * Mark a widget as deleted in the widgetstore.
    *
-   * @throws - an exception if `undo` is called during a transaction.
+   * @param widget - the widget to mark as deleted.
+   */
+  deleteWidgetInfo(widget: DashboardWidget): void {
+    this._dbArea.deleteWidgetInfo(widget);
+  }
+
+  /**
+   * Update a widgetstore entry for a widget given that widget.
+   *
+   * @param widget - the widget to update from.
+   */
+  updateInfoFromWidget(widget: DashboardWidget): void {
+    this._dbArea.updateInfoFromWidget(widget);
+  }
+
+  /**
+   * Updates the layout based on the state of the datastore.
+   */
+  updateLayoutFromWidgetstore(): void {
+    this._dbArea.updateLayoutFromWidgetstore();
+  }
+
+  /**
+   * Undo the last change to the layout.
    */
   undo(): void {
-    this._store.undo();
-    this.update();
+    this._dbArea.undo();
   }
 
   /**
-   * Redo a dashboard change.
-   *
-   * @param transactionId - the ID of the transaction to redo, or undefined
-   * to redo the last transaction.
-   *
-   * @returns - a promise which resolves when the action is complete.
-   *
-   * @throws - an exception if `undo` is called during a transaction.
+   * Redo the last change to the layout.
    */
   redo(): void {
-    this._store.redo();
-    this.update();
+    this._dbArea.redo();
   }
 
   get store(): Widgetstore {
@@ -357,6 +478,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
   private _name: string;
   private _store: Widgetstore;
+  // Convenient alias so I don't have to type
+  // (this.content as DashboardArea) every time.
+  private _dbArea: DashboardArea;
   private _contents: ContentsManager;
   private _file: Contents.IModel;
   private _path: string;

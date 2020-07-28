@@ -20,7 +20,7 @@ import { Drag } from '@lumino/dragdrop';
 
 import { shouldStartDrag } from './widgetdragutils';
 
-import { Dashboard } from './dashboard';
+import { DashboardArea } from './dashboard';
 
 // HTML element classes
 
@@ -33,8 +33,6 @@ const DASHBOARD_WIDGET_MIME = 'pr-DashboardWidgetMine';
 
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
- * Currently just a slight modification of ClonedOutpuArea.
- * jupyterlab/packages/notebook-extension/src/index.ts
  */
 export class DashboardWidget extends Panel {
   /**
@@ -241,7 +239,10 @@ export class DashboardWidget extends Panel {
 
     this.node.style.width = `${newWidth}px`;
     this.node.style.height = `${newHeight}px`;
-    // Hacky way to clamp dimmensions to child widget dimmensions.
+  }
+
+  fitContent(): void {
+    // Hacky way to clamp dimensions to child widget dimensions.
     this.node.style.width = `${this.widgets[0].node.clientWidth}px`;
     this.node.style.height = `${this.widgets[0].node.clientHeight}px`;
   }
@@ -301,7 +302,8 @@ export class DashboardWidget extends Panel {
           height: parseInt(this.node.style.height, 10),
         };
         // FIXME: There has to be a better solution than this!
-        (this.parent.parent as Dashboard).moveWidget(this, pos);
+        (this.parent as DashboardArea).updateWidget(this, pos);
+        (this.parent as DashboardArea).updateInfoFromWidget(this);
         break;
       }
       default:
