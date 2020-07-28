@@ -12,7 +12,7 @@ import { Dashboard } from './dashboard';
 
 // import { DashboardWidget } from './widget';
 
-import {saveDialog} from './dialog';
+import { saveDialog } from './dialog';
 
 /**
  * Create save button toolbar item.
@@ -27,7 +27,7 @@ export function createSaveButton(
     onClick: (): void => {
       dashboard.dirty = false;
       const dialog = saveDialog(dashboard);
-      dialog.launch().then(result => {
+      dialog.launch().then((result) => {
         dialog.dispose();
       });
     },

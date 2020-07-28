@@ -32,7 +32,7 @@ import { addCellId, addNotebookId } from './utils';
 
 import { newfile } from './fsutils';
 
-import {unsaveDialog} from './dialog';
+import { unsaveDialog } from './dialog';
 
 // HTML element classes
 
@@ -229,8 +229,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     // Adds save button to dashboard toolbar.
     this.toolbar.addItem('save', createSaveButton(this, panel));
-    this._store.listenTable({schema: Widgetstore.WIDGET_SCHEMA}, (change) => this._dirty = true
-      );
+    this._store.listenTable(
+      { schema: Widgetstore.WIDGET_SCHEMA },
+      (change) => (this._dirty = true)
+    );
   }
 
   /**
@@ -258,10 +260,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.path = v;
   }
 
-  public set dirty(v : boolean) {
+  public set dirty(v: boolean) {
     this._dirty = v;
   }
-
 
   /**
    * Adds a dashboard widget to the widgetstore.
@@ -273,17 +274,17 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.update();
   }
 
-  dispose(){
-    if(this._dirty){
+  dispose() {
+    if (this._dirty) {
       const dialog = unsaveDialog(this);
-      dialog.launch().then(result => {
+      dialog.launch().then((result) => {
         dialog.dispose();
         // console.log(dialog.dispose());
-        if(result.button.accept){
+        if (result.button.accept) {
           return super.dispose();
         }
-          });
-    }else{
+      });
+    } else {
       return super.dispose();
     }
   }
