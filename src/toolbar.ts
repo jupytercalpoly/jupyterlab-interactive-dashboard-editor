@@ -4,13 +4,15 @@ import { Widget } from '@lumino/widgets';
 
 import { ToolbarButton, WidgetTracker, sessionContextDialogs} from '@jupyterlab/apputils';
 
-import { Cell, CodeCell } from '@jupyterlab/cells';
+import { CodeCell } from '@jupyterlab/cells';
 
 import { saveIcon, refreshIcon, undoIcon, cutIcon, copyIcon, pasteIcon, runIcon, stopIcon, fastForwardIcon} from '@jupyterlab/ui-components';
 
 import { Dashboard } from './dashboard';
 
 import { DashboardWidget } from './widget';
+
+import { saveDialog } from './dialog';
 
 import { Icons} from './icons';
 
@@ -42,27 +44,11 @@ export function createSaveButton(
   const button = new ToolbarButton({
     icon: saveIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      let cell: Cell;
-      let newPos = [];
-      let pos: number[][];
-      while (widget) {
-        cell = widget.cell as Cell;
-        newPos = [];
-        newPos.push(Number(widget.node.style.left.split('p')[0]));
-        newPos.push(Number(widget.node.style.top.split('p')[0]));
-        newPos.push(Number(widget.node.style.width.split('p')[0]));
-        newPos.push(Number(widget.node.style.height.split('p')[0]));
-        pos = cell.model.metadata.get(dashboard.getName()) as number[][];
-        if (pos === undefined) {
-          pos = [];
-        }
-        pos.push(newPos);
-        cell.model.metadata.set(dashboard.getName(), pos);
-        widget = widgets.next() as DashboardWidget;
-      }
-      //saving the cell metadata needs to save notebook?
+      dashboard.dirty = false;
+      const dialog = saveDialog(dashboard);
+      dialog.launch().then((result) => {
+        dialog.dispose();
+      });
     },
     tooltip: 'Save Dashboard',
   });

@@ -16,6 +16,8 @@ import { UUID } from '@lumino/coreutils';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 
+// import {Dialog} from '@jupyterlab/apputils';
+
 import { DashboardLayout } from './custom_layout';
 
 import { DashboardWidget } from './widget';
@@ -29,6 +31,8 @@ import { Widgetstore } from './widgetstore';
 import { addCellId, addNotebookId } from './utils';
 
 import { newfile } from './fsutils';
+
+import { unsaveDialog } from './dialog';
 
 // HTML element classes
 
@@ -214,6 +218,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this._store = store;
     this._name = options.name || 'Unnamed Dashboard';
     this._contents = contents;
+    this._dirty = false;
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
@@ -224,17 +229,11 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     // Adds buttons to dashboard toolbar.
     buildToolbar(this, panel, outputTracker, clipboard);
-
-    // TODO: Figure out if this is worth it. Right now it's disabled to prevent
-    // double updating, and I figure manually calling this.update() whenever the
-    // widgetstore is modified isn't so bad.
-    //
-    // Attach listener to update on table changes.
-    // this._store.listenTable(
-    //   { schema: Widgetstore.WIDGET_SCHEMA },
-    //   this.update,
-    //   this
-    // );
+  
+    this._store.listenTable(
+      { schema: Widgetstore.WIDGET_SCHEMA },
+      (change) => (this._dirty = true)
+    );
   }
 
   /**
@@ -262,6 +261,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.path = v;
   }
 
+  public set dirty(v: boolean) {
+    this._dirty = v;
+  }
+
   /**
    * Adds a dashboard widget to the widgetstore.
    *
@@ -270,6 +273,21 @@ export class Dashboard extends MainAreaWidget<Widget> {
   addWidget(info: Widgetstore.WidgetInfo): void {
     this._store.addWidget(info);
     this.update();
+  }
+
+  dispose() {
+    if (this._dirty) {
+      const dialog = unsaveDialog(this);
+      dialog.launch().then((result) => {
+        dialog.dispose();
+        // console.log(dialog.dispose());
+        if (result.button.accept) {
+          return super.dispose();
+        }
+      });
+    } else {
+      return super.dispose();
+    }
   }
 
   /**
@@ -360,6 +378,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   private _contents: ContentsManager;
   private _file: Contents.IModel;
   private _path: string;
+  private _dirty: boolean;
 }
 
 export namespace Dashboard {
