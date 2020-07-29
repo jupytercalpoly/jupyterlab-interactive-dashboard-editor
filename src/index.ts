@@ -305,6 +305,7 @@ function addCommands(
         ref: currentNotebook.id,
         mode: 'split-bottom',
       });
+      dashboardTracker.add(dashboard);
     },
   });
 

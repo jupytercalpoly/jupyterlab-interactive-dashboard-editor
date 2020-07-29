@@ -6,7 +6,9 @@ import { Dashboard } from './dashboard';
  *
  * @return file created
  */
-export async function newfile(contents: ContentsManager) {
+export async function newfile(
+  contents: ContentsManager
+): Promise<Contents.IModel> {
   const file = await contents.newUntitled({
     path: '/',
     type: 'file',
@@ -20,7 +22,7 @@ export async function newfile(contents: ContentsManager) {
  * @param content - content of any type to save as a string
  * @param dashboard - dashboard with its path to be saved
  */
-export function dashboard2file(dashboard: Dashboard, content: any) {
+export function dashboard2file(dashboard: Dashboard, content: any): void {
   const DASHBOARD: Partial<Contents.IModel> = {
     path: dashboard.path,
     type: 'file',
@@ -36,7 +38,7 @@ export function dashboard2file(dashboard: Dashboard, content: any) {
  *
  * @param dashboard - dashboard with its path to be renamed
  */
-export function renameDashboardFile(name: string, dashboard: Dashboard) {
+export function renameDashboardFile(name: string, dashboard: Dashboard): void {
   const newPath = '/' + name + '.dashboard';
   dashboard.contents.rename(dashboard.path, newPath);
   dashboard.path = newPath;
@@ -48,7 +50,7 @@ export function renameDashboardFile(name: string, dashboard: Dashboard) {
  * But new dashboard is not saved later
  * @param dashboard - dashboard with its path to be deleted
  */
-export function deleteDashboardFile(dashboard: Dashboard) {
+export function deleteDashboardFile(dashboard: Dashboard): void {
   dashboard.contents.delete(dashboard.path);
 }
 
@@ -58,7 +60,7 @@ export function deleteDashboardFile(dashboard: Dashboard) {
  * @param dashboard - dashboard whose .dashboard file to be read
  * @return content of .dashboard file
  */
-export async function readDashboardFile(dashboard: Dashboard) {
+export async function readDashboardFile(dashboard: Dashboard): Promise<string> {
   const content = await dashboard.contents.get(dashboard.path);
   return content.content as string;
 }

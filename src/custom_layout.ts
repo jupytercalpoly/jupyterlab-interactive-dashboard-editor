@@ -142,6 +142,7 @@ export class DashboardLayout extends Layout {
 
     let { left, top } = pos;
     const { width, height } = pos;
+    console.log('new pos', pos);
 
     // Constrain the widget to the dashboard dimensions.
     if (this._width !== 0 && left + width > this._width) {
@@ -150,6 +151,9 @@ export class DashboardLayout extends Layout {
     if (this._height !== 0 && top + height > this._height) {
       top = this._height - height;
     }
+
+    console.log('new left', left);
+    console.log('new top', top);
 
     // Update the widget's position.
     item.update(left, top, width, height);
@@ -214,10 +218,16 @@ export class DashboardLayout extends Layout {
    * @param widget - the widget to collect information from.
    */
   getWidgetInfo(widget: DashboardWidget): Widgetstore.WidgetInfo {
+    const notebookId =
+      widget.notebookId !== undefined
+        ? widget.notebookId
+        : getNotebookId(widget.notebook);
+    const cellId =
+      widget.cellId !== undefined ? widget.cellId : getCellId(widget.cell);
     const info: Widgetstore.WidgetInfo = {
       widgetId: widget.id,
-      notebookId: getNotebookId(widget.notebook),
-      cellId: getCellId(widget.cell),
+      notebookId: notebookId,
+      cellId: cellId,
       left: parseInt(widget.node.style.left, 10),
       top: parseInt(widget.node.style.top, 10),
       width: parseInt(widget.node.style.width, 10),

@@ -198,15 +198,18 @@ export class Widgetstore extends Litestore {
    * widgetinfo object.
    */
   createWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
-    const notebook = this.getNotebookById(info.notebookId);
+    const { notebookId, cellId } = info;
+
+    const notebook = this.getNotebookById(notebookId);
     if (notebook === undefined) {
       throw new Error('notebook not found');
     }
-    const cell = this.getCellById(info.cellId) as CodeCell;
+    const cell = this.getCellById(cellId) as CodeCell;
     if (cell === undefined) {
       throw new Error('cell not found');
     }
-    const widget = new DashboardWidget({ notebook, cell });
+    const widget = new DashboardWidget({ notebook, cell, notebookId, cellId });
+
     widget.id = info.widgetId;
     widget.node.style.left = `${info.left}px`;
     widget.node.style.top = `${info.top}px`;
@@ -217,11 +220,18 @@ export class Widgetstore extends Litestore {
   }
 
   createPlaceholderWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
+    const { notebookId, cellId } = info;
+
     const notebook = this.getNotebookById(info.notebookId);
     if (notebook === undefined) {
       throw new Error('notebook not found');
     }
-    const widget = new DashboardWidget({ notebook, placeholder: true });
+    const widget = new DashboardWidget({
+      notebook,
+      notebookId,
+      cellId,
+      placeholder: true,
+    });
 
     widget.id = info.widgetId;
     widget.node.style.left = `${info.left}px`;
