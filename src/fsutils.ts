@@ -36,8 +36,8 @@ export function dashboard2file(dashboard: Dashboard, content: any) {
  *
  * @param dashboard - dashboard with its path to be renamed
  */
-export function renameDashboardFile(dashboard: Dashboard) {
-  const newPath = '/' + dashboard.getName() + '.dashboard';
+export function renameDashboardFile(name: string, dashboard: Dashboard) {
+  const newPath = '/' + name + '.dashboard';
   dashboard.contents.rename(dashboard.path, newPath);
   dashboard.path = newPath;
 }

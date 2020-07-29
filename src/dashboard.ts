@@ -2,6 +2,8 @@ import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
 import { CodeCell } from '@jupyterlab/cells';
 
+import { filter, each } from '@lumino/algorithm';
+
 import { MainAreaWidget, WidgetTracker } from '@jupyterlab/apputils';
 
 import { Widget } from '@lumino/widgets';
@@ -24,14 +26,13 @@ import { createSaveButton } from './toolbar';
 
 import { Widgetstore } from './widgetstore';
 
-import {
-  addCellId,
-  addNotebookId,
-  loadFileAsString,
-  getPathFromNotebookId,
-} from './utils';
+import { getPathFromNotebookId } from './utils';
 
-import { DashboardSpec, DASHBOARD_VERSION, WidgetInfo } from './file';
+import { dashboard2file, renameDashboardFile } from './fsutils';
+
+import { addCellId, addNotebookId, getCellById } from './utils';
+
+import { DASHBOARD_VERSION, WidgetInfo, DashboardSpec } from './file';
 
 import { newfile } from './fsutils';
 
@@ -281,17 +282,6 @@ export class DashboardArea extends Widget {
     this._dbLayout.redo();
   }
 
-  /**
-   * Saves the dashboard to file.
-   *
-   * @param path - file path to save the dashboard to.
-   *
-   * @throws an error if saving fails.
-   */
-  save(path: string): void {
-    this._dbLayout.save(path);
-  }
-
   // Convenient alias for layout so I don't have to type
   // (this.layout as DashboardLayout) every time.
   private _dbLayout: DashboardLayout;
@@ -304,6 +294,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
     const { notebookTracker, content, outputTracker, panel } = options;
+    const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
     const contents = new ContentsManager();
 
@@ -322,11 +313,13 @@ export class Dashboard extends MainAreaWidget<Widget> {
     });
     this._dbArea = this.content as DashboardArea;
 
-    //creates and attachs a new untitled .dashboard file to dashboard
-    newfile(contents).then((f) => {
-      this._file = f;
-      this._path = this._file.path;
-    });
+    if (!restore) {
+      //creates and attachs a new untitled .dashboard file to dashboard
+      newfile(contents).then((f) => {
+        this._file = f;
+        this._path = this._file.path;
+      });
+    }
 
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
@@ -343,16 +336,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
     // Adds save button to dashboard toolbar.
     this.toolbar.addItem('save', createSaveButton(this, panel));
 
-    // TODO: Figure out if this is worth it. Right now it's disabled to prevent
-    // double updating, and I figure manually calling this.update() whenever the
-    // widgetstore is modified isn't so bad.
-    //
-    // Attach listener to update on table changes.
-    // this._store.listenTable(
-    //   { schema: Widgetstore.WIDGET_SCHEMA },
-    //   this.update,
-    //   this
-    // );
+    if (restore) {
+      this.updateLayoutFromWidgetstore();
+    }
   }
 
   /**
@@ -377,7 +363,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    */
   public set path(v: string) {
-    this.path = v;
+    this._path = v;
   }
 
   /**
@@ -501,29 +487,89 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    * @throws an error if saving fails.
    */
-  save(path: string): void {
-    this._dbArea.save(path);
+  save(notebookTracker: INotebookTracker): void {
+    // Get all widgets that haven't been removed.
+    const records = filter(
+      this._store.getWidgets(),
+      (widget) => widget.widgetId && !widget.removed
+    );
+
+    const file: DashboardSpec = {
+      version: DASHBOARD_VERSION,
+      dashboardHeight: (this._dbArea.layout as DashboardLayout).height,
+      dashboardWidth: (this._dbArea.layout as DashboardLayout).width,
+      paths: {},
+      outputs: {},
+    };
+
+    each(records, (record) => {
+      const notebookId = record.notebookId;
+      const path = getPathFromNotebookId(notebookId, notebookTracker);
+
+      if (path === undefined) {
+        throw new Error(
+          `Notebook path for notebook with id ${notebookId} not found`
+        );
+      }
+
+      if (file.paths[path] !== undefined && file.paths[path] !== notebookId) {
+        throw new Error(`Conflicting paths for same notebook id ${notebookId}`);
+      }
+
+      file.paths[path] = notebookId;
+
+      if (file.outputs[notebookId] === undefined) {
+        file.outputs[notebookId] = [];
+      }
+
+      file.outputs[notebookId].push({
+        cellId: record.cellId,
+        top: record.top,
+        left: record.left,
+        width: record.width,
+        height: record.height,
+      });
+    });
+
+    const fileName = this._name;
+    renameDashboardFile(fileName, this);
+    dashboard2file(this, file);
   }
 
   /**
    * Load a dashboard from a file.
    *
-   * UNFINISHED!!
+   * @param path - the path to save to.
+   *
+   * @param notebookTracker - the current NotebookTracker.
+   *
+   * @param outputTracker - the current outputTracker.
+   *
+   * @returns - the created Dashboard.
+   *
+   * @throws - an error if the dashboard file is not well-formated, notebooks
+   * are missing, or there is an issue reading them.
    */
-  static load(
+  static async load(
     path: string,
     notebookTracker: INotebookTracker,
-    outputTracker: WidgetTracker<DashboardWidget>,
-    panel: NotebookPanel
-  ): Dashboard {
-    const fileText = loadFileAsString(path);
+    outputTracker: WidgetTracker<DashboardWidget>
+  ): Promise<Dashboard> {
+    // Create the contentsManager for opening/reading the dashboard file.
+    const contentsManager = new ContentsManager();
+
+    // Promise containing the file text.
+    const filePromise = await contentsManager.get(path);
+    const fileText = filePromise.content as string;
 
     if (fileText === undefined) {
       throw new Error(`Error reading file at ${path}`);
     }
 
+    // File text as a JSOn object.
     const parsed = JSON.parse(fileText);
 
+    // Validate version information.
     if (parsed.version === undefined) {
       throw new Error("Dashboard file missing required field 'version'");
     } else if (isNaN(+parsed.version)) {
@@ -534,69 +580,95 @@ export class Dashboard extends MainAreaWidget<Widget> {
       );
     }
 
+    // Validate notebook paths.
     if (parsed.paths === undefined) {
       throw new Error("Dashboard file missing required field 'paths'");
-    } else if (!Array.isArray(parsed.paths)) {
-      throw new Error('Paths field is not an array');
     }
 
-    for (const [notebookPath, notebookId] of Object.entries(parsed.paths)) {
-      if (notebookId === undefined) {
-        throw new Error(`No notebook id for notebook at ${notebookPath}`);
-      }
+    // for (const [notebookPath, notebookId] of Object.entries(parsed.paths)) {
+    //   if (notebookId === undefined) {
+    //     throw new Error(`No notebook id for notebook at ${notebookPath}`);
+    //   }
 
-      const maybeNotebook = loadFileAsString(path);
+    //   const maybeNotebook = loadFileAsString(path);
 
-      if (maybeNotebook === undefined) {
-        // TODO: Replace with file picker.
-        throw new Error(`Error reading notebook at ${notebookPath}`);
-      }
+    //   if (maybeNotebook === undefined) {
+    //     // TODO: Replace with file picker.
+    //     throw new Error(`Error reading notebook at ${notebookPath}`);
+    //   }
 
-      const parsedMaybeNotebook = JSON.parse(maybeNotebook);
+    //   const parsedMaybeNotebook = JSON.parse(maybeNotebook);
 
-      const maybeNotebookId = parsedMaybeNotebook.metadata?.presto.id;
+    //   const maybeNotebookId = parsedMaybeNotebook.metadata?.presto.id;
 
-      if (maybeNotebookId === undefined) {
-        throw new Error(`No notebook id found for ${notebookPath}`);
-      }
+    //   if (maybeNotebookId === undefined) {
+    //     throw new Error(`No notebook id found for ${notebookPath}`);
+    //   }
 
-      if (maybeNotebookId !== notebookId) {
-        throw new Error(
-          `Notebook id of ${notebookPath} (${maybeNotebookId}) does not match dashboard file notebook id (${notebookId})`
-        );
-      }
-    }
+    //   if (maybeNotebookId !== notebookId) {
+    //     throw new Error(
+    //       `Notebook id of ${notebookPath} (${maybeNotebookId}) does not match dashboard file notebook id (${notebookId})`
+    //     );
+    //   }
+    // }
 
     const paths = parsed.paths;
 
-    for (const notebookPath of paths) {
+    // Open required notebooks.
+    for (const [notebookPath, notebookId] of Object.entries(paths)) {
       // Replace this with code to open a notebook.
-      console.log('opening notebook at ', notebookPath);
+      console.log('opening notebook at ', notebookPath, notebookId);
     }
 
+    // Validate outputs field
     if (parsed.outputs === undefined) {
       throw new Error("Dashboard file missing required field 'outputs'");
     }
 
+    // Create a new widgetstore.
     const store = new Widgetstore({ id: 0, notebookTracker });
 
     for (const [notebookId, outputs] of Object.entries(parsed.outputs)) {
+      // Make sure each id corresponds to an array of outputs.
       if (!Array.isArray(outputs)) {
         throw new Error(`Outputs for notebook ${notebookId} are not an array`);
       }
-      for (const output of outputs) {
-        Dashboard.verifyOutput(notebookId, output);
-        const info: Widgetstore.WidgetInfo = {
-          ...output,
-          notebookId,
-          widgetId: DashboardWidget.createDashboardWidgetId(),
-        };
+      for (const _output of outputs) {
+        const output: WidgetInfo = _output;
+
+        // Validate output information
+        Dashboard.validateOutput(notebookId, output);
+        let info: Widgetstore.WidgetInfo;
+
+        const cell = getCellById(output.cellId, notebookTracker);
+        // Check if cell id exists in the given notebook.
+        if (cell === undefined) {
+          // If cell id doesn't exist, create a red "placeholder" widget in its spot.
+          info = {
+            ...output,
+            notebookId,
+            widgetId: DashboardWidget.createDashboardWidgetId(),
+            missing: true,
+          };
+        } else {
+          // Create widget based on position, notebookId, and cellId.
+          info = {
+            ...output,
+            notebookId,
+            widgetId: DashboardWidget.createDashboardWidgetId(),
+          };
+        }
+        // Add the widget to the widgetstore.
         store.addWidget(info);
       }
     }
 
     const name = parsed.name;
+    const panel = notebookTracker.currentWidget;
 
+    contentsManager.dispose();
+
+    // Create and return a notebook based on the contents of the widgetstore.
     return new Dashboard({
       name,
       notebookTracker,
@@ -606,7 +678,16 @@ export class Dashboard extends MainAreaWidget<Widget> {
     });
   }
 
-  static verifyOutput(notebookId: string, output: any): void {
+  /**
+   * Makes sure an output entry from a dashboard file is well-formated.
+   *
+   * @param notebookId - id of output's notebook for error messages.
+   *
+   * @param output - output to verify.
+   *
+   * @throws - an error if the entry is not well-formated.
+   */
+  static validateOutput(notebookId: string, output: any): void {
     if (output.left === undefined) {
       throw new Error(
         `Output of notebook ${notebookId} is missing the 'left' field`

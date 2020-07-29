@@ -83,8 +83,8 @@ export class DashboardButton
               notebookId: addNotebookId(panel),
               cellId: addCellId(cell),
               ...p,
-              changed: true,
               removed: false,
+              missing: false,
             };
             dashboard.updateWidgetInfo(info);
           });

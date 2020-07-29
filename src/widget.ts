@@ -51,18 +51,23 @@ export class DashboardWidget extends Panel {
     // Makes widget focusable for WidgetTracker
     this.node.setAttribute('tabindex', '-1');
 
-    // Wait for the notebook to be loaded before cloning the output area.
-    void this._notebook.context.ready.then(() => {
-      if (!this._cell) {
-        this._cell = this._notebook.content.widgets[this._index] as CodeCell;
-      }
-      if (!this._cell || this._cell.model.type !== 'code') {
-        this.dispose();
-        return;
-      }
-      const clone = this._cell.cloneOutputArea();
-      this.addWidget(clone);
-    });
+    if (options.placeholder) {
+      console.log('creating placeholder');
+      this.node.style.background = 'red';
+    } else {
+      // Wait for the notebook to be loaded before cloning the output area.
+      void this._notebook.context.ready.then(() => {
+        if (!this._cell) {
+          this._cell = this._notebook.content.widgets[this._index] as CodeCell;
+        }
+        if (!this._cell || this._cell.model.type !== 'code') {
+          this.dispose();
+          return;
+        }
+        const clone = this._cell.cloneOutputArea();
+        this.addWidget(clone);
+      });
+    }
 
     const resizer = document.createElement('div');
     resizer.classList.add('pr-Resizer');
@@ -356,7 +361,13 @@ namespace DashboardWidget {
      * of the cell for when the notebook is loaded.
      */
     index?: number;
+
+    /**
+     * Whether the widget is a placeholder for a missing cell.
+     */
+    placeholder?: boolean;
   }
+
   export type MouseMode = 'drag' | 'resize' | 'none';
 }
 

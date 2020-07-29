@@ -61,7 +61,6 @@ export class Widgetstore extends Litestore {
       {
         ...info,
         removed: false,
-        changed: true,
       }
     );
 
@@ -102,10 +101,7 @@ export class Widgetstore extends Litestore {
       return false;
     }
 
-    this.updateRecord(recordLoc, {
-      ...pos,
-      changed: true,
-    });
+    this.updateRecord(recordLoc, pos);
 
     if (!this._inBatch) {
       this.endTransaction();
@@ -144,7 +140,6 @@ export class Widgetstore extends Litestore {
       },
       {
         removed: true,
-        changed: true,
       }
     );
 
@@ -171,15 +166,6 @@ export class Widgetstore extends Litestore {
       return undefined;
     }
     return record as Widgetstore.WidgetInfo;
-  }
-
-  /**
-   * Returns an iterator over contained widgets marked as changed.
-   */
-  getChangedWidgets(): IIterator<Record<WidgetSchema>> {
-    const table = this.get(Widgetstore.WIDGET_SCHEMA);
-    const changed = filter(table, (record) => record.changed);
-    return changed;
   }
 
   getWidgets(): IIterator<Record<WidgetSchema>> {
@@ -230,6 +216,22 @@ export class Widgetstore extends Litestore {
     return widget;
   }
 
+  createPlaceholderWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
+    const notebook = this.getNotebookById(info.notebookId);
+    if (notebook === undefined) {
+      throw new Error('notebook not found');
+    }
+    const widget = new DashboardWidget({ notebook, placeholder: true });
+
+    widget.id = info.widgetId;
+    widget.node.style.left = `${info.left}px`;
+    widget.node.style.top = `${info.top}px`;
+    widget.node.style.width = `${info.width}px`;
+    widget.node.style.height = `${info.height}px`;
+
+    return widget;
+  }
+
   /**
    * Starts a batch transfer. Functions modifying widgets won't start or end
    * a new transaction.
@@ -271,9 +273,8 @@ export namespace Widgetstore {
       left: Fields.Number(),
       width: Fields.Number(),
       height: Fields.Number(),
-      // changed field is currently unused/defunct.
-      changed: Fields.Boolean(),
       removed: Fields.Boolean(),
+      missing: Fields.Boolean(),
     },
   };
 
@@ -328,14 +329,14 @@ export namespace Widgetstore {
     height: number;
 
     /**
-     * Whether the widget has been changed since last read.
-     */
-    changed?: boolean;
-
-    /**
      * Whether the widget has been removed.
      */
     removed?: boolean;
+
+    /**
+     * Whether the cellId fails to corelate with an output (used when loading from file).
+     */
+    missing?: boolean;
   };
 
   export type WidgetPosition = {
