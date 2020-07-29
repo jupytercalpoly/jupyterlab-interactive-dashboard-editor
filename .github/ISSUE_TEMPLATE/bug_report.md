@@ -24,4 +24,4 @@ If applicable, add screenshots/gifs to help explain your problem.
  - Browser [e.g. Safari 13.1.1]
  - JupyterLab Version [e.g. 2.1.4]
 
-##Addition info
+## Addition info
