@@ -247,6 +247,7 @@ export function createRestartButton(
       let widget = widgets.next() as DashboardWidget;
       while (widget) {
         notebooks.add(widget.notebook);
+        console.log("notebook here one", widget.notebook);
         widget = widgets.next() as DashboardWidget;
       }
       notebooks.forEach(nb => void sessionContextDialogs.restart(nb.sessionContext));      
