@@ -35,16 +35,19 @@ export class DashboardButton
   _outputTracker: WidgetTracker<DashboardWidget>;
   _dashboardTracker: WidgetTracker<Dashboard>;
   _tracker: INotebookTracker;
+  _clipboard: Set<DashboardWidget>
   constructor(
     app: JupyterFrontEnd,
     outputTracker: WidgetTracker<DashboardWidget>,
     dashboardTracker: WidgetTracker<Dashboard>,
-    tracker: INotebookTracker
+    tracker: INotebookTracker,
+    clipboard: Set<DashboardWidget>
   ) {
     this._app = app;
     this._outputTracker = outputTracker;
     this._dashboardTracker = dashboardTracker;
     this._tracker = tracker;
+    this._clipboard = clipboard;
   }
 
   createNew(
@@ -57,6 +60,7 @@ export class DashboardButton
         notebookTracker: this._tracker,
         outputTracker,
         panel,
+        clipboard: this._clipboard
       });
       const currentNotebook = this._tracker.currentWidget;
       if (currentNotebook) {

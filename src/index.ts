@@ -67,6 +67,9 @@ const extension: JupyterFrontEndPlugin<void> = {
       namespace: 'dashboard-outputs',
     });
 
+    //Clipboard for DashboardWidgets
+    const clipboard = new Set<DashboardWidget>();
+
     addCommands(app, tracker, dashboardTracker, outputTracker);
 
     // Adds commands to code cell context menu.
@@ -140,7 +143,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new DashboardButton(app, outputTracker, dashboardTracker, tracker)
+      new DashboardButton(app, outputTracker, dashboardTracker, tracker, clipboard)
     );
   },
 };

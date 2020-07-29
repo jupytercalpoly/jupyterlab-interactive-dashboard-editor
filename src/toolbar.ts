@@ -1,10 +1,10 @@
-import { NotebookPanel } from '@jupyterlab/notebook';
+import { NotebookPanel, NotebookActions} from '@jupyterlab/notebook';
 
 import { Widget } from '@lumino/widgets';
 
-import { ToolbarButton } from '@jupyterlab/apputils';
+import { ToolbarButton, WidgetTracker, sessionContextDialogs} from '@jupyterlab/apputils';
 
-import { Cell } from '@jupyterlab/cells';
+import { Cell, CodeCell } from '@jupyterlab/cells';
 
 import { saveIcon, refreshIcon, undoIcon, cutIcon, copyIcon, pasteIcon, runIcon, stopIcon, fastForwardIcon} from '@jupyterlab/ui-components';
 
@@ -14,14 +14,18 @@ import { DashboardWidget } from './widget';
 
 import { Icons} from './icons';
 
-export function buildToolbar(dashboard: Dashboard, panel: NotebookPanel){
+import { Widgetstore } from './widgetstore';
+
+import { addCellId, addNotebookId } from './utils';
+
+export function buildToolbar(dashboard: Dashboard, panel: NotebookPanel, tracker: WidgetTracker<DashboardWidget>, clipboard: Set<DashboardWidget>){
   dashboard.toolbar.addItem('save', createSaveButton(dashboard, panel));
   dashboard.toolbar.addItem('undo', createUndoButton(dashboard, panel));
   dashboard.toolbar.addItem('redo', createRedoButton(dashboard, panel));
-  dashboard.toolbar.addItem('cut', createCutButton(dashboard, panel));
-  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel));
-  dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel));
-  dashboard.toolbar.addItem('run', createRunButton(dashboard, panel));
+  dashboard.toolbar.addItem('cut', createCutButton(dashboard, panel, tracker, clipboard));
+  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel, tracker, clipboard));
+  dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel, clipboard));
+  dashboard.toolbar.addItem('run', createRunButton(dashboard, panel, tracker));
   dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel));
   dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
   dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
@@ -107,20 +111,17 @@ export function createRedoButton(
 
 export function createCutButton(
   dashboard: Dashboard,
-  panel: NotebookPanel
+  panel: NotebookPanel, 
+  outputTracker: WidgetTracker<DashboardWidget>,
+  clipboard: Set<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
     icon: cutIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
-        widget = widgets.next() as DashboardWidget;
-      }
-      //saving the cell metadata needs to save notebook?
+      clipboard.clear();
+      const widget = outputTracker.currentWidget;
+      clipboard.add(widget);
+      dashboard.deleteWidget(widget);
     },
     tooltip: 'Cut the selected outputs',
   });
@@ -133,24 +134,38 @@ export function createCutButton(
 
 export function createCopyButton(
   dashboard: Dashboard,
-  panel: NotebookPanel
+  panel: NotebookPanel,
+  outputTracker: WidgetTracker<DashboardWidget>,
+  clipboard: Set<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
     icon: copyIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
-        widget = widgets.next() as DashboardWidget;
-      }
-      //saving the cell metadata needs to save notebook?
+      clipboard.clear();
+      const widget = outputTracker.currentWidget;
+      clipboard.add(widget);
     },
     tooltip: 'Copy the selected outputs',
   });
   return button;
+}
+
+function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
+  const info: Widgetstore.WidgetInfo = {
+    widgetId: DashboardWidget.createDashboardWidgetId(),
+    notebookId: addNotebookId(widget.notebook),
+    cellId: addCellId(widget.cell),
+    left: 0,
+    top: 0,
+    width: Widgetstore.DEFAULT_WIDTH,
+    height: Widgetstore.DEFAULT_HEIGHT,
+    changed: true,
+    removed: false,
+  };
+
+  // Should probably try to avoid calling methods of the parent.
+  dashboard.addWidget(info);
+  widget.show();
 }
 
 /**
@@ -159,20 +174,13 @@ export function createCopyButton(
 
 export function createPasteButton(
   dashboard: Dashboard,
-  panel: NotebookPanel
+  panel: NotebookPanel,
+  clipboard: Set<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
     icon: pasteIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
-        widget = widgets.next() as DashboardWidget;
-      }
-      //saving the cell metadata needs to save notebook?
+      clipboard.forEach(widget => pasteWidget(dashboard, widget));
     },
     tooltip: 'Paste outputs from the clipboard',
   });
@@ -185,20 +193,15 @@ export function createPasteButton(
 
 export function createRunButton(
   dashboard: Dashboard,
-  panel: NotebookPanel
+  panel: NotebookPanel,
+  tracker: WidgetTracker<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
     icon: runIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
-      while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
-        widget = widgets.next() as DashboardWidget;
-      }
-      //saving the cell metadata needs to save notebook?
+      const cell = (tracker.currentWidget.cell as CodeCell);
+      const sessionContext = tracker.currentWidget.notebook.sessionContext;
+      CodeCell.execute(cell, sessionContext);
     },
     tooltip: 'Run the selected outputs',
   });
@@ -218,13 +221,10 @@ export function createStopButton(
     onClick: (): void => {
       const widgets = dashboard.content.children().iter();
       let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
       while (widget) {
-        // cell = widget.cell as Cell;
-        // widget.notebook.
+        void widget.notebook.sessionContext.session?.kernel?.interrupt();
         widget = widgets.next() as DashboardWidget;
       }
-      //saving the cell metadata needs to save notebook?
     },
     tooltip: 'Interrupt all kernels',
   });
@@ -242,15 +242,14 @@ export function createRestartButton(
   const button = new ToolbarButton({
     icon: refreshIcon,
     onClick: (): void => {
-      // const widgets = dashboard.content.children().iter();
-      // let widget = widgets.next() as DashboardWidget;
-      // // let cell: Cell;
-      // while (widget) {
-      //   // cell = widget.cell as Cell;
-      //   // widget.notebook.
-      //   widget = widgets.next() as DashboardWidget;
-      // }
-      //saving the cell metadata needs to save notebook?
+      const notebooks = new Set<NotebookPanel>();
+      const widgets = dashboard.content.children().iter();
+      let widget = widgets.next() as DashboardWidget;
+      while (widget) {
+        notebooks.add(widget.notebook);
+        widget = widgets.next() as DashboardWidget;
+      }
+      notebooks.forEach(nb => void sessionContextDialogs.restart(nb.sessionContext));      
     },
     tooltip: 'Restart all kernels',
   });
@@ -268,16 +267,22 @@ export function createRunAllButton(
   const button = new ToolbarButton({
     icon: fastForwardIcon,
     onClick: (): void => {
+      const notebooks = new Set<NotebookPanel>();
       const widgets = dashboard.content.children().iter();
       let widget = widgets.next() as DashboardWidget;
-      // let cell: Cell;
       while (widget) {
-        console.log(widget.notebook);
-        // cell = widget.cell as Cell;
-        // widget.notebook.
+        notebooks.add(widget.notebook);
+        console.log(widget);
         widget = widgets.next() as DashboardWidget;
       }
-      //saving the cell metadata needs to save notebook?
+
+      console.log("notebooks", notebooks);
+      notebooks.forEach(nb => void sessionContextDialogs.restart(nb.sessionContext)
+      .then(restarted => {
+        if (restarted) {
+          void NotebookActions.runAll(nb.content, nb.sessionContext);
+        }
+      }));
     },
     tooltip: 'Restart all kernels, then re-run all notebooks',
   });

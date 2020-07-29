@@ -186,7 +186,7 @@ export class DashboardArea extends Widget {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const { notebookTracker, content, outputTracker, panel } = options;
+    const { notebookTracker, content, outputTracker, panel, clipboard} = options;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
     const contents = new ContentsManager();
 
@@ -223,7 +223,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.node.setAttribute('style', 'overflow:auto');
 
     // Adds buttons to dashboard toolbar.
-    buildToolbar(this, panel);
+    buildToolbar(this, panel, outputTracker, clipboard);
 
     // TODO: Figure out if this is worth it. Right now it's disabled to prevent
     // double updating, and I figure manually calling this.update() whenever the
@@ -388,5 +388,10 @@ export namespace Dashboard {
      * Optional widgetstore to restore state from.
      */
     store?: Widgetstore;
+
+    /**
+     * Optional DashboardWidget Array for cut, copy and paste
+     */
+    clipboard: Set<DashboardWidget>;
   }
 }
