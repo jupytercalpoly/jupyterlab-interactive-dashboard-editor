@@ -1,4 +1,4 @@
-import { filter, IIterator, each } from '@lumino/algorithm';
+import { filter, IIterator } from '@lumino/algorithm';
 
 import { Litestore } from './litestore';
 
@@ -10,9 +10,7 @@ import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 
 import { Cell, CodeCell } from '@jupyterlab/cells';
 
-import { getNotebookById, getCellById, getPathFromNotebookId } from './utils';
-
-import { DashboardFile, WidgetInfo, DASHBOARD_VERSION } from './file';
+import { getNotebookById, getCellById } from './utils';
 
 /**
  * Alias for widget schema type.
@@ -63,7 +61,6 @@ export class Widgetstore extends Litestore {
       {
         ...info,
         removed: false,
-        changed: true,
       }
     );
 
@@ -104,10 +101,7 @@ export class Widgetstore extends Litestore {
       return false;
     }
 
-    this.updateRecord(recordLoc, {
-      ...pos,
-      changed: true,
-    });
+    this.updateRecord(recordLoc, pos);
 
     if (!this._inBatch) {
       this.endTransaction();
@@ -146,7 +140,6 @@ export class Widgetstore extends Litestore {
       },
       {
         removed: true,
-        changed: true,
       }
     );
 
@@ -173,15 +166,6 @@ export class Widgetstore extends Litestore {
       return undefined;
     }
     return record as Widgetstore.WidgetInfo;
-  }
-
-  /**
-   * Returns an iterator over contained widgets marked as changed.
-   */
-  getChangedWidgets(): IIterator<Record<WidgetSchema>> {
-    const table = this.get(Widgetstore.WIDGET_SCHEMA);
-    const changed = filter(table, (record) => record.changed);
-    return changed;
   }
 
   getWidgets(): IIterator<Record<WidgetSchema>> {
@@ -214,16 +198,46 @@ export class Widgetstore extends Litestore {
    * widgetinfo object.
    */
   createWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
+    const { notebookId, cellId } = info;
+
+    const notebook = this.getNotebookById(notebookId);
+    if (notebook === undefined) {
+      throw new Error('notebook not found');
+    }
+    const cell = this.getCellById(cellId) as CodeCell;
+    if (cell === undefined) {
+      throw new Error('cell not found');
+    }
+    const widget = new DashboardWidget({ notebook, cell, notebookId, cellId });
+
+    widget.id = info.widgetId;
+    widget.node.style.left = `${info.left}px`;
+    widget.node.style.top = `${info.top}px`;
+    widget.node.style.width = `${info.width}px`;
+    widget.node.style.height = `${info.height}px`;
+
+    return widget;
+  }
+
+  createPlaceholderWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
+    const { notebookId, cellId } = info;
+
     const notebook = this.getNotebookById(info.notebookId);
     if (notebook === undefined) {
       throw new Error('notebook not found');
     }
-    const cell = this.getCellById(info.cellId) as CodeCell;
-    if (cell === undefined) {
-      throw new Error('cell not found');
-    }
-    const widget = new DashboardWidget({ notebook, cell });
+    const widget = new DashboardWidget({
+      notebook,
+      notebookId,
+      cellId,
+      placeholder: true,
+    });
+
     widget.id = info.widgetId;
+    widget.node.style.left = `${info.left}px`;
+    widget.node.style.top = `${info.top}px`;
+    widget.node.style.width = `${info.width}px`;
+    widget.node.style.height = `${info.height}px`;
 
     return widget;
   }
@@ -251,54 +265,6 @@ export class Widgetstore extends Litestore {
     this.endTransaction();
   }
 
-  /**
-   * Saves the store to file.
-   *
-   * @param path - file path to save the store to.
-   *
-   * @throws an error if saving fails.
-   */
-  save(path: string): void {
-    console.log('saving to', path);
-
-    // Get all widgets that haven't been removed or un-added.
-    const widgets = filter(
-      this.getWidgets(),
-      (widget) => widget.widgetId && !widget.removed
-    );
-
-    const file: DashboardFile = {
-      version: DASHBOARD_VERSION,
-      gridSpec: {
-        width: 0,
-        height: 0,
-        padX: 0,
-        padY: 0,
-      },
-      paths: {},
-      outputs: {},
-    };
-
-    each(widgets, (widget) => {
-      // Currently just returns a dummy path.
-      const widgetInfo: WidgetInfo = {
-        id: widget.cellId,
-        left: widget.left,
-        top: widget.top,
-        width: widget.width,
-        height: widget.height,
-      };
-      const path = getPathFromNotebookId(widget.notebookId);
-      file.paths[path] = widget.notebookId;
-      if (file.outputs[widget.notebookId] === undefined) {
-        file.outputs[widget.notebookId] = [];
-      }
-      file.outputs[widget.notebookId].push(widgetInfo);
-    });
-
-    console.log(file);
-  }
-
   private _notebookTracker: INotebookTracker;
   private _inBatch: boolean;
 }
@@ -317,9 +283,8 @@ export namespace Widgetstore {
       left: Fields.Number(),
       width: Fields.Number(),
       height: Fields.Number(),
-      // changed field is currently unused/defunct.
-      changed: Fields.Boolean(),
       removed: Fields.Boolean(),
+      missing: Fields.Boolean(),
     },
   };
 
@@ -374,14 +339,14 @@ export namespace Widgetstore {
     height: number;
 
     /**
-     * Whether the widget has been changed since last read.
-     */
-    changed?: boolean;
-
-    /**
      * Whether the widget has been removed.
      */
     removed?: boolean;
+
+    /**
+     * Whether the cellId fails to corelate with an output (used when loading from file).
+     */
+    missing?: boolean;
   };
 
   export type WidgetPosition = {

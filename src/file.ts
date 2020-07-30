@@ -3,36 +3,21 @@ export const DASHBOARD_VERSION = 1;
 /**
  * A type that's serialized to create a dashboard file.
  */
-export type DashboardFile = {
+export type DashboardSpec = {
   /**
    * The dashboard spec version.
    */
   version: number;
 
   /**
-   * Information about the dashboard grid.
+   * The width of the dashboad in pixels (0 if unconstrained).
    */
-  gridSpec: {
-    /**
-     * Unit width of the grid.
-     */
-    width: number;
+  dashboardWidth: number;
 
-    /**
-     * Unit height of the grid.
-     */
-    height: number;
-
-    /**
-     * Default width padding.
-     */
-    padX: number;
-
-    /**
-     * Default height padding.
-     */
-    padY: number;
-  };
+  /**
+   * The height of the dashboard in pixels (0 if unconstrained).
+   */
+  dashboardHeight: number;
 
   /**
    * A map from notebook paths to IDs.
@@ -52,7 +37,7 @@ export type WidgetInfo = {
   /**
    * The cell ID the widget is created from.
    */
-  id: string;
+  cellId: string;
 
   /**
    * The top edge position of the widget.

@@ -14,13 +14,11 @@ import {
 
 import { Widget } from '@lumino/widgets';
 
-import { Dashboard, DashboardArea } from './dashboard';
+import { Dashboard } from './dashboard';
 
 import { DashboardWidget } from './widget';
 
 import { DashboardButton } from './button';
-
-import { MessageLoop } from '@lumino/messaging';
 
 // HTML element classes
 
@@ -45,6 +43,10 @@ namespace CommandIDs {
   export const undo = 'dashboard:undo';
 
   export const redo = 'dashboard:redo';
+
+  export const save = 'dashboard:save';
+
+  export const load = 'dashboard:load';
 }
 
 const extension: JupyterFrontEndPlugin<void> = {
@@ -70,7 +72,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     //Clipboard for DashboardWidgets
     const clipboard = new Set<DashboardWidget>();
 
-    addCommands(app, tracker, dashboardTracker, outputTracker);
+    addCommands(app, tracker, dashboardTracker, outputTracker, clipboard);
 
     // Adds commands to code cell context menu.
     // Puts command entries in a weird place in the right-click menu--
@@ -81,6 +83,18 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.printTracker,
       selector: '.jp-Notebook .jp-CodeCell',
       rank: 13,
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.save,
+      selector: '.pr-JupyterDashboard',
+      rank: 3,
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.load,
+      selector: '.jp-Notebook',
+      rank: 15,
     });
 
     app.contextMenu.addItem({
@@ -105,18 +119,6 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.deleteOutput,
       selector: '.pr-DashboardWidget',
       rank: 0,
-    });
-
-    app.contextMenu.addItem({
-      command: 'printFile',
-      selector: '.pr-JupyterDashboard',
-      rank: 5,
-    });
-
-    app.contextMenu.addItem({
-      command: 'resize',
-      selector: '.pr-JupyterDashboard',
-      rank: 6,
     });
 
     // Add commands to key bindings
@@ -152,84 +154,10 @@ function addCommands(
   app: JupyterFrontEnd,
   tracker: INotebookTracker,
   dashboardTracker: WidgetTracker<Dashboard>,
-  outputTracker: WidgetTracker<DashboardWidget>
+  outputTracker: WidgetTracker<DashboardWidget>,
+  clipboard: Set<DashboardWidget>
 ): void {
   const { commands, shell } = app;
-
-  /**
-   * Get the current widget and activate unless the args specify otherwise.
-   * jupyterlab/packages/notebook-extension/src/index.ts
-   */
-  // function getCurrentNotebook(
-  //   args: ReadonlyPartialJSONObject
-  // ): NotebookPanel | null {
-  //   const widget = tracker.currentWidget;
-  //   const activate = args['activate'] !== false;
-
-  //   if (activate && widget) {
-  //     shell.activateById(widget.id);
-  //   }
-
-  //   return widget;
-  // }
-
-  /**
-   * Get the current notebook output wrapped in a DashboardWidget.
-   */
-  // function getCurrentWidget(currentNotebook: NotebookPanel): DashboardWidget {
-  //   if (!currentNotebook) {
-  //     return;
-  //   }
-  //   const cell = currentNotebook.content.activeCell as CodeCell;
-  //   const index = currentNotebook.content.activeCellIndex;
-
-  //   return new DashboardWidget({
-  //     notebook: currentNotebook,
-  //     cell,
-  //     index,
-  //   });
-  // }
-
-  /**
-   * Get the current Dashboard.
-   */
-  // function getCurrentDashboard(): Dashboard {
-  //   return dashboardTracker.currentWidget;
-  // }
-
-  // function createDashboard(): void {
-  //   const panel = getCurrentNotebook({ activate: false });
-  //   const dashboard = new Dashboard({ outputTracker, panel, notebookTracker: tracker});
-  //   panel.context.addSibling(dashboard, {
-  //     ref: panel.id,
-  //     mode: 'split-bottom',
-  //   });
-  //   dashboardTracker.add(dashboard);
-  // }
-
-  /**
-   * Inserts a widget into a dashboard.
-   */
-  // async function addWidget(
-  //   dashboard: Dashboard,
-  //   notebook: NotebookPanel,
-  //   cell: Cell
-  // ): Promise<void> {
-
-  //   const info: Widgetstore.WidgetInfo = {
-  //     widgetId: DashboardWidget.createDashboardWidgetId(),
-  //     notebookId: addNotebookId(notebook),
-  //     cellId: addCellId(cell),
-  //     top: 0,
-  //     left: 0,
-  //     width: Widgetstore.DEFAULT_WIDTH,
-  //     height: Widgetstore.DEFAULT_HEIGHT,
-  //     changed: true,
-  //     removed: false
-  //   }
-
-  //   dashboard.addWidget(info);
-  // }
 
   /**
    * Whether there is an active notebook.
@@ -262,6 +190,18 @@ function addCommands(
     return true;
   }
 
+  async function getPath(): Promise<string> {
+    const path = await showDialog({
+      title: 'Load Path',
+      body: new Private.PathHandler(),
+      focusNodeSelector: 'input',
+      buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Load' })],
+    }).then((result) => {
+      return result.value;
+    });
+    return path;
+  }
+
   /**
    * Deletes a selected DashboardWidget.
    */
@@ -269,6 +209,7 @@ function addCommands(
     label: 'Delete Output',
     execute: (args) => {
       const widget = outputTracker.currentWidget;
+      dashboardTracker.currentWidget.deleteWidgetInfo(widget);
       dashboardTracker.currentWidget.deleteWidget(widget);
     },
   });
@@ -349,17 +290,26 @@ function addCommands(
     isVisible: () => false,
   });
 
-  commands.addCommand('printFile', {
-    label: 'Print File',
-    execute: (args) => dashboardTracker.currentWidget.store.save('myPath'),
+  commands.addCommand(CommandIDs.save, {
+    label: 'Save Dashboard',
+    execute: (args) => dashboardTracker.currentWidget.save(tracker),
   });
 
-  commands.addCommand('resize', {
-    label: 'Resize',
-    execute: (args) => {
-      const msg = new Widget.ResizeMessage(1920, 1080);
-      const widget = dashboardTracker.currentWidget.content as DashboardArea;
-      MessageLoop.sendMessage(widget, msg);
+  commands.addCommand(CommandIDs.load, {
+    label: 'Load Dashboard',
+    execute: async (args) => {
+      const path = await getPath();
+      if (path === undefined) {
+        console.log('invalid path');
+        return;
+      }
+      const dashboard = await Dashboard.load(path, tracker, outputTracker, clipboard);
+      const currentNotebook = tracker.currentWidget;
+      currentNotebook.context.addSibling(dashboard, {
+        ref: currentNotebook.id,
+        mode: 'split-bottom',
+      });
+      dashboardTracker.add(dashboard);
     },
   });
 
@@ -385,6 +335,35 @@ function addCommands(
  * A namespace for private data.
  */
 namespace Private {
+  export class PathHandler extends Widget {
+    constructor() {
+      const node = document.createElement('div');
+
+      const nameTitle = document.createElement('label');
+      nameTitle.textContent = 'Load Path';
+      const path = document.createElement('input');
+
+      node.appendChild(nameTitle);
+      node.appendChild(path);
+
+      super({ node });
+    }
+
+    /**
+     * Get the input text node.
+     */
+    get inputNode(): HTMLInputElement {
+      return this.node.getElementsByTagName('input')[0] as HTMLInputElement;
+    }
+
+    /**
+     * Get the value of the widget.
+     */
+    getValue(): string {
+      return this.inputNode.value;
+    }
+  }
+
   /**
    * A widget used to rename dashboards.
    * jupyterlab/packages/docmanager/src/dialog.ts

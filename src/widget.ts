@@ -20,7 +20,9 @@ import { Drag } from '@lumino/dragdrop';
 
 import { shouldStartDrag } from './widgetdragutils';
 
-import { Dashboard } from './dashboard';
+import { DashboardArea } from './dashboard';
+
+import { getNotebookId, getCellId } from './utils';
 
 // HTML element classes
 
@@ -33,8 +35,6 @@ const DASHBOARD_WIDGET_MIME = 'pr-DashboardWidgetMine';
 
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
- * Currently just a slight modification of ClonedOutpuArea.
- * jupyterlab/packages/notebook-extension/src/index.ts
  */
 export class DashboardWidget extends Panel {
   /**
@@ -53,18 +53,36 @@ export class DashboardWidget extends Panel {
     // Makes widget focusable for WidgetTracker
     this.node.setAttribute('tabindex', '-1');
 
-    // Wait for the notebook to be loaded before cloning the output area.
-    void this._notebook.context.ready.then(() => {
-      if (!this._cell) {
-        this._cell = this._notebook.content.widgets[this._index] as CodeCell;
+    if (options.placeholder) {
+      this.node.style.background = 'red';
+      if (options.cellId === undefined) {
+        console.warn('DashboardWidget has no cell or cellId');
       }
-      if (!this._cell || this._cell.model.type !== 'code') {
-        this.dispose();
-        return;
-      }
-      const clone = this._cell.cloneOutputArea();
-      this.addWidget(clone);
-    });
+      this._cellId = options.cellId;
+    } else {
+      // Wait for the notebook to be loaded before cloning the output area.
+      void this._notebook.context.ready.then(() => {
+        if (!this._cell) {
+          this._cell = this._notebook.content.widgets[this._index] as CodeCell;
+        }
+        if (!this._cell || this._cell.model.type !== 'code') {
+          this.dispose();
+          return;
+        }
+        const clone = this._cell.cloneOutputArea();
+        this.addWidget(clone);
+      });
+
+      // Might have weird interactions where options.cellId !== actual cellId
+      this._cellId =
+        options.cellId !== undefined ? options.cellId : getCellId(options.cell);
+    }
+
+    // Might have weird interactions where options.notebookId !== actual notebookId
+    this._notebookId =
+      options.notebookId !== undefined
+        ? options.notebookId
+        : getNotebookId(options.notebook);
 
     const resizer = document.createElement('div');
     resizer.classList.add('pr-Resizer');
@@ -241,7 +259,10 @@ export class DashboardWidget extends Panel {
 
     this.node.style.width = `${newWidth}px`;
     this.node.style.height = `${newHeight}px`;
-    // Hacky way to clamp dimmensions to child widget dimmensions.
+  }
+
+  fitContent(): void {
+    // Hacky way to clamp dimensions to child widget dimensions.
     this.node.style.width = `${this.widgets[0].node.clientWidth}px`;
     this.node.style.height = `${this.widgets[0].node.clientHeight}px`;
   }
@@ -301,7 +322,8 @@ export class DashboardWidget extends Panel {
           height: parseInt(this.node.style.height, 10),
         };
         // FIXME: There has to be a better solution than this!
-        (this.parent.parent as Dashboard).moveWidget(this, pos);
+        (this.parent as DashboardArea).updateWidget(this, pos);
+        (this.parent as DashboardArea).updateInfoFromWidget(this);
         break;
       }
       default:
@@ -313,6 +335,14 @@ export class DashboardWidget extends Panel {
     window.removeEventListener('mouseup', this);
 
     window.removeEventListener('mousemove', this);
+  }
+
+  get cellId(): string {
+    return this._cellId;
+  }
+
+  get notebookId(): string {
+    return this._notebookId;
   }
 
   static createDashboardWidgetId(): string {
@@ -332,6 +362,8 @@ export class DashboardWidget extends Panel {
   } | null = null;
   private _drag: Drag | null = null;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
+  private _cellId: string;
+  private _notebookId: string;
 }
 
 /**
@@ -354,46 +386,24 @@ namespace DashboardWidget {
      * of the cell for when the notebook is loaded.
      */
     index?: number;
+
+    /**
+     * Whether the widget is a placeholder for a missing cell.
+     */
+    placeholder?: boolean;
+
+    /**
+     * An optional cell id used for placeholder widgets.
+     */
+    cellId?: string;
+
+    /**
+     * An optional notebook id used for placeholder widgets.
+     */
+    notebookId?: string;
   }
+
   export type MouseMode = 'drag' | 'resize' | 'none';
 }
-
-/**
- * A namespace for private functionality.
- */
-// namespace Private {
-//   export type ResizerOrientation = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-
-//   export function createResizer(orientation: ResizerOrientation): HTMLElement {
-//     const resizer = document.createElement('div');
-//     resizer.classList.add('pr-Resizer');
-//     resizer.setAttribute('orientation', orientation);
-
-//     switch (orientation) {
-//       case 'top-left':
-//         resizer.style.top = '0';
-//         resizer.style.left = '0';
-//         resizer.style.cursor = 'nw-resize';
-//         break;
-//       case 'top-right':
-//         resizer.style.top = '0';
-//         resizer.style.right = '0';
-//         resizer.style.cursor = 'ne-resize';
-//         break;
-//       case 'bottom-left':
-//         resizer.style.bottom = '0';
-//         resizer.style.left = '0';
-//         resizer.style.cursor = 'sw-resize';
-//         break;
-//       case 'bottom-right':
-//         resizer.style.bottom = '0';
-//         resizer.style.right = '0';
-//         resizer.style.cursor = 'se-resize';
-//         break;
-//     }
-
-//     return resizer;
-//   }
-// }
 
 export default DashboardWidget;

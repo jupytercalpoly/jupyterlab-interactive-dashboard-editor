@@ -87,14 +87,15 @@ export class DashboardButton
               notebookId: addNotebookId(panel),
               cellId: addCellId(cell),
               ...p,
-              changed: true,
               removed: false,
+              missing: false,
             };
-            dashboard.addWidget(info);
+            dashboard.updateWidgetInfo(info);
           });
         }
       }
       dashboard.update();
+      dashboard.updateLayoutFromWidgetstore();
       void this._dashboardTracker.add(dashboard);
     };
     const button = new ToolbarButton({

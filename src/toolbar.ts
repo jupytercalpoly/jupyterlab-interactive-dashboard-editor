@@ -1,4 +1,4 @@
-import { NotebookPanel, NotebookActions} from '@jupyterlab/notebook';
+import { NotebookPanel, NotebookActions, INotebookTracker} from '@jupyterlab/notebook';
 
 import { Widget } from '@lumino/widgets';
 
@@ -20,8 +20,9 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-export function buildToolbar(dashboard: Dashboard, panel: NotebookPanel, tracker: WidgetTracker<DashboardWidget>, clipboard: Set<DashboardWidget>){
-  dashboard.toolbar.addItem('save', createSaveButton(dashboard, panel));
+export function buildToolbar(notebookTrakcer: INotebookTracker,
+  dashboard: Dashboard, panel: NotebookPanel, tracker: WidgetTracker<DashboardWidget>, clipboard: Set<DashboardWidget>){
+  dashboard.toolbar.addItem('save', createSaveButton(dashboard, panel, notebookTrakcer));
   dashboard.toolbar.addItem('undo', createUndoButton(dashboard, panel));
   dashboard.toolbar.addItem('redo', createRedoButton(dashboard, panel));
   dashboard.toolbar.addItem('cut', createCutButton(dashboard, panel, tracker, clipboard));
@@ -39,11 +40,13 @@ export function buildToolbar(dashboard: Dashboard, panel: NotebookPanel, tracker
 
 export function createSaveButton(
   dashboard: Dashboard,
-  panel: NotebookPanel
+  panel: NotebookPanel,
+  notebookTrakcer: INotebookTracker
 ): Widget {
   const button = new ToolbarButton({
     icon: saveIcon,
     onClick: (): void => {
+      dashboard.save(notebookTrakcer);
       dashboard.dirty = false;
       const dialog = saveDialog(dashboard);
       dialog.launch().then((result) => {
@@ -137,6 +140,7 @@ export function createCopyButton(
 }
 
 function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
+
   const info: Widgetstore.WidgetInfo = {
     widgetId: DashboardWidget.createDashboardWidgetId(),
     notebookId: addNotebookId(widget.notebook),
@@ -145,13 +149,12 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
     top: 0,
     width: Widgetstore.DEFAULT_WIDTH,
     height: Widgetstore.DEFAULT_HEIGHT,
-    changed: true,
     removed: false,
   };
-
-  // Should probably try to avoid calling methods of the parent.
-  dashboard.addWidget(info);
-  widget.show();
+  
+  // console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
+  dashboard.area.addWidget(widget, info);
+  dashboard.area.updateWidgetInfo(info); 
 }
 
 /**
