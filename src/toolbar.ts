@@ -29,9 +29,35 @@ export function buildToolbar(notebookTrakcer: INotebookTracker,
   dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel, tracker, clipboard));
   dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel, clipboard));
   dashboard.toolbar.addItem('run', createRunButton(dashboard, panel, tracker));
+  dashboard.toolbar.addItem('view', createViewButton(dashboard, panel, notebookTrakcer));
   // dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel));
   // dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
   // dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
+}
+
+/**
+ * Create save button toolbar item.
+ */
+
+export function createViewButton(
+  dashboard: Dashboard,
+  panel: NotebookPanel,
+  notebookTrakcer: INotebookTracker
+): Widget {
+  const button = new ToolbarButton({
+    icon: Icons.blueDashboard,
+    onClick: (): void => {
+      console.log("clicked to view");
+      if(dashboard.area.node.requestFullscreen){
+        console.log("full screen requested");
+        dashboard.area.node.requestFullscreen();
+      }
+      console.log("full screen not requested");
+      // dashboard.node.requestFullscreen();
+    },
+    tooltip: 'Save Dashboard',
+  });
+  return button;
 }
 
 /**

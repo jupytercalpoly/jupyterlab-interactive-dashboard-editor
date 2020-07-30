@@ -341,7 +341,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.node.setAttribute('style', 'overflow:auto');
 
     // Adds buttons to dashboard toolbar.
-    buildToolbar(this, panel, outputTracker, clipboard);
+    buildToolbar(notebookTracker, this, panel, outputTracker, clipboard);
   
     this._store.listenTable(
       { schema: Widgetstore.WIDGET_SCHEMA },
