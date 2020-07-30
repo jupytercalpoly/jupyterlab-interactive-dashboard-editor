@@ -157,6 +157,7 @@ export class DashboardArea extends Widget {
 
       // Should probably try to avoid calling methods of the parent.
       (this.parent as Dashboard).addWidget(info);
+      console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
     } else {
       return;
     }

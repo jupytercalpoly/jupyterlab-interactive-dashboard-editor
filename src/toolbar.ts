@@ -28,9 +28,9 @@ export function buildToolbar(dashboard: Dashboard, panel: NotebookPanel, tracker
   dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel, tracker, clipboard));
   dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel, clipboard));
   dashboard.toolbar.addItem('run', createRunButton(dashboard, panel, tracker));
-  dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel));
-  dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
-  dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
+  // dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel));
+  // dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
+  // dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
 }
 
 /**
