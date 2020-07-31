@@ -19,6 +19,7 @@ import { Dashboard } from './dashboard';
 import { DashboardWidget } from './widget';
 
 import { DashboardButton } from './button';
+import { DBUtils } from './dbUtils';
 
 // HTML element classes
 
@@ -69,10 +70,11 @@ const extension: JupyterFrontEndPlugin<void> = {
       namespace: 'dashboard-outputs',
     });
 
-    //Clipboard for DashboardWidgets
-    const clipboard = new Set<DashboardWidget>();
+    // //Clipboard for DashboardWidgets
+    // const clipboard = new Set<DashboardWidget>();
 
-    addCommands(app, tracker, dashboardTracker, outputTracker, clipboard);
+    const utils = new DBUtils();
+    addCommands(app, tracker, dashboardTracker, outputTracker, utils);
 
     // Adds commands to code cell context menu.
     // Puts command entries in a weird place in the right-click menu--
@@ -145,7 +147,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new DashboardButton(app, outputTracker, dashboardTracker, tracker, clipboard)
+      new DashboardButton(app, outputTracker, dashboardTracker, tracker, utils)
     );
   },
 };
@@ -155,7 +157,7 @@ function addCommands(
   tracker: INotebookTracker,
   dashboardTracker: WidgetTracker<Dashboard>,
   outputTracker: WidgetTracker<DashboardWidget>,
-  clipboard: Set<DashboardWidget>
+  utils: DBUtils
 ): void {
   const { commands, shell } = app;
 
@@ -303,7 +305,7 @@ function addCommands(
         console.log('invalid path');
         return;
       }
-      const dashboard = await Dashboard.load(path, tracker, outputTracker, clipboard);
+      const dashboard = await Dashboard.load(path, tracker, outputTracker, utils);
       const currentNotebook = tracker.currentWidget;
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,

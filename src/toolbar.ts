@@ -20,42 +20,42 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
+import {openfullscreen} from './editviewUtils';
+import { DBUtils } from './dbUtils';
+
 export function buildToolbar(notebookTrakcer: INotebookTracker,
-  dashboard: Dashboard, panel: NotebookPanel, tracker: WidgetTracker<DashboardWidget>, clipboard: Set<DashboardWidget>){
+  dashboard: Dashboard, panel: NotebookPanel, tracker: WidgetTracker<DashboardWidget>, utils: DBUtils){
   dashboard.toolbar.addItem('save', createSaveButton(dashboard, panel, notebookTrakcer));
   dashboard.toolbar.addItem('undo', createUndoButton(dashboard, panel));
   dashboard.toolbar.addItem('redo', createRedoButton(dashboard, panel));
-  dashboard.toolbar.addItem('cut', createCutButton(dashboard, panel, tracker, clipboard));
-  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel, tracker, clipboard));
-  dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel, clipboard));
+  dashboard.toolbar.addItem('cut', createCutButton(dashboard, panel, tracker, utils));
+  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel, tracker, utils));
+  dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel, utils));
   dashboard.toolbar.addItem('run', createRunButton(dashboard, panel, tracker));
-  dashboard.toolbar.addItem('view', createViewButton(dashboard, panel, notebookTrakcer));
+  dashboard.toolbar.addItem('full screen', createFullScreenButton(dashboard, panel, notebookTrakcer));
   // dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel));
   // dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
   // dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
 }
 
 /**
- * Create save button toolbar item.
+ * Create full screen toolbar item.
  */
 
-export function createViewButton(
+export function createFullScreenButton(
   dashboard: Dashboard,
   panel: NotebookPanel,
   notebookTrakcer: INotebookTracker
 ): Widget {
   const button = new ToolbarButton({
-    icon: Icons.blueDashboard,
+    icon: Icons.fullscreenToolbarIcon,
     onClick: (): void => {
-      console.log("clicked to view");
-      if(dashboard.area.node.requestFullscreen){
-        console.log("full screen requested");
-        dashboard.area.node.requestFullscreen();
-      }
-      console.log("full screen not requested");
-      // dashboard.node.requestFullscreen();
+      // console.log("clicked to view");
+
+      openfullscreen(dashboard.area.node);
+      // console.log("getting corner node?");
     },
-    tooltip: 'Save Dashboard',
+    tooltip: 'View in full screen',
   });
   return button;
 }
@@ -128,14 +128,14 @@ export function createCutButton(
   dashboard: Dashboard,
   panel: NotebookPanel, 
   outputTracker: WidgetTracker<DashboardWidget>,
-  clipboard: Set<DashboardWidget>
+  utils: DBUtils
 ): Widget {
   const button = new ToolbarButton({
     icon: cutIcon,
     onClick: (): void => {
-      clipboard.clear();
+      utils.clipboard.clear();
       const widget = outputTracker.currentWidget;
-      clipboard.add(widget);
+      utils.clipboard.add(widget);
       dashboard.deleteWidget(widget);
     },
     tooltip: 'Cut the selected outputs',
@@ -151,14 +151,14 @@ export function createCopyButton(
   dashboard: Dashboard,
   panel: NotebookPanel,
   outputTracker: WidgetTracker<DashboardWidget>,
-  clipboard: Set<DashboardWidget>
+  untils: DBUtils
 ): Widget {
   const button = new ToolbarButton({
     icon: copyIcon,
     onClick: (): void => {
-      clipboard.clear();
+      untils.clipboard.clear();
       const widget = outputTracker.currentWidget;
-      clipboard.add(widget);
+      untils.clipboard.add(widget);
     },
     tooltip: 'Copy the selected outputs',
   });
@@ -166,20 +166,24 @@ export function createCopyButton(
 }
 
 function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
+  const notebookId = addNotebookId(widget.notebook);
+  const cellId = addCellId(widget.cell);
+  const notebook = widget.notebook;
+  const cell = widget.cell;
+  const newWidget = new DashboardWidget({ notebook, cell, notebookId, cellId });
 
   const info: Widgetstore.WidgetInfo = {
     widgetId: DashboardWidget.createDashboardWidgetId(),
-    notebookId: addNotebookId(widget.notebook),
-    cellId: addCellId(widget.cell),
+    notebookId: newWidget.notebookId,
+    cellId: newWidget.cellId,
     left: 0,
     top: 0,
     width: Widgetstore.DEFAULT_WIDTH,
     height: Widgetstore.DEFAULT_HEIGHT,
     removed: false,
   };
-  
   // console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
-  dashboard.area.addWidget(widget, info);
+  dashboard.area.addWidget(newWidget, info);
   dashboard.area.updateWidgetInfo(info); 
 }
 
@@ -190,12 +194,12 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
 export function createPasteButton(
   dashboard: Dashboard,
   panel: NotebookPanel,
-  clipboard: Set<DashboardWidget>
+  untils: DBUtils
 ): Widget {
   const button = new ToolbarButton({
     icon: pasteIcon,
     onClick: (): void => {
-      clipboard.forEach(widget => pasteWidget(dashboard, widget));
+      untils.clipboard.forEach(widget => pasteWidget(dashboard, widget));
     },
     tooltip: 'Paste outputs from the clipboard',
   });

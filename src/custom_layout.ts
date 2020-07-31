@@ -28,6 +28,11 @@ export class DashboardLayout extends Layout {
     this._corner = DashboardLayout.makeCorner(this._width, this._height);
   }
 
+  
+  public get corner() : Widget {
+    return this._corner;
+  }
+
   /**
    * Perform initilization that requires a parent.
    */

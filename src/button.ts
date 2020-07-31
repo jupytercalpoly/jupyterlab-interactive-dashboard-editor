@@ -25,6 +25,7 @@ import { Dashboard } from './dashboard';
 import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
+import { DBUtils } from './dbUtils';
 
 /**
  * Adds a button to the main toolbar.
@@ -35,19 +36,19 @@ export class DashboardButton
   _outputTracker: WidgetTracker<DashboardWidget>;
   _dashboardTracker: WidgetTracker<Dashboard>;
   _tracker: INotebookTracker;
-  _clipboard: Set<DashboardWidget>
+  _utils: DBUtils
   constructor(
     app: JupyterFrontEnd,
     outputTracker: WidgetTracker<DashboardWidget>,
     dashboardTracker: WidgetTracker<Dashboard>,
     tracker: INotebookTracker,
-    clipboard: Set<DashboardWidget>
+    utils: DBUtils
   ) {
     this._app = app;
     this._outputTracker = outputTracker;
     this._dashboardTracker = dashboardTracker;
     this._tracker = tracker;
-    this._clipboard = clipboard;
+    this._utils = utils;
   }
 
   createNew(
@@ -60,7 +61,7 @@ export class DashboardButton
         notebookTracker: this._tracker,
         outputTracker,
         panel,
-        clipboard: this._clipboard
+        utils: this._utils
       });
       const currentNotebook = this._tracker.currentWidget;
       if (currentNotebook) {

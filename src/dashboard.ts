@@ -40,6 +40,8 @@ import { newfile } from './fsutils';
 
 import { unsaveDialog } from './dialog';
 
+import {DBUtils} from './dbUtils';
+
 // HTML element classes
 
 const DASHBOARD_CLASS = 'pr-JupyterDashboard';
@@ -78,6 +80,11 @@ export class DashboardArea extends Widget {
     this.addClass(DASHBOARD_AREA_CLASS);
   }
 
+  
+  public get dblayout() : DashboardLayout {
+    return this._dbLayout; 
+  }
+  
   /**
    * Create click listeners on attach
    */
@@ -299,7 +306,7 @@ export class DashboardArea extends Widget {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const { notebookTracker, content, outputTracker, panel, clipboard} = options;
+    const { notebookTracker, content, outputTracker, panel, utils} = options;
     const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
     const contents = new ContentsManager();
@@ -313,6 +320,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
         height: 1000,
       }),
     });
+
     super({
       ...options,
       content: content || dashboardArea,
@@ -341,7 +349,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.node.setAttribute('style', 'overflow:auto');
 
     // Adds buttons to dashboard toolbar.
-    buildToolbar(notebookTracker, this, panel, outputTracker, clipboard);
+    buildToolbar(notebookTracker, this, panel, outputTracker, utils);
   
     this._store.listenTable(
       { schema: Widgetstore.WIDGET_SCHEMA },
@@ -356,7 +364,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
   public get area() : DashboardArea{
     return this._dbArea;
   }
-  
 
   /**
    * Gets the contents of dashboard
@@ -590,7 +597,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     path: string,
     notebookTracker: INotebookTracker,
     outputTracker: WidgetTracker<DashboardWidget>,
-    clipboard: Set<DashboardWidget>
+    utils: DBUtils
   ): Promise<Dashboard> {
     // Create the contentsManager for opening/reading the dashboard file.
     const contentsManager = new ContentsManager();
@@ -712,7 +719,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       outputTracker,
       panel,
       store,
-      clipboard
+      utils
     });
   }
 
@@ -803,9 +810,14 @@ export namespace Dashboard {
      */
     store?: Widgetstore;
 
-    /**
-     * Optional DashboardWidget Array for cut, copy and paste
+    // /**
+    //  * Optional DashboardWidget Array for cut, copy and paste
+    //  */
+    // clipboard: Set<DashboardWidget>;
+
+     /**
+     * clipboard, fullscreen and contents
      */
-    clipboard: Set<DashboardWidget>;
+    utils: DBUtils;
   }
 }
