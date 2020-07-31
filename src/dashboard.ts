@@ -161,8 +161,8 @@ export class DashboardArea extends Widget {
           cellId: widget.cellId,
           left: event.offsetX,
           top: event.offsetY,
-          width: Widgetstore.DEFAULT_WIDTH,
-          height: Widgetstore.DEFAULT_HEIGHT,
+          width: widget.node.offsetWidth,
+          height: widget.node.offsetHeight,
           removed: false,
         };
 
