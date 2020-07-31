@@ -138,7 +138,11 @@ export class DashboardArea extends Widget {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
-    // dragging from dashboard -> dashboard.
+    // dragging between dashboards
+    
+
+
+    // dragging in same dashboard.
     if (event.proposedAction === 'move') {
       const widget = event.source as DashboardWidget;
 

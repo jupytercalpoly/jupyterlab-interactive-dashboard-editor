@@ -1,4 +1,4 @@
-import { JupyterFrontEnd } from '@jupyterlab/application';
+import { JupyterFrontEnd, ILabShell } from '@jupyterlab/application';
 
 import {
   INotebookTracker,
@@ -37,23 +37,26 @@ export class DashboardButton
   _dashboardTracker: WidgetTracker<Dashboard>;
   _tracker: INotebookTracker;
   _utils: DBUtils
+  _shell: ILabShell
   constructor(
     app: JupyterFrontEnd,
     outputTracker: WidgetTracker<DashboardWidget>,
     dashboardTracker: WidgetTracker<Dashboard>,
     tracker: INotebookTracker,
-    utils: DBUtils
+    utils: DBUtils,
+    shell: ILabShell
   ) {
     this._app = app;
     this._outputTracker = outputTracker;
     this._dashboardTracker = dashboardTracker;
     this._tracker = tracker;
     this._utils = utils;
+    this._shell = shell;
   }
 
   createNew(
     panel: NotebookPanel,
-    context: DocumentRegistry.IContext<INotebookModel>
+    context: DocumentRegistry.IContext<INotebookModel>,
   ): IDisposable {
     const callback = (): void => {
       const outputTracker = this._outputTracker;
@@ -67,7 +70,8 @@ export class DashboardButton
       if (currentNotebook) {
         this._app.shell.activateById(currentNotebook.id);
       }
-
+      this._shell.collapseLeft();
+      console.log("collapseLeft");
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
         mode: 'split-bottom',
