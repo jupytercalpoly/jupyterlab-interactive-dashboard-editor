@@ -55,7 +55,11 @@ const extension: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
   requires: [INotebookTracker, ILabShell],
-  activate: (app: JupyterFrontEnd, tracker: INotebookTracker, labShell: ILabShell): void => {
+  activate: (
+    app: JupyterFrontEnd,
+    tracker: INotebookTracker,
+    labShell: ILabShell
+  ): void => {
     console.log('JupyterLab extension presto is activated!');
 
     // Datastore for Dashboard info
@@ -148,7 +152,14 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new DashboardButton(app, outputTracker, dashboardTracker, tracker, utils, labShell)
+      new DashboardButton(
+        app,
+        outputTracker,
+        dashboardTracker,
+        tracker,
+        utils,
+        labShell
+      )
     );
   },
 };
@@ -306,11 +317,16 @@ function addCommands(
         console.log('invalid path');
         return;
       }
-      const dashboard = await Dashboard.load(path, tracker, outputTracker, utils);
+      const dashboard = await Dashboard.load(
+        path,
+        tracker,
+        outputTracker,
+        utils
+      );
       const currentNotebook = tracker.currentWidget;
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-bottom',
+        mode: 'split-left',
       });
       dashboardTracker.add(dashboard);
     },

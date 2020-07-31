@@ -1,12 +1,30 @@
-import { NotebookPanel, NotebookActions, INotebookTracker} from '@jupyterlab/notebook';
+import {
+  NotebookPanel,
+  NotebookActions,
+  INotebookTracker,
+} from '@jupyterlab/notebook';
 
 import { Widget } from '@lumino/widgets';
 
-import { ToolbarButton, WidgetTracker, sessionContextDialogs} from '@jupyterlab/apputils';
+import {
+  ToolbarButton,
+  WidgetTracker,
+  sessionContextDialogs,
+} from '@jupyterlab/apputils';
 
 import { CodeCell } from '@jupyterlab/cells';
 
-import { saveIcon, refreshIcon, undoIcon, cutIcon, copyIcon, pasteIcon, runIcon, stopIcon, fastForwardIcon} from '@jupyterlab/ui-components';
+import {
+  saveIcon,
+  refreshIcon,
+  undoIcon,
+  cutIcon,
+  copyIcon,
+  pasteIcon,
+  runIcon,
+  stopIcon,
+  fastForwardIcon,
+} from '@jupyterlab/ui-components';
 
 import { Dashboard } from './dashboard';
 
@@ -14,25 +32,45 @@ import { DashboardWidget } from './widget';
 
 import { saveDialog } from './dialog';
 
-import { Icons} from './icons';
+import { Icons } from './icons';
 
 import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-import {openfullscreen} from './editviewUtils';
+import { openfullscreen } from './editviewUtils';
 import { DBUtils } from './dbUtils';
 
-export function buildToolbar(notebookTrakcer: INotebookTracker,
-  dashboard: Dashboard, panel: NotebookPanel, tracker: WidgetTracker<DashboardWidget>, utils: DBUtils){
-  dashboard.toolbar.addItem('save', createSaveButton(dashboard, panel, notebookTrakcer));
+export function buildToolbar(
+  notebookTrakcer: INotebookTracker,
+  dashboard: Dashboard,
+  panel: NotebookPanel,
+  tracker: WidgetTracker<DashboardWidget>,
+  utils: DBUtils
+) {
+  dashboard.toolbar.addItem(
+    'save',
+    createSaveButton(dashboard, panel, notebookTrakcer)
+  );
   dashboard.toolbar.addItem('undo', createUndoButton(dashboard, panel));
   dashboard.toolbar.addItem('redo', createRedoButton(dashboard, panel));
-  dashboard.toolbar.addItem('cut', createCutButton(dashboard, panel, tracker, utils));
-  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel, tracker, utils));
-  dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel, utils));
+  dashboard.toolbar.addItem(
+    'cut',
+    createCutButton(dashboard, panel, tracker, utils)
+  );
+  dashboard.toolbar.addItem(
+    'copy',
+    createCopyButton(dashboard, panel, tracker, utils)
+  );
+  dashboard.toolbar.addItem(
+    'paste',
+    createPasteButton(dashboard, panel, utils)
+  );
   dashboard.toolbar.addItem('run', createRunButton(dashboard, panel, tracker));
-  dashboard.toolbar.addItem('full screen', createFullScreenButton(dashboard, panel, notebookTrakcer));
+  dashboard.toolbar.addItem(
+    'full screen',
+    createFullScreenButton(dashboard, panel, notebookTrakcer)
+  );
   // dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel));
   // dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
   // dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
@@ -126,7 +164,7 @@ export function createRedoButton(
 
 export function createCutButton(
   dashboard: Dashboard,
-  panel: NotebookPanel, 
+  panel: NotebookPanel,
   outputTracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils
 ): Widget {
@@ -165,7 +203,7 @@ export function createCopyButton(
   return button;
 }
 
-function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
+function pasteWidget(dashboard: Dashboard, widget: DashboardWidget) {
   const notebookId = addNotebookId(widget.notebook);
   const cellId = addCellId(widget.cell);
   const notebook = widget.notebook;
@@ -184,7 +222,7 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
   };
   // console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
   dashboard.area.addWidget(newWidget, info);
-  dashboard.area.updateWidgetInfo(info); 
+  dashboard.area.updateWidgetInfo(info);
 }
 
 /**
@@ -199,7 +237,7 @@ export function createPasteButton(
   const button = new ToolbarButton({
     icon: pasteIcon,
     onClick: (): void => {
-      untils.clipboard.forEach(widget => pasteWidget(dashboard, widget));
+      untils.clipboard.forEach((widget) => pasteWidget(dashboard, widget));
     },
     tooltip: 'Paste outputs from the clipboard',
   });
@@ -218,7 +256,7 @@ export function createRunButton(
   const button = new ToolbarButton({
     icon: runIcon,
     onClick: (): void => {
-      const cell = (tracker.currentWidget.cell as CodeCell);
+      const cell = tracker.currentWidget.cell as CodeCell;
       const sessionContext = tracker.currentWidget.notebook.sessionContext;
       CodeCell.execute(cell, sessionContext);
     },
@@ -266,10 +304,12 @@ export function createRestartButton(
       let widget = widgets.next() as DashboardWidget;
       while (widget) {
         notebooks.add(widget.notebook);
-        console.log("notebook here one", widget.notebook);
+        console.log('notebook here one', widget.notebook);
         widget = widgets.next() as DashboardWidget;
       }
-      notebooks.forEach(nb => void sessionContextDialogs.restart(nb.sessionContext));      
+      notebooks.forEach(
+        (nb) => void sessionContextDialogs.restart(nb.sessionContext)
+      );
     },
     tooltip: 'Restart all kernels',
   });
@@ -296,13 +336,17 @@ export function createRunAllButton(
         widget = widgets.next() as DashboardWidget;
       }
 
-      console.log("notebooks", notebooks);
-      notebooks.forEach(nb => void sessionContextDialogs.restart(nb.sessionContext)
-      .then(restarted => {
-        if (restarted) {
-          void NotebookActions.runAll(nb.content, nb.sessionContext);
-        }
-      }));
+      console.log('notebooks', notebooks);
+      notebooks.forEach(
+        (nb) =>
+          void sessionContextDialogs
+            .restart(nb.sessionContext)
+            .then((restarted) => {
+              if (restarted) {
+                void NotebookActions.runAll(nb.content, nb.sessionContext);
+              }
+            })
+      );
     },
     tooltip: 'Restart all kernels, then re-run all notebooks',
   });

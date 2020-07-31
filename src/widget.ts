@@ -287,7 +287,7 @@ export class DashboardWidget extends Panel {
       dragImage,
       proposedAction: 'move',
       supportedActions: 'copy-move',
-      source: this,
+      source: [this, this.parent],
     });
 
     this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);

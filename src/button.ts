@@ -36,8 +36,8 @@ export class DashboardButton
   _outputTracker: WidgetTracker<DashboardWidget>;
   _dashboardTracker: WidgetTracker<Dashboard>;
   _tracker: INotebookTracker;
-  _utils: DBUtils
-  _shell: ILabShell
+  _utils: DBUtils;
+  _shell: ILabShell;
   constructor(
     app: JupyterFrontEnd,
     outputTracker: WidgetTracker<DashboardWidget>,
@@ -56,7 +56,7 @@ export class DashboardButton
 
   createNew(
     panel: NotebookPanel,
-    context: DocumentRegistry.IContext<INotebookModel>,
+    context: DocumentRegistry.IContext<INotebookModel>
   ): IDisposable {
     const callback = (): void => {
       const outputTracker = this._outputTracker;
@@ -64,17 +64,17 @@ export class DashboardButton
         notebookTracker: this._tracker,
         outputTracker,
         panel,
-        utils: this._utils
+        utils: this._utils,
       });
       const currentNotebook = this._tracker.currentWidget;
       if (currentNotebook) {
         this._app.shell.activateById(currentNotebook.id);
       }
+
       this._shell.collapseLeft();
-      console.log("collapseLeft");
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-bottom',
+        mode: 'split-left',
       });
 
       //populate new dashboard based off metadata?

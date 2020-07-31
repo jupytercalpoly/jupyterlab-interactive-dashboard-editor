@@ -40,7 +40,7 @@ import { newfile } from './fsutils';
 
 import { unsaveDialog } from './dialog';
 
-import {DBUtils} from './dbUtils';
+import { DBUtils } from './dbUtils';
 
 // HTML element classes
 
@@ -80,11 +80,10 @@ export class DashboardArea extends Widget {
     this.addClass(DASHBOARD_AREA_CLASS);
   }
 
-  
-  public get dblayout() : DashboardLayout {
-    return this._dbLayout; 
+  public get dblayout(): DashboardLayout {
+    return this._dbLayout;
   }
-  
+
   /**
    * Create click listeners on attach
    */
@@ -138,23 +137,41 @@ export class DashboardArea extends Widget {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
-    // dragging between dashboards
-    
-
-
-    // dragging in same dashboard.
     if (event.proposedAction === 'move') {
-      const widget = event.source as DashboardWidget;
+      const widget = event.source[0] as DashboardWidget;
+      const oldArea = event.source[1] as DashboardArea;
+      if (oldArea === this) {
+        // dragging in same dashboard.
+        console.log('same dashboard', widget);
 
-      const pos: Widgetstore.WidgetPosition = {
-        left: event.offsetX,
-        top: event.offsetY,
-        width: widget.node.offsetWidth,
-        height: widget.node.offsetHeight,
-      };
+        const pos: Widgetstore.WidgetPosition = {
+          left: event.offsetX,
+          top: event.offsetY,
+          width: widget.node.offsetWidth,
+          height: widget.node.offsetHeight,
+        };
+        this._dbLayout.updateWidget(widget, pos);
+        this._dbLayout.updateInfoFromWidget(widget);
+      } else {
+        // dragging between dashboards
+        console.log('between dashboards', widget);
+        const info: Widgetstore.WidgetInfo = {
+          widgetId: DashboardWidget.createDashboardWidgetId(),
+          notebookId: widget.notebookId,
+          cellId: widget.cellId,
+          left: event.offsetX,
+          top: event.offsetY,
+          width: Widgetstore.DEFAULT_WIDTH,
+          height: Widgetstore.DEFAULT_HEIGHT,
+          removed: false,
+        };
 
-      this._dbLayout.updateWidget(widget, pos);
-      this._dbLayout.updateInfoFromWidget(widget);
+        const newWidget = this._dbLayout.createWidget(info);
+        this._dbLayout.addWidget(newWidget, info);
+        this._dbLayout.updateWidgetInfo(info);
+        oldArea.deleteWidgetInfo(widget);
+        oldArea.deleteWidget(widget);
+      }
 
       // dragging from notebook -> dashboard.
     } else if (event.proposedAction === 'copy') {
@@ -171,7 +188,7 @@ export class DashboardArea extends Widget {
         height: Widgetstore.DEFAULT_HEIGHT,
         removed: false,
       };
-      
+
       console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
 
       const widget = this._dbLayout.createWidget(info);
@@ -310,7 +327,7 @@ export class DashboardArea extends Widget {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const { notebookTracker, content, outputTracker, panel, utils} = options;
+    const { notebookTracker, content, outputTracker, panel, utils } = options;
     const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
     const contents = new ContentsManager();
@@ -354,7 +371,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     // Adds buttons to dashboard toolbar.
     buildToolbar(notebookTracker, this, panel, outputTracker, utils);
-  
+
     this._store.listenTable(
       { schema: Widgetstore.WIDGET_SCHEMA },
       (change) => (this._dirty = true)
@@ -365,7 +382,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     }
   }
 
-  public get area() : DashboardArea{
+  public get area(): DashboardArea {
     return this._dbArea;
   }
 
@@ -723,7 +740,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       outputTracker,
       panel,
       store,
-      utils
+      utils,
     });
   }
 
@@ -819,7 +836,7 @@ export namespace Dashboard {
     //  */
     // clipboard: Set<DashboardWidget>;
 
-     /**
+    /**
      * clipboard, fullscreen and contents
      */
     utils: DBUtils;
