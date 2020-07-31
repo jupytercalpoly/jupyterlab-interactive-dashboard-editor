@@ -7,6 +7,7 @@ import whiteDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_w
 import greyDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_grey.svg';
 import redoIcon from '../style/icons/redo.svg';
 import fullscreenIcon from '../style/icons/fullscreen.svg';
+import statusIcon from '../style/icons/dummy.svg';
 
 /**
  * Dashboard icons
@@ -45,6 +46,11 @@ export namespace Icons {
   export const fullscreenToolbarIcon = new LabIcon({
     name: 'pr-icons:fullscreen-icon',
     svgstr: fullscreenIcon,
+  });
+
+  export const statusToolbarIcon = new LabIcon({
+    name: 'pr-icons:status-icon',
+    svgstr: statusIcon,
   });
 }
 

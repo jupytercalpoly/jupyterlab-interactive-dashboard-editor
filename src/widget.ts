@@ -18,6 +18,8 @@ import { Message } from '@lumino/messaging';
 
 import { Drag } from '@lumino/dragdrop';
 
+// import { Widget } from '@lumino/widgets';
+
 import { shouldStartDrag } from './widgetdragutils';
 
 import { DashboardArea } from './dashboard';
@@ -139,6 +141,8 @@ export class DashboardWidget extends Panel {
     return this._notebook.context.path;
   }
 
+  
+
   /**
    * Create click listeners on attach
    */
@@ -149,6 +153,8 @@ export class DashboardWidget extends Panel {
     this.node.addEventListener('lm-drop', this);
     this.node.addEventListener('mousedown', this);
   }
+
+
 
   /**
    * Remove click listeners on detach

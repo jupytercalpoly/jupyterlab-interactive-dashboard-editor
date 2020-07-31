@@ -189,8 +189,6 @@ export class DashboardArea extends Widget {
         removed: false,
       };
 
-      console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
-
       const widget = this._dbLayout.createWidget(info);
       this._dbLayout.addWidget(widget, info);
       this._dbLayout.updateWidgetInfo(info);

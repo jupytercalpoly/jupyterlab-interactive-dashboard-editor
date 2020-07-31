@@ -7,6 +7,7 @@ import {
 import { Widget } from '@lumino/widgets';
 
 import {
+  Toolbar,
   ToolbarButton,
   WidgetTracker,
   sessionContextDialogs,
@@ -38,7 +39,7 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-import { openfullscreen } from './editviewUtils';
+import { openfullscreen } from './fullscreen';
 import { DBUtils } from './dbUtils';
 
 export function buildToolbar(
@@ -67,13 +68,52 @@ export function buildToolbar(
     createPasteButton(dashboard, panel, utils)
   );
   dashboard.toolbar.addItem('run', createRunButton(dashboard, panel, tracker));
+  dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel, tracker));
   dashboard.toolbar.addItem(
     'full screen',
     createFullScreenButton(dashboard, panel, notebookTrakcer)
   );
-  // dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel));
+  dashboard.toolbar.addItem(
+    'status',
+    createStatusButton(dashboard, panel, notebookTrakcer)
+  );
   // dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
   // dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
+}
+
+/**
+ * Create widget status toolbar item.
+ */
+
+export function createStatusButton(
+  dashboard: Dashboard,
+  panel: NotebookPanel,
+  notebookTrakcer: INotebookTracker
+): Widget {
+  const button = new ToolbarButton({
+    icon: Icons.statusToolbarIcon,
+    onClick: (): void => {
+      const widgets = dashboard.content.children().iter();
+      let widget = widgets.next() as DashboardWidget;
+      let sessionContext = widget.notebook.sessionContext;
+      let item = Toolbar.createKernelStatusItem(sessionContext);
+      let status = sessionContext?.kernelDisplayStatus;
+      while (widget) {
+        console.log("status", status);
+        if(status == ""){
+          //NEED TO DO: widget status bar, and toggle 
+          widget.node.style.background = 'red'
+          console.log(item); 
+        }
+        widget = widgets.next() as DashboardWidget;
+        sessionContext = widget.notebook.sessionContext;
+        item = Toolbar.createKernelStatusItem(sessionContext);
+        status = sessionContext?.kernelDisplayStatus;
+      }
+    },
+    tooltip: 'Show outputs status',
+  });
+  return button;
 }
 
 /**
@@ -271,19 +311,16 @@ export function createRunButton(
 
 export function createStopButton(
   dashboard: Dashboard,
-  panel: NotebookPanel
+  panel: NotebookPanel,
+  tracker: WidgetTracker<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
     icon: stopIcon,
     onClick: (): void => {
-      const widgets = dashboard.content.children().iter();
-      let widget = widgets.next() as DashboardWidget;
-      while (widget) {
-        void widget.notebook.sessionContext.session?.kernel?.interrupt();
-        widget = widgets.next() as DashboardWidget;
-      }
+      const sessionContext = tracker.currentWidget.notebook.sessionContext;
+      void sessionContext.session?.kernel?.interrupt();
     },
-    tooltip: 'Interrupt all kernels',
+    tooltip: 'Interrupt output\'s kernel',
   });
   return button;
 }
