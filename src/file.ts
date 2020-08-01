@@ -10,6 +10,11 @@ export type DashboardSpec = {
   version: number;
 
   /**
+   * The name of the dashboard.
+   */
+  name: string;
+
+  /**
    * The width of the dashboad in pixels (0 if unconstrained).
    */
   dashboardWidth: number;

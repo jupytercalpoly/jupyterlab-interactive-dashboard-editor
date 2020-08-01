@@ -4,7 +4,7 @@ import { Record } from '@lumino/datastore';
 
 import { IIterator, map, each } from '@lumino/algorithm';
 
-import { MessageLoop } from '@lumino/messaging';
+import { MessageLoop, Message } from '@lumino/messaging';
 
 import { DashboardWidget } from './widget';
 
@@ -13,6 +13,10 @@ import { Widgetstore, WidgetSchema } from './widgetstore';
 import { WidgetTracker } from '@jupyterlab/apputils';
 
 import { getCellId, getNotebookId } from './utils';
+
+import { Dashboard } from './dashboard';
+
+const EDITABLE_CORNER_CLASS = 'pr-EditableBackground';
 
 export class DashboardLayout extends Layout {
   constructor(options: DashboardLayout.IOptions) {
@@ -26,6 +30,12 @@ export class DashboardLayout extends Layout {
     this._height = options.height || 0;
 
     this._corner = DashboardLayout.makeCorner(this._width, this._height);
+
+    if (options.mode === 'edit') {
+      this._corner.addClass(EDITABLE_CORNER_CLASS);
+    }
+
+    this._mode = options.mode;
   }
 
   /**
@@ -46,6 +56,11 @@ export class DashboardLayout extends Layout {
     this._outputTracker = null;
     this._store = null;
     super.dispose();
+  }
+
+  onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this._dashboard = this.parent.parent as Dashboard;
   }
 
   /**
@@ -122,6 +137,11 @@ export class DashboardLayout extends Layout {
 
     // Attach the widget to the parent.
     if (this.parent) {
+      if (this._dashboard !== undefined) {
+        widget.mode = this._dashboard.mode;
+      } else {
+        widget.mode = 'present';
+      }
       this.attachWidget(widget);
       this.updateWidget(widget, pos);
       this._outputTracker.add(widget);
@@ -142,7 +162,6 @@ export class DashboardLayout extends Layout {
 
     let { left, top } = pos;
     const { width, height } = pos;
-    console.log('new pos', pos);
 
     // Constrain the widget to the dashboard dimensions.
     if (this._width !== 0 && left + width > this._width) {
@@ -151,9 +170,6 @@ export class DashboardLayout extends Layout {
     if (this._height !== 0 && top + height > this._height) {
       top = this._height - height;
     }
-
-    console.log('new left', left);
-    console.log('new top', top);
 
     // Update the widget's position.
     item.update(left, top, width, height);
@@ -332,7 +348,7 @@ export class DashboardLayout extends Layout {
   }
   set width(newWidth: number) {
     if (newWidth < 0) {
-      return;
+      newWidth = 0;
     }
     this._width = newWidth;
     this._corner.node.style.width = `${newWidth}px`;
@@ -343,10 +359,22 @@ export class DashboardLayout extends Layout {
   }
   set height(newHeight: number) {
     if (newHeight < 0) {
-      return;
+      newHeight = 0;
     }
     this._height = newHeight;
     this._corner.node.style.height = `${newHeight}px`;
+  }
+
+  get mode(): Dashboard.Mode {
+    return this._mode;
+  }
+  set mode(newMode: Dashboard.Mode) {
+    this._mode = newMode;
+    each(this, (_widget) => {
+      const widget = _widget as DashboardWidget;
+      widget.mode = newMode;
+    });
+    this._corner.toggleClass(EDITABLE_CORNER_CLASS);
   }
 
   /**
@@ -375,6 +403,10 @@ export class DashboardLayout extends Layout {
   private _width: number;
   // Dashboard height (zero if unconstrained).
   private _height: number;
+  // Mode (either interactive or edit);
+  private _mode: Dashboard.Mode;
+  // Parent dashboard.
+  private _dashboard: Dashboard;
 }
 
 /**
@@ -405,6 +437,11 @@ export namespace DashboardLayout {
      * The static height of the dashboard area.
      */
     height?: number;
+
+    /**
+     * The layout mode (either interactive or edit).
+     */
+    mode: Dashboard.Mode;
   }
 
   /**
@@ -416,10 +453,10 @@ export namespace DashboardLayout {
    */
   export function makeCorner(x: number, y: number): Widget {
     const corner = new Widget();
-    corner.node.style.width = '1px';
-    corner.node.style.height = '1px';
-    corner.node.style.left = `${x}px`;
-    corner.node.style.top = `${y}px`;
+    corner.node.style.width = `${x}px`;
+    corner.node.style.height = `${y}px`;
+    corner.node.style.left = '0';
+    corner.node.style.top = '0';
     corner.node.style.position = 'absolute';
     return corner;
   }

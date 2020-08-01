@@ -7,24 +7,15 @@ import { INotebookTracker } from '@jupyterlab/notebook';
 
 import {
   WidgetTracker,
-  Dialog,
-  showDialog,
   showErrorMessage,
+  InputDialog,
 } from '@jupyterlab/apputils';
-
-import { Widget } from '@lumino/widgets';
 
 import { Dashboard } from './dashboard';
 
 import { DashboardWidget } from './widget';
 
 import { DashboardButton } from './button';
-
-// HTML element classes
-
-const RENAME_DIALOG_CLASS = 'pr-RenameDialog';
-
-const RENAME_TITLE_CLASS = 'pr-RenameTitle';
 
 /**
  * Command IDs used
@@ -47,6 +38,12 @@ namespace CommandIDs {
   export const save = 'dashboard:save';
 
   export const load = 'dashboard:load';
+
+  export const toggleARLock = 'dashboard-widget:toggleARLock';
+
+  export const toggleFitContent = 'dashboard-widget:toggleFitContent';
+
+  export const toggleMode = 'dashboard:toggleMode';
 }
 
 const extension: JupyterFrontEndPlugin<void> = {
@@ -70,17 +67,6 @@ const extension: JupyterFrontEndPlugin<void> = {
     });
 
     addCommands(app, tracker, dashboardTracker, outputTracker);
-
-    // Adds commands to code cell context menu.
-    // Puts command entries in a weird place in the right-click menu--
-    // between 'Clear Output' and 'Clear All Outputs'
-    // 'Clear Output' is end of selector='.jp-Notebook .jp-CodeCell'
-    // and 'Clear All Outputs' is start of selector='.jp-Notebook'
-    app.contextMenu.addItem({
-      command: CommandIDs.printTracker,
-      selector: '.jp-Notebook .jp-CodeCell',
-      rank: 13,
-    });
 
     app.contextMenu.addItem({
       command: CommandIDs.save,
@@ -113,9 +99,27 @@ const extension: JupyterFrontEndPlugin<void> = {
     });
 
     app.contextMenu.addItem({
+      command: CommandIDs.toggleMode,
+      selector: '.pr-JupyterDashboard',
+      rank: 3,
+    });
+
+    app.contextMenu.addItem({
       command: CommandIDs.deleteOutput,
-      selector: '.pr-DashboardWidget',
+      selector: '.pr-EditableWidget',
       rank: 0,
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.toggleARLock,
+      selector: '.pr-EditableWidget',
+      rank: 1,
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.toggleFitContent,
+      selector: '.pr-EditableWidget',
+      rank: 2,
     });
 
     // Add commands to key bindings
@@ -186,18 +190,6 @@ function addCommands(
     return true;
   }
 
-  async function getPath(): Promise<string> {
-    const path = await showDialog({
-      title: 'Load Path',
-      body: new Private.PathHandler(),
-      focusNodeSelector: 'input',
-      buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Load' })],
-    }).then((result) => {
-      return result.value;
-    });
-    return path;
-  }
-
   /**
    * Deletes a selected DashboardWidget.
    */
@@ -246,15 +238,7 @@ function addCommands(
     execute: (args) => {
       // Should this be async? Still kind of unclear on when that needs to be used.
       if (dashboardTracker.currentWidget) {
-        showDialog({
-          title: 'Rename Dashboard',
-          body: new Private.RenameHandler(),
-          focusNodeSelector: 'input',
-          buttons: [
-            Dialog.cancelButton(),
-            Dialog.okButton({ label: 'Rename' }),
-          ],
-        }).then((result) => {
+        InputDialog.getText({ title: 'Rename' }).then((result) => {
           if (!result.value) {
             return;
           }
@@ -288,13 +272,25 @@ function addCommands(
 
   commands.addCommand(CommandIDs.save, {
     label: 'Save Dashboard',
-    execute: (args) => dashboardTracker.currentWidget.save(tracker),
+    execute: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      const filename = `${dashboard.getName()}.dashboard`;
+      InputDialog.getText({ title: 'Save as', text: filename }).then(
+        (value) => {
+          dashboard.save(tracker, value.value);
+        }
+      );
+    },
   });
 
   commands.addCommand(CommandIDs.load, {
     label: 'Load Dashboard',
     execute: async (args) => {
-      const path = await getPath();
+      const path = await InputDialog.getText({ title: 'Load Path' }).then(
+        (value) => {
+          return value.value;
+        }
+      );
       if (path === undefined) {
         console.log('invalid path');
         return;
@@ -303,100 +299,51 @@ function addCommands(
       const currentNotebook = tracker.currentWidget;
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-bottom',
+        mode: 'split-left',
       });
       dashboardTracker.add(dashboard);
     },
   });
 
-  /**
-   * Adds the currently selected cell's output to the dashboard.
-   * Currently only supports a single dashboard view at a time.
-   */
-  //   commands.addCommand(CommandIDs.addToDashboard, {
-  //     label: 'Add to Dashboard',
-  //     execute: (args) => {
-  //       if (!getCurrentDashboard()) {
-  //         insertWidget({ createNew: true });
-  //       } else {
-  //         insertWidget({});
-  //       }
-  //     },
-  //     isEnabled: isEnabledAndSingleSelected,
-  //   });
-  // }
-}
+  commands.addCommand(CommandIDs.toggleARLock, {
+    label: 'Lock Aspect Ratio',
+    execute: (args) => {
+      const widget = outputTracker.currentWidget;
+      widget.lockAR = !widget.lockAR;
+    },
+    isToggled: (args) => outputTracker.currentWidget.lockAR,
+  });
 
-/**
- * A namespace for private data.
- */
-namespace Private {
-  export class PathHandler extends Widget {
-    constructor() {
-      const node = document.createElement('div');
+  commands.addCommand(CommandIDs.toggleFitContent, {
+    label: 'Fit To Content',
+    execute: (args) => {
+      const widget = outputTracker.currentWidget;
+      widget.fitToContent = !widget.fitToContent;
+      if (widget.fitToContent) {
+        widget.fitContent();
+      }
+    },
+    isToggled: (args) => outputTracker.currentWidget.fitToContent,
+  });
 
-      const nameTitle = document.createElement('label');
-      nameTitle.textContent = 'Load Path';
-      const path = document.createElement('input');
-
-      node.appendChild(nameTitle);
-      node.appendChild(path);
-
-      super({ node });
-    }
-
-    /**
-     * Get the input text node.
-     */
-    get inputNode(): HTMLInputElement {
-      return this.node.getElementsByTagName('input')[0] as HTMLInputElement;
-    }
-
-    /**
-     * Get the value of the widget.
-     */
-    getValue(): string {
-      return this.inputNode.value;
-    }
-  }
-
-  /**
-   * A widget used to rename dashboards.
-   * jupyterlab/packages/docmanager/src/dialog.ts
-   */
-  export class RenameHandler extends Widget {
-    /**
-     * Construct a new "rename" dialog.
-     */
-    constructor() {
-      const node = document.createElement('div');
-
-      const nameTitle = document.createElement('label');
-      nameTitle.textContent = 'New Name';
-      nameTitle.className = RENAME_TITLE_CLASS;
-      const name = document.createElement('input');
-
-      node.appendChild(nameTitle);
-      node.appendChild(name);
-
-      super({ node });
-      this.addClass(RENAME_DIALOG_CLASS);
-    }
-
-    /**
-     * Get the input text node.
-     */
-    get inputNode(): HTMLInputElement {
-      return this.node.getElementsByTagName('input')[0] as HTMLInputElement;
-    }
-
-    /**
-     * Get the value of the widget.
-     */
-    getValue(): string {
-      return this.inputNode.value;
-    }
-  }
+  commands.addCommand(CommandIDs.toggleMode, {
+    label: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      if (dashboard.mode === 'edit') {
+        return 'Switch To Presentation Mode';
+      } else {
+        return 'Switch To Edit Mode';
+      }
+    },
+    execute: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      if (dashboard.mode === 'edit') {
+        dashboard.mode = 'present';
+      } else {
+        dashboard.mode = 'edit';
+      }
+    },
+  });
 }
 
 export default extension;
