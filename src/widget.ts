@@ -141,8 +141,6 @@ export class DashboardWidget extends Panel {
     return this._notebook.context.path;
   }
 
-  
-
   /**
    * Create click listeners on attach
    */
@@ -152,6 +150,7 @@ export class DashboardWidget extends Panel {
     this.node.addEventListener('contextmenu', this);
     this.node.addEventListener('lm-drop', this);
     this.node.addEventListener('mousedown', this);
+    this.node.addEventListener('dblclick', this);
   }
 
 
@@ -165,6 +164,7 @@ export class DashboardWidget extends Panel {
     this.node.removeEventListener('contextmenu', this);
     this.node.removeEventListener('lm-drop', this);
     this.node.removeEventListener('mousedown', this);
+    this.node.removeEventListener('dblclick', this);
   }
 
   handleEvent(event: Event): void {
@@ -186,7 +186,46 @@ export class DashboardWidget extends Panel {
           blur
         );
         this.node.focus();
+      case 'dblclick':
+        this._evtDblClick(event as MouseEvent);
+        break;
     }
+  }
+
+   /**
+   * Handle the `'dblclick'` event for the widget.
+   */
+  private _evtDblClick(event: MouseEvent): void {
+    // Do nothing if it's not a left mouse press.
+    if (event.button !== 0) {
+      return;
+    }
+
+    // Do nothing if any modifier keys are pressed.
+    if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) {
+      return;
+    }
+
+    // Stop the event propagation.
+    event.preventDefault();
+    event.stopPropagation();
+
+    console.log("double clicked", this);
+
+    // clearTimeout(this._selectTimer);
+    // this._editNode.blur();
+
+    // // Find a valid double click target.
+    // const target = event.target as HTMLElement;
+    // const i = ArrayExt.findFirstIndex(this._items, node =>
+    //   node.contains(target)
+    // );
+    // if (i === -1) {
+    //   return;
+    // }
+
+    // const item = this._sortedItems[i];
+    // this._handleOpen(item);
   }
 
   /**
@@ -243,6 +282,7 @@ export class DashboardWidget extends Panel {
     }
   }
 
+  
   private _dragMouseMove(event: MouseEvent): void {
     const data = this._clickData;
 
