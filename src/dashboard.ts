@@ -22,7 +22,7 @@ import { DashboardWidget } from './widget';
 
 import { Icons } from './icons';
 
-import { buildToolbar } from './toolbar';
+import { buildToolbar, createSaveButton } from './toolbar';
 
 import { Widgetstore } from './widgetstore';
 
@@ -37,7 +37,6 @@ import { DASHBOARD_VERSION, WidgetInfo, DashboardSpec } from './file';
 import { unsaveDialog } from './dialog';
 
 import { DBUtils } from './dbUtils';
-
 
 // HTML element classes
 
@@ -134,7 +133,6 @@ export class DashboardArea extends Widget {
       const oldArea = event.source[1] as DashboardArea;
       if (oldArea === this) {
         // dragging in same dashboard.
-        console.log('same dashboard', widget);
 
         const pos: Widgetstore.WidgetPosition = {
           left: event.offsetX,
@@ -146,7 +144,6 @@ export class DashboardArea extends Widget {
         this._dbLayout.updateInfoFromWidget(widget);
       } else {
         // dragging between dashboards
-        console.log('between dashboards', widget);
         const info: Widgetstore.WidgetInfo = {
           widgetId: DashboardWidget.createDashboardWidgetId(),
           notebookId: widget.notebookId,
@@ -181,7 +178,7 @@ export class DashboardArea extends Widget {
         removed: false,
       };
 
-      const widget = this._dbLayout.createWidget(info);
+      const widget = this._dbLayout.createWidget(info, true);
       this._dbLayout.addWidget(widget, info);
       // Wait until the widget is fit to content then add it to the widgetstore.
       widget.ready.connect(() => {
@@ -325,10 +322,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
     const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
 
-    const { notebookTracker, content, outputTracker } = options;
-    const restore = options.store !== undefined;
-    const store = options.store || new Widgetstore({ id: 0, notebookTracker });
-
     const dashboardArea = new DashboardArea({
       outputTracker,
       layout: new DashboardLayout({
@@ -339,8 +332,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
         mode: restore ? 'present' : 'edit',
       }),
     });
-    
-    super({...options, content: content || dashboardArea});
+
+    super({ ...options, content: content || dashboardArea });
 
     this._dbArea = this.content as DashboardArea;
 
@@ -363,7 +356,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       { schema: Widgetstore.WIDGET_SCHEMA },
       (change) => (this._dirty = true)
     );
-    
+
     // Adds save button to dashboard toolbar.
     this.toolbar.addItem('save', createSaveButton(this, notebookTracker));
 
@@ -864,11 +857,6 @@ export namespace Dashboard {
      * clipboard, fullscreen and contents
      */
     utils: DBUtils;
-    
-    /**
-     * Optional widgetstore to restore state from.
-     */
-    store?: Widgetstore;
 
     /**
      * Dashboard canvas width (default is 1280).

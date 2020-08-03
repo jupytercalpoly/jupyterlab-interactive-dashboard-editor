@@ -22,7 +22,6 @@ import { Signal, ISignal } from '@lumino/signaling';
 
 import { Icons } from './icons';
 
-
 // HTML element classes
 
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
@@ -67,17 +66,21 @@ export class DashboardWidget extends Panel {
 
         clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
 
+        this.node.style.opacity = '0';
         this.addWidget(clone);
 
         // Wait a moment then fit content. This allows all components to load
         // and for their width/height to adjust before fitting.
         const done = (): void => {
-          this.fitContent();
+          if (options.fit) {
+            this.fitContent();
+          }
+          this.node.style.opacity = '1.0';
           // Emit the ready signal.
           this._ready.emit(undefined);
         };
 
-        setTimeout(done.bind(this), 40);
+        setTimeout(done.bind(this), 2);
       });
 
       // Might have weird interactions where options.cellId !== actual cellId
@@ -185,7 +188,6 @@ export class DashboardWidget extends Panel {
    * Handle the `'dblclick'` event for the widget.
    */
   private _evtDblClick(event: MouseEvent): void {
-    console.log('_evtDblClick');
     // Do nothing if it's not a left mouse press.
     if (event.button !== 0) {
       return;
@@ -268,7 +270,6 @@ export class DashboardWidget extends Panel {
    * Handle `mousemove` event of widget
    */
   private _evtMouseMove(event: MouseEvent): void {
-    console.log('_evtMouseMove');
     switch (this._mouseMode) {
       case 'drag':
         this._dragMouseMove(event);
@@ -315,8 +316,9 @@ export class DashboardWidget extends Panel {
   }
 
   fitContent(): void {
-    this.node.style.width = `${this.widgets[0].node.clientWidth}px`;
-    this.node.style.height = `${this.widgets[0].node.clientHeight}px`;
+    const element = this.widgets[0].node;
+    this.node.style.width = `${element.clientWidth + 3}px`;
+    this.node.style.height = `${element.clientHeight + 2}px`;
   }
 
   /**
@@ -361,7 +363,6 @@ export class DashboardWidget extends Panel {
   }
 
   private _evtMouseUp(event: MouseEvent): void {
-    console.log('_evtMouseUp');
     event.stopPropagation();
     event.preventDefault();
 
@@ -508,6 +509,11 @@ export namespace DashboardWidget {
      * An optional notebook id used for placeholder widgets.
      */
     notebookId?: string;
+
+    /**
+     * Whether to fit the widget to content when created.
+     */
+    fit?: boolean;
   }
 
   export type MouseMode = 'drag' | 'resize' | 'none';

@@ -15,12 +15,6 @@ import {
 
 import { CodeCell } from '@jupyterlab/cells';
 
-import { INotebookTracker } from '@jupyterlab/notebook';
-
-import { Widget } from '@lumino/widgets';
-
-import { ToolbarButton, InputDialog } from '@jupyterlab/apputils';
-
 import {
   saveIcon,
   refreshIcon,
@@ -48,7 +42,6 @@ import { addCellId, addNotebookId } from './utils';
 import { openfullscreen } from './fullscreen';
 
 import { DBUtils } from './dbUtils';
-
 
 export function buildToolbar(
   notebookTrakcer: INotebookTracker,
@@ -274,7 +267,7 @@ export function createStopButton(
  * Create restart button toolbar item.
  */
 
-export function createRestartButton(dashboard: Dashboard): Widget {
+export function createRestartButton(dashboard: Dashboard): ToolbarButton {
   const button = new ToolbarButton({
     icon: refreshIcon,
     onClick: (): void => {
@@ -287,9 +280,6 @@ export function createRestartButton(dashboard: Dashboard): Widget {
       }
       notebooks.forEach(
         (nb) => void sessionContextDialogs.restart(nb.sessionContext)
-      );
-          dashboard.save(notebookTracker, value.value);
-        }
       );
     },
     tooltip: 'Restart all kernels',

@@ -20,7 +20,6 @@ import { DashboardButton } from './button';
 
 import { DBUtils } from './dbUtils';
 
-
 /**
  * Command IDs used
  */
@@ -72,7 +71,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     });
 
     const utils = new DBUtils();
-  
+
     addCommands(app, tracker, dashboardTracker, outputTracker, utils);
 
     app.contextMenu.addItem({
