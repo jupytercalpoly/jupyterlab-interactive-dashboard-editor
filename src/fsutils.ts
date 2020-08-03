@@ -4,44 +4,64 @@ import { Dashboard } from './dashboard';
 /**
  * Creates a new untitled .dashboard in current dir
  *
+ * @param dashboard - the dashboard to associate the file with
+ *
  * @return file created
  */
-export async function newfile(
-  contents: ContentsManager
-): Promise<Contents.IModel> {
-  const file = await contents.newUntitled({
+export async function newfile(dashboard: Dashboard): Promise<Contents.IModel> {
+  const file = await dashboard.contentsManager.newUntitled({
     path: '/',
     type: 'file',
     ext: 'dashboard',
   });
+
+  dashboard.path = file.path;
+
   return file;
 }
+
 /**
  * Saves content as string to dashboard file
  *
- * @param content - content of any type to save as a string
+ * @param contents - the contents manager to use to write
+ *
+ * @param path - the path to the file
+ *
  * @param dashboard - dashboard with its path to be saved
  */
-export function dashboard2file(dashboard: Dashboard, content: any): void {
+export async function writeFile(
+  contents: ContentsManager,
+  path: string,
+  content: any
+): Promise<Contents.IModel> {
   const DASHBOARD: Partial<Contents.IModel> = {
-    path: dashboard.path,
+    path,
     type: 'file',
     mimetype: 'text/plain',
     content: JSON.stringify(content),
     format: 'text',
   };
-  dashboard.contents.save(dashboard.path, DASHBOARD);
+  return contents.save(path, DASHBOARD);
 }
 
 /**
  * Renames the dashboard file to name of the dashboard
  *
+ * @param name - the new name for the dashboard
+ *
  * @param dashboard - dashboard with its path to be renamed
  */
-export function renameDashboardFile(name: string, dashboard: Dashboard): void {
-  const newPath = '/' + name + '.dashboard';
-  dashboard.contents.rename(dashboard.path, newPath);
-  dashboard.path = newPath;
+export async function renameDashboardFile(
+  name: string,
+  dashboard: Dashboard
+): Promise<Contents.IModel> {
+  const newPath = '/' + name;
+  return dashboard.contentsManager.rename(dashboard.path, newPath).then(
+    (f: Contents.IModel): Contents.IModel => {
+      dashboard.path = newPath;
+      return f;
+    }
+  );
 }
 
 /**
@@ -51,7 +71,7 @@ export function renameDashboardFile(name: string, dashboard: Dashboard): void {
  * @param dashboard - dashboard with its path to be deleted
  */
 export function deleteDashboardFile(dashboard: Dashboard): void {
-  dashboard.contents.delete(dashboard.path);
+  dashboard.contentsManager.delete(dashboard.path);
 }
 
 /**
@@ -61,6 +81,6 @@ export function deleteDashboardFile(dashboard: Dashboard): void {
  * @return content of .dashboard file
  */
 export async function readDashboardFile(dashboard: Dashboard): Promise<string> {
-  const content = await dashboard.contents.get(dashboard.path);
+  const content = await dashboard.contentsManager.get(dashboard.path);
   return content.content as string;
 }

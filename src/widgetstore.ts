@@ -295,6 +295,8 @@ export namespace Widgetstore {
     id: 'dashboard',
     fields: {
       name: Fields.String(),
+      width: Fields.Number(),
+      height: Fields.Number(),
     },
   };
 
@@ -395,14 +397,4 @@ export namespace Widgetstore {
      */
     notebookTracker: INotebookTracker;
   }
-
-  /**
-   * Default width of added widgets.
-   */
-  export const DEFAULT_WIDTH = 500;
-
-  /**
-   * Default height of added widgets.
-   */
-  export const DEFAULT_HEIGHT = 100;
 }

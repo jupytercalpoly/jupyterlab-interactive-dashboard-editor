@@ -16,7 +16,7 @@ import { ArrayExt } from '@lumino/algorithm';
 
 import { Message } from '@lumino/messaging';
 
-import { Drag } from '@lumino/dragdrop';
+import { Drag } from './drag';
 
 import { shouldStartDrag } from './widgetdragutils';
 
@@ -24,25 +24,22 @@ import { DashboardArea } from './dashboard';
 
 import { getNotebookId, getCellId } from './utils';
 
+import { Signal, ISignal } from '@lumino/signaling';
+
 // HTML element classes
 
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
 
-/**
- * The mimetype used for DashboardWidget.
- */
 const DASHBOARD_WIDGET_MIME = 'pr-DashboardWidgetMine';
+
+const DASHBOARD_WIDGET_CHILD_CLASS = 'pr-DashboardWidgetChild';
+
+const EDITABLE_WIDGET_CLASS = 'pr-EditableWidget';
 
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
  */
 export class DashboardWidget extends Panel {
-  /**
-   * The left, top, width and height relative to
-   * the top left of dashboard.
-   */
-  _pos: number[];
-
   constructor(options: DashboardWidget.IOptions) {
     super();
     this._notebook = options.notebook;
@@ -70,7 +67,20 @@ export class DashboardWidget extends Panel {
           return;
         }
         const clone = this._cell.cloneOutputArea();
+
+        clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
+
         this.addWidget(clone);
+
+        // Wait a moment then fit content. This allows all components to load
+        // and for their width/height to adjust before fitting.
+        const done = (): void => {
+          this.fitContent();
+          // Emit the ready signal.
+          this._ready.emit(undefined);
+        };
+
+        setTimeout(done.bind(this), 40);
       });
 
       // Might have weird interactions where options.cellId !== actual cellId
@@ -88,22 +98,8 @@ export class DashboardWidget extends Panel {
     resizer.classList.add('pr-Resizer');
 
     this.node.appendChild(resizer);
-  }
 
-  /**
-   * Get the position of widget relative to the
-   * top left of dashboard.
-   */
-  public get pos(): number[] {
-    return this._pos;
-  }
-
-  /**
-   * Set the position of widget relative to the
-   * top left of dashboard.
-   */
-  public set pos(newPos: number[]) {
-    this._pos = newPos;
+    this.addClass(EDITABLE_WIDGET_CLASS);
   }
 
   /**
@@ -187,6 +183,10 @@ export class DashboardWidget extends Panel {
    * Handle `mousedown` events for the widget.
    */
   private _evtMouseDown(event: MouseEvent): void {
+    if (this._mode === 'present') {
+      return;
+    }
+
     const { button, shiftKey, target } = event;
 
     // We only handle main or secondary button actions.
@@ -211,6 +211,8 @@ export class DashboardWidget extends Panel {
 
     const cell = this.cell;
 
+    const rect = this.node.getBoundingClientRect();
+
     this._clickData = {
       pressX: event.clientX,
       pressY: event.clientY,
@@ -218,6 +220,8 @@ export class DashboardWidget extends Panel {
       pressWidth: parseInt(this.node.style.width, 10),
       pressHeight: parseInt(this.node.style.height, 10),
       target: this.node.cloneNode(true) as HTMLElement,
+      widgetX: rect.left,
+      widgetY: rect.top,
     };
   }
 
@@ -239,30 +243,38 @@ export class DashboardWidget extends Panel {
 
   private _dragMouseMove(event: MouseEvent): void {
     const data = this._clickData;
+    const { clientX, clientY } = event;
 
-    if (
-      data &&
-      shouldStartDrag(data.pressX, data.pressY, event.clientX, event.clientY)
-    ) {
-      void this._startDrag(data.target, event.clientX, event.clientY);
+    if (data && shouldStartDrag(data.pressX, data.pressY, clientX, clientY)) {
+      void this._startDrag(data.target, clientX, clientY);
     }
   }
 
   private _resizeMouseMove(event: MouseEvent): void {
     const { pressX, pressY, pressWidth, pressHeight } = this._clickData;
 
-    // const newWidth = Math.round((pressWidth + (event.clientX - pressX)) / 100) * 100;
-    // const newHeight = Math.round((pressHeight + (event.clientY - pressY)) / 100) * 100;
+    const deltaX = event.clientX - pressX;
+    const deltaY = event.clientY - pressY;
 
-    const newWidth = Math.max(pressWidth + (event.clientX - pressX), 60);
-    const newHeight = Math.max(pressHeight + (event.clientY - pressY), 60);
+    if (this._lockAR || event.shiftKey) {
+      console.log('aspect ratio move');
+    }
+
+    const newWidth = Math.max(pressWidth + deltaX, DashboardWidget.MIN_WIDTH);
+    const newHeight = Math.max(
+      pressHeight + deltaY,
+      DashboardWidget.MIN_HEIGHT
+    );
 
     this.node.style.width = `${newWidth}px`;
     this.node.style.height = `${newHeight}px`;
+
+    if (this._fitToContent && !event.altKey) {
+      this.fitContent();
+    }
   }
 
   fitContent(): void {
-    // Hacky way to clamp dimensions to child widget dimensions.
     this.node.style.width = `${this.widgets[0].node.clientWidth}px`;
     this.node.style.height = `${this.widgets[0].node.clientHeight}px`;
   }
@@ -288,6 +300,8 @@ export class DashboardWidget extends Panel {
       proposedAction: 'move',
       supportedActions: 'copy-move',
       source: this,
+      widgetX: this._clickData.widgetX,
+      widgetY: this._clickData.widgetY,
     });
 
     this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
@@ -345,6 +359,39 @@ export class DashboardWidget extends Panel {
     return this._notebookId;
   }
 
+  get fitToContent(): boolean {
+    return this._fitToContent;
+  }
+  set fitToContent(newState: boolean) {
+    this._fitToContent = newState;
+  }
+
+  get lockAR(): boolean {
+    return this._lockAR;
+  }
+  set lockAR(newState: boolean) {
+    this._lockAR = newState;
+  }
+
+  get mode(): DashboardWidget.Mode {
+    return this._mode;
+  }
+  set mode(newMode: DashboardWidget.Mode) {
+    this._mode = newMode;
+    if (newMode === 'edit') {
+      this.addClass(EDITABLE_WIDGET_CLASS);
+    } else {
+      this.removeClass(EDITABLE_WIDGET_CLASS);
+    }
+  }
+
+  /**
+   * A signal emitted once the widget's content is added.
+   */
+  get ready(): ISignal<this, void> {
+    return this._ready;
+  }
+
   static createDashboardWidgetId(): string {
     return `DashboardWidget-${UUID.uuid4()}`;
   }
@@ -352,6 +399,8 @@ export class DashboardWidget extends Panel {
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
+  private _cellId: string;
+  private _notebookId: string;
   private _clickData: {
     pressX: number;
     pressY: number;
@@ -359,17 +408,21 @@ export class DashboardWidget extends Panel {
     pressHeight: number;
     target: HTMLElement;
     cell: CodeCell;
+    widgetX: number;
+    widgetY: number;
   } | null = null;
   private _drag: Drag | null = null;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
-  private _cellId: string;
-  private _notebookId: string;
+  private _ready = new Signal<this, void>(this);
+  private _fitToContent = false;
+  private _lockAR = false;
+  private _mode: DashboardWidget.Mode = 'edit';
 }
 
 /**
- * Namespace for DashboardWidget options
+ * Namespace for DashboardWidget options and constants.
  */
-namespace DashboardWidget {
+export namespace DashboardWidget {
   export interface IOptions {
     /**
      * The notebook associated with the cloned output area.
@@ -404,6 +457,28 @@ namespace DashboardWidget {
   }
 
   export type MouseMode = 'drag' | 'resize' | 'none';
+
+  export type Mode = 'edit' | 'present';
+
+  /**
+   * Default width of added widgets.
+   */
+  export const DEFAULT_WIDTH = 500;
+
+  /**
+   * Default height of added widgets.
+   */
+  export const DEFAULT_HEIGHT = 500;
+
+  /**
+   * Minimum width of added widgets.
+   */
+  export const MIN_WIDTH = 10;
+
+  /**
+   * Minimum height of added widgets.
+   */
+  export const MIN_HEIGHT = 10;
 }
 
 export default DashboardWidget;
