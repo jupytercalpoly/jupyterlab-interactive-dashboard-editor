@@ -192,12 +192,14 @@ export class Widgetstore extends Litestore {
    *
    * @param info - info to create widget from.
    *
+   * @param fit - whether to fit the created widget to content when created.
+   *
    * @returns - the created widget.
    *
    * @throws - an error if a notebook or cell isn't found from the ids in the
    * widgetinfo object.
    */
-  createWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
+  createWidget(info: Widgetstore.WidgetInfo, fit?: boolean): DashboardWidget {
     const { notebookId, cellId } = info;
 
     const notebook = this.getNotebookById(notebookId);
@@ -208,7 +210,13 @@ export class Widgetstore extends Litestore {
     if (cell === undefined) {
       throw new Error('cell not found');
     }
-    const widget = new DashboardWidget({ notebook, cell, notebookId, cellId });
+    const widget = new DashboardWidget({
+      notebook,
+      cell,
+      notebookId,
+      cellId,
+      fit,
+    });
 
     widget.id = info.widgetId;
     widget.node.style.left = `${info.left}px`;

@@ -565,7 +565,7 @@ export class Drag implements IDisposable {
   /**
    * The scroll loop handler function.
    */
-  private _onScrollFrame = () => {
+  private _onScrollFrame = (): void => {
     // Bail early if there is no scroll target.
     if (!this._scrollTarget) {
       return;

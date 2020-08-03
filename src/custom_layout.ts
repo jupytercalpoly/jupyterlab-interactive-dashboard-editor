@@ -38,6 +38,10 @@ export class DashboardLayout extends Layout {
     this._mode = options.mode;
   }
 
+  get corner(): Widget {
+    return this._corner;
+  }
+
   /**
    * Perform initilization that requires a parent.
    */
@@ -382,13 +386,15 @@ export class DashboardLayout extends Layout {
    *
    * @param info - info to create widget from.
    *
+   * @param fit - whether to fit the widget to content when it's created.
+   *
    * @returns - the created widget.
    *
    * @throws - an error if a notebook or cell isn't found from the ids in the
    * widgetinfo object.
    */
-  createWidget(info: Widgetstore.WidgetInfo): DashboardWidget {
-    return this._store.createWidget(info);
+  createWidget(info: Widgetstore.WidgetInfo, fit?: boolean): DashboardWidget {
+    return this._store.createWidget(info, fit);
   }
 
   // Map from widget ids to LayoutItems

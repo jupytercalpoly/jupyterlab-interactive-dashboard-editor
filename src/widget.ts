@@ -1,12 +1,6 @@
-import {
-  NotebookPanel,
-  // , Notebook
-} from '@jupyterlab/notebook';
+import { NotebookPanel } from '@jupyterlab/notebook';
 
-import {
-  CodeCell,
-  // , ICodeCellModel
-} from '@jupyterlab/cells';
+import { CodeCell } from '@jupyterlab/cells';
 
 import { Panel } from '@lumino/widgets';
 
@@ -25,6 +19,8 @@ import { DashboardArea } from './dashboard';
 import { getNotebookId, getCellId } from './utils';
 
 import { Signal, ISignal } from '@lumino/signaling';
+
+import { Icons } from './icons';
 
 // HTML element classes
 
@@ -70,17 +66,21 @@ export class DashboardWidget extends Panel {
 
         clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
 
+        this.node.style.opacity = '0';
         this.addWidget(clone);
 
         // Wait a moment then fit content. This allows all components to load
         // and for their width/height to adjust before fitting.
         const done = (): void => {
-          this.fitContent();
+          if (options.fit) {
+            this.fitContent();
+          }
+          this.node.style.opacity = '1.0';
           // Emit the ready signal.
           this._ready.emit(undefined);
         };
 
-        setTimeout(done.bind(this), 40);
+        setTimeout(done.bind(this), 2);
       });
 
       // Might have weird interactions where options.cellId !== actual cellId
@@ -94,8 +94,7 @@ export class DashboardWidget extends Panel {
         ? options.notebookId
         : getNotebookId(options.notebook);
 
-    const resizer = document.createElement('div');
-    resizer.classList.add('pr-Resizer');
+    const resizer = DashboardWidget.createResizer();
 
     this.node.appendChild(resizer);
 
@@ -144,6 +143,7 @@ export class DashboardWidget extends Panel {
     this.node.addEventListener('contextmenu', this);
     this.node.addEventListener('lm-drop', this);
     this.node.addEventListener('mousedown', this);
+    this.node.addEventListener('dblclick', this);
   }
 
   /**
@@ -155,6 +155,7 @@ export class DashboardWidget extends Panel {
     this.node.removeEventListener('contextmenu', this);
     this.node.removeEventListener('lm-drop', this);
     this.node.removeEventListener('mousedown', this);
+    this.node.removeEventListener('dblclick', this);
   }
 
   handleEvent(event: Event): void {
@@ -176,7 +177,47 @@ export class DashboardWidget extends Panel {
           blur
         );
         this.node.focus();
+        break;
+      case 'dblclick':
+        this._evtDblClick(event as MouseEvent);
+        break;
     }
+  }
+
+  /**
+   * Handle the `'dblclick'` event for the widget.
+   */
+  private _evtDblClick(event: MouseEvent): void {
+    // Do nothing if it's not a left mouse press.
+    if (event.button !== 0) {
+      return;
+    }
+
+    // Do nothing if any modifier keys are pressed.
+    if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) {
+      return;
+    }
+
+    // Stop the event propagation.
+    event.preventDefault();
+    event.stopPropagation();
+
+    // console.log("double clicked", this);
+
+    // clearTimeout(this._selectTimer);
+    // this._editNode.blur();
+
+    // // Find a valid double click target.
+    // const target = event.target as HTMLElement;
+    // const i = ArrayExt.findFirstIndex(this._items, node =>
+    //   node.contains(target)
+    // );
+    // if (i === -1) {
+    //   return;
+    // }
+
+    // const item = this._sortedItems[i];
+    // this._handleOpen(item);
   }
 
   /**
@@ -275,8 +316,9 @@ export class DashboardWidget extends Panel {
   }
 
   fitContent(): void {
-    this.node.style.width = `${this.widgets[0].node.clientWidth}px`;
-    this.node.style.height = `${this.widgets[0].node.clientHeight}px`;
+    const element = this.widgets[0].node;
+    this.node.style.width = `${element.clientWidth + 3}px`;
+    this.node.style.height = `${element.clientHeight + 2}px`;
   }
 
   /**
@@ -299,7 +341,7 @@ export class DashboardWidget extends Panel {
       dragImage,
       proposedAction: 'move',
       supportedActions: 'copy-move',
-      source: this,
+      source: [this, this.parent],
       widgetX: this._clickData.widgetX,
       widgetY: this._clickData.widgetY,
     });
@@ -396,6 +438,19 @@ export class DashboardWidget extends Panel {
     return `DashboardWidget-${UUID.uuid4()}`;
   }
 
+  static createResizer(): HTMLElement {
+    const resizer = document.createElement('div');
+    resizer.classList.add('pr-Resizer');
+    Icons.resizer.element({
+      container: resizer,
+      width: '15px',
+      height: '15px',
+      pointerEvents: 'none',
+    });
+
+    return resizer;
+  }
+
   private _notebook: NotebookPanel;
   private _index: number;
   private _cell: CodeCell | null = null;
@@ -454,6 +509,11 @@ export namespace DashboardWidget {
      * An optional notebook id used for placeholder widgets.
      */
     notebookId?: string;
+
+    /**
+     * Whether to fit the widget to content when created.
+     */
+    fit?: boolean;
   }
 
   export type MouseMode = 'drag' | 'resize' | 'none';

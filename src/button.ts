@@ -1,4 +1,4 @@
-import { JupyterFrontEnd } from '@jupyterlab/application';
+import { JupyterFrontEnd, ILabShell } from '@jupyterlab/application';
 
 import {
   INotebookTracker,
@@ -20,6 +20,8 @@ import { DashboardWidget } from './widget';
 
 import { Dashboard } from './dashboard';
 
+import { DBUtils } from './dbUtils';
+
 /**
  * Adds a button to the main toolbar.
  */
@@ -29,12 +31,16 @@ export class DashboardButton
     app: JupyterFrontEnd,
     outputTracker: WidgetTracker<DashboardWidget>,
     dashboardTracker: WidgetTracker<Dashboard>,
-    tracker: INotebookTracker
+    tracker: INotebookTracker,
+    utils: DBUtils,
+    shell: ILabShell
   ) {
     this._app = app;
     this._outputTracker = outputTracker;
     this._dashboardTracker = dashboardTracker;
     this._tracker = tracker;
+    this._utils = utils;
+    this._shell = shell;
   }
 
   createNew(
@@ -46,6 +52,7 @@ export class DashboardButton
       const dashboard = new Dashboard({
         notebookTracker: this._tracker,
         outputTracker,
+        utils: this._utils,
       });
 
       const currentNotebook = this._tracker.currentWidget;
@@ -54,6 +61,7 @@ export class DashboardButton
         this._app.shell.activateById(currentNotebook.id);
       }
 
+      this._shell.collapseLeft();
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
         mode: 'split-left',
@@ -79,4 +87,6 @@ export class DashboardButton
   private _outputTracker: WidgetTracker<DashboardWidget>;
   private _dashboardTracker: WidgetTracker<Dashboard>;
   private _tracker: INotebookTracker;
+  private _utils: DBUtils;
+  private _shell: ILabShell;
 }

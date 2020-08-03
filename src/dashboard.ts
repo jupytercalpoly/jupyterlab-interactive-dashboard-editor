@@ -22,7 +22,7 @@ import { DashboardWidget } from './widget';
 
 import { Icons } from './icons';
 
-import { createSaveButton } from './toolbar';
+import { buildToolbar, createSaveButton } from './toolbar';
 
 import { Widgetstore } from './widgetstore';
 
@@ -33,6 +33,10 @@ import { newfile, renameDashboardFile, writeFile } from './fsutils';
 import { addCellId, addNotebookId, getCellById } from './utils';
 
 import { DASHBOARD_VERSION, WidgetInfo, DashboardSpec } from './file';
+
+import { unsaveDialog } from './dialog';
+
+import { DBUtils } from './dbUtils';
 
 // HTML element classes
 
@@ -65,6 +69,10 @@ export class DashboardArea extends Widget {
     this.layout = options.layout;
     this._dbLayout = options.layout as DashboardLayout;
     this.addClass(DASHBOARD_AREA_CLASS);
+  }
+
+  public get dblayout(): DashboardLayout {
+    return this._dbLayout;
   }
 
   /**
@@ -120,19 +128,39 @@ export class DashboardArea extends Widget {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
-    // dragging from dashboard -> dashboard.
     if (event.proposedAction === 'move') {
-      const widget = event.source as DashboardWidget;
+      const widget = event.source[0] as DashboardWidget;
+      const oldArea = event.source[1] as DashboardArea;
+      if (oldArea === this) {
+        // dragging in same dashboard.
 
-      const pos: Widgetstore.WidgetPosition = {
-        left: event.offsetX,
-        top: event.offsetY,
-        width: widget.node.offsetWidth,
-        height: widget.node.offsetHeight,
-      };
+        const pos: Widgetstore.WidgetPosition = {
+          left: event.offsetX,
+          top: event.offsetY,
+          width: widget.node.offsetWidth,
+          height: widget.node.offsetHeight,
+        };
+        this._dbLayout.updateWidget(widget, pos);
+        this._dbLayout.updateInfoFromWidget(widget);
+      } else {
+        // dragging between dashboards
+        const info: Widgetstore.WidgetInfo = {
+          widgetId: DashboardWidget.createDashboardWidgetId(),
+          notebookId: widget.notebookId,
+          cellId: widget.cellId,
+          left: event.offsetX,
+          top: event.offsetY,
+          width: widget.node.offsetWidth,
+          height: widget.node.offsetHeight,
+          removed: false,
+        };
 
-      this._dbLayout.updateWidget(widget, pos);
-      this._dbLayout.updateInfoFromWidget(widget);
+        const newWidget = this._dbLayout.createWidget(info);
+        this._dbLayout.addWidget(newWidget, info);
+        this._dbLayout.updateWidgetInfo(info);
+        oldArea.deleteWidgetInfo(widget);
+        oldArea.deleteWidget(widget);
+      }
 
       // dragging from notebook -> dashboard.
     } else if (event.proposedAction === 'copy') {
@@ -150,7 +178,7 @@ export class DashboardArea extends Widget {
         removed: false,
       };
 
-      const widget = this._dbLayout.createWidget(info);
+      const widget = this._dbLayout.createWidget(info, true);
       this._dbLayout.addWidget(widget, info);
       // Wait until the widget is fit to content then add it to the widgetstore.
       widget.ready.connect(() => {
@@ -290,10 +318,9 @@ export class DashboardArea extends Widget {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const { notebookTracker, content, outputTracker } = options;
+    const { notebookTracker, content, outputTracker, utils } = options;
     const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
-    const contentsManager = new ContentsManager();
 
     const dashboardArea = new DashboardArea({
       outputTracker,
@@ -313,7 +340,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
     this.setName(options.name || 'Unnamed Dashboard');
-    this._contentsManager = contentsManager;
+    this._contentsManager = utils.contents;
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
@@ -321,6 +348,14 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     this.addClass(DASHBOARD_CLASS);
     this.node.setAttribute('style', 'overflow:auto');
+
+    // Adds buttons to dashboard toolbar.
+    buildToolbar(notebookTracker, this, outputTracker, utils);
+
+    this._store.listenTable(
+      { schema: Widgetstore.WIDGET_SCHEMA },
+      (change) => (this._dirty = true)
+    );
 
     // Adds save button to dashboard toolbar.
     this.toolbar.addItem('save', createSaveButton(this, notebookTracker));
@@ -331,6 +366,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
     } else {
       this._mode = 'edit';
     }
+  }
+
+  public get area(): DashboardArea {
+    return this._dbArea;
   }
 
   /**
@@ -358,6 +397,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this._path = v;
   }
 
+  public set dirty(v: boolean) {
+    this._dirty = v;
+  }
+
   /**
    ** Add a widget to the layout.
    *
@@ -372,6 +415,20 @@ export class Dashboard extends MainAreaWidget<Widget> {
     pos: Widgetstore.WidgetPosition
   ): boolean {
     return this._dbArea.updateWidget(widget, pos);
+  }
+
+  dispose(): void {
+    if (this._dirty) {
+      const dialog = unsaveDialog(this);
+      dialog.launch().then((result) => {
+        dialog.dispose();
+        if (result.button.accept) {
+          return super.dispose();
+        }
+      });
+    } else {
+      return super.dispose();
+    }
   }
 
   /**
@@ -553,7 +610,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
   static async load(
     path: string,
     notebookTracker: INotebookTracker,
-    outputTracker: WidgetTracker<DashboardWidget>
+    outputTracker: WidgetTracker<DashboardWidget>,
+    utils: DBUtils
   ): Promise<Dashboard> {
     // Create the contentsManager for opening/reading the dashboard file.
     const contentsManager = new ContentsManager();
@@ -685,6 +743,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       notebookTracker,
       outputTracker,
       store,
+      utils,
       dashboardWidth,
       dashboardHeight,
     });
@@ -768,6 +827,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   private _dbArea: DashboardArea;
   private _contentsManager: ContentsManager;
   private _path: string;
+  private _dirty: boolean;
   private _mode: Dashboard.Mode;
 }
 
@@ -789,9 +849,14 @@ export namespace Dashboard {
     notebookTracker: INotebookTracker;
 
     /**
-     * Optional widgetstore to restore state from.
+     * Dashboard canvas width (default is 1280).
      */
     store?: Widgetstore;
+
+    /**
+     * clipboard, fullscreen and contents
+     */
+    utils: DBUtils;
 
     /**
      * Dashboard canvas width (default is 1280).

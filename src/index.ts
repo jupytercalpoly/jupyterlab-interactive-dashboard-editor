@@ -1,4 +1,5 @@
 import {
+  ILabShell,
   JupyterFrontEnd,
   JupyterFrontEndPlugin,
 } from '@jupyterlab/application';
@@ -16,6 +17,8 @@ import { Dashboard } from './dashboard';
 import { DashboardWidget } from './widget';
 
 import { DashboardButton } from './button';
+
+import { DBUtils } from './dbUtils';
 
 /**
  * Command IDs used
@@ -49,12 +52,13 @@ namespace CommandIDs {
 const extension: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
-  requires: [INotebookTracker],
-  activate: (app: JupyterFrontEnd, tracker: INotebookTracker): void => {
+  requires: [INotebookTracker, ILabShell],
+  activate: (
+    app: JupyterFrontEnd,
+    tracker: INotebookTracker,
+    labShell: ILabShell
+  ): void => {
     console.log('JupyterLab extension presto is activated!');
-
-    // Datastore for Dashboard info
-    // TODO
 
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({
@@ -66,7 +70,9 @@ const extension: JupyterFrontEndPlugin<void> = {
       namespace: 'dashboard-outputs',
     });
 
-    addCommands(app, tracker, dashboardTracker, outputTracker);
+    const utils = new DBUtils();
+
+    addCommands(app, tracker, dashboardTracker, outputTracker, utils);
 
     app.contextMenu.addItem({
       command: CommandIDs.save,
@@ -146,7 +152,14 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new DashboardButton(app, outputTracker, dashboardTracker, tracker)
+      new DashboardButton(
+        app,
+        outputTracker,
+        dashboardTracker,
+        tracker,
+        utils,
+        labShell
+      )
     );
   },
 };
@@ -155,7 +168,8 @@ function addCommands(
   app: JupyterFrontEnd,
   tracker: INotebookTracker,
   dashboardTracker: WidgetTracker<Dashboard>,
-  outputTracker: WidgetTracker<DashboardWidget>
+  outputTracker: WidgetTracker<DashboardWidget>,
+  utils: DBUtils
 ): void {
   const { commands, shell } = app;
 
@@ -295,7 +309,12 @@ function addCommands(
         console.log('invalid path');
         return;
       }
-      const dashboard = await Dashboard.load(path, tracker, outputTracker);
+      const dashboard = await Dashboard.load(
+        path,
+        tracker,
+        outputTracker,
+        utils
+      );
       const currentNotebook = tracker.currentWidget;
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
