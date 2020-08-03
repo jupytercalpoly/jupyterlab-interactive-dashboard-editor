@@ -14,17 +14,16 @@ import { DocumentRegistry } from '@jupyterlab/docregistry';
 
 import { WidgetTracker } from '@jupyterlab/apputils';
 
-import { CodeCell, Cell } from '@jupyterlab/cells';
-
 import { Icons } from './icons';
 
 import { DashboardWidget } from './widget';
 
 import { Dashboard } from './dashboard';
 
-import { Widgetstore } from './widgetstore';
+// import { Widgetstore } from './widgetstore';
 
-import { addCellId, addNotebookId } from './utils';
+// import { addCellId, addNotebookId } from './utils';
+
 import { DBUtils } from './dbUtils';
 
 /**
@@ -32,12 +31,6 @@ import { DBUtils } from './dbUtils';
  */
 export class DashboardButton
   implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
-  _app: JupyterFrontEnd;
-  _outputTracker: WidgetTracker<DashboardWidget>;
-  _dashboardTracker: WidgetTracker<Dashboard>;
-  _tracker: INotebookTracker;
-  _utils: DBUtils;
-  _shell: ILabShell;
   constructor(
     app: JupyterFrontEnd,
     outputTracker: WidgetTracker<DashboardWidget>,
@@ -63,10 +56,11 @@ export class DashboardButton
       const dashboard = new Dashboard({
         notebookTracker: this._tracker,
         outputTracker,
-        panel,
         utils: this._utils,
       });
+
       const currentNotebook = this._tracker.currentWidget;
+
       if (currentNotebook) {
         this._app.shell.activateById(currentNotebook.id);
       }
@@ -77,32 +71,9 @@ export class DashboardButton
         mode: 'split-left',
       });
 
-      //populate new dashboard based off metadata?
-      for (let i = 0; i < panel.content.widgets.length; i++) {
-        // console.log("cell ", i, " at pos", (panel.content.widgets[i] as Cell).model.metadata.get("pos"));
-        // CodeCell.execute(panel.content.widgets[i] as CodeCell, sessionContext: ISessionContext, metadata?: JSONObject):
-        const pos = (panel.content.widgets[i] as Cell).model.metadata.get(
-          dashboard.getName()
-        ) as Widgetstore.WidgetPosition[];
-        const cell = panel.content.widgets[i] as CodeCell;
-        if (pos !== undefined) {
-          pos.forEach((p) => {
-            const info: Widgetstore.WidgetInfo = {
-              widgetId: DashboardWidget.createDashboardWidgetId(),
-              notebookId: addNotebookId(panel),
-              cellId: addCellId(cell),
-              ...p,
-              removed: false,
-              missing: false,
-            };
-            dashboard.updateWidgetInfo(info);
-          });
-        }
-      }
-      dashboard.update();
-      dashboard.updateLayoutFromWidgetstore();
       void this._dashboardTracker.add(dashboard);
     };
+
     const button = new ToolbarButton({
       className: 'dashboardButton',
       icon: Icons.blueDashboard,
@@ -112,8 +83,13 @@ export class DashboardButton
     });
 
     panel.toolbar.insertItem(9, 'dashboard', button);
-    return new DisposableDelegate(() => {
-      button.dispose();
-    });
+
+    return new DisposableDelegate(() => button.dispose());
   }
+  private _app: JupyterFrontEnd;
+  private _outputTracker: WidgetTracker<DashboardWidget>;
+  private _dashboardTracker: WidgetTracker<Dashboard>;
+  private _tracker: INotebookTracker;
+  private _utils: DBUtils;
+  private _shell: ILabShell;
 }

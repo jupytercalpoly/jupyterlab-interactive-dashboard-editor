@@ -451,7 +451,6 @@ export class Litestore implements IDisposable, IIterable<Table<Schema>> {
     if (transaction === undefined) {
       return undefined;
     }
-    console.log('new transaction', transaction);
 
     return transaction.id;
   }

@@ -16,8 +16,6 @@ import { UUID } from '@lumino/coreutils';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 
-// import {Dialog} from '@jupyterlab/apputils';
-
 import { DashboardLayout } from './custom_layout';
 
 import { DashboardWidget } from './widget';
@@ -30,13 +28,11 @@ import { Widgetstore } from './widgetstore';
 
 import { getPathFromNotebookId } from './utils';
 
-import { dashboard2file, renameDashboardFile } from './fsutils';
+import { newfile, renameDashboardFile, writeFile } from './fsutils';
 
 import { addCellId, addNotebookId, getCellById } from './utils';
 
 import { DASHBOARD_VERSION, WidgetInfo, DashboardSpec } from './file';
-
-import { newfile } from './fsutils';
 
 import { unsaveDialog } from './dialog';
 
@@ -61,11 +57,6 @@ export namespace DashboardArea {
     outputTracker: WidgetTracker<DashboardWidget>;
 
     layout: DashboardLayout;
-
-    // /**
-    //  * Dashboard used for position.
-    //  */
-    // dashboard: Dashboard;
   }
 }
 
@@ -128,9 +119,9 @@ export class DashboardArea extends Widget {
    */
   private _evtDragOver(event: IDragEvent): void {
     this.addClass(DROP_TARGET_CLASS);
+    event.dropAction = 'copy';
     event.preventDefault();
     event.stopPropagation();
-    event.dropAction = 'copy';
   }
 
   /**
@@ -184,14 +175,18 @@ export class DashboardArea extends Widget {
         cellId: addCellId(cell),
         left: event.offsetX,
         top: event.offsetY,
-        width: Widgetstore.DEFAULT_WIDTH,
-        height: Widgetstore.DEFAULT_HEIGHT,
+        width: DashboardWidget.DEFAULT_WIDTH,
+        height: DashboardWidget.DEFAULT_HEIGHT,
         removed: false,
       };
 
       const widget = this._dbLayout.createWidget(info);
       this._dbLayout.addWidget(widget, info);
-      this._dbLayout.updateWidgetInfo(info);
+      // Wait until the widget is fit to content then add it to the widgetstore.
+      widget.ready.connect(() => {
+        const newInfo = this.getWidgetInfo(widget);
+        this.updateWidgetInfo(newInfo);
+      }, this);
     } else {
       return;
     }
@@ -325,18 +320,19 @@ export class DashboardArea extends Widget {
 export class Dashboard extends MainAreaWidget<Widget> {
   // Generics??? Would love to further constrain this to DashboardWidgets but idk how
   constructor(options: Dashboard.IOptions) {
-    const { notebookTracker, content, outputTracker, panel, utils } = options;
+    const { notebookTracker, content, outputTracker, utils } = options;
     const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
-    const contents = new ContentsManager();
+    // const contentsManager = new ContentsManager();
 
     const dashboardArea = new DashboardArea({
       outputTracker,
       layout: new DashboardLayout({
         store,
         outputTracker,
-        width: 1000,
-        height: 1000,
+        width: options.dashboardWidth || 1280,
+        height: options.dashboardHeight || 720,
+        mode: restore ? 'present' : 'edit',
       }),
     });
 
@@ -346,19 +342,14 @@ export class Dashboard extends MainAreaWidget<Widget> {
     });
     this._dbArea = this.content as DashboardArea;
 
-    if (!restore) {
-      //creates and attachs a new untitled .dashboard file to dashboard
-      newfile(contents).then((f) => {
-        this._file = f;
-        this._path = this._file.path;
-      });
-    }
+    super({ ...options, content: content || dashboardArea });
+
+    this._dbArea = this.content as DashboardArea;
 
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
-    this._name = options.name || 'Unnamed Dashboard';
-    this._contents = contents;
-    this._dirty = false;
+    this.setName(options.name || 'Unnamed Dashboard');
+    this._contentsManager = utils.contents;
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
@@ -368,7 +359,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.node.setAttribute('style', 'overflow:auto');
 
     // Adds buttons to dashboard toolbar.
-    buildToolbar(notebookTracker, this, panel, outputTracker, utils);
+    buildToolbar(notebookTracker, this, outputTracker, utils);
 
     this._store.listenTable(
       { schema: Widgetstore.WIDGET_SCHEMA },
@@ -376,7 +367,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
     );
 
     if (restore) {
+      this._mode = 'present';
       this.updateLayoutFromWidgetstore();
+    } else {
+      this._mode = 'edit';
     }
   }
 
@@ -389,8 +383,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    * @returns ContentsManage
    */
-  public get contents(): ContentsManager {
-    return this._contents;
+  public get contentsManager(): ContentsManager {
+    return this._contentsManager;
   }
 
   /**
@@ -545,11 +539,16 @@ export class Dashboard extends MainAreaWidget<Widget> {
   /**
    * Saves the dashboard to file.
    *
-   * @param path - file path to save the dashboard to.
+   * @param tracker - notebook tracker used for saving.
+   *
+   * @param filename - name to save dashboard as.
    *
    * @throws an error if saving fails.
    */
-  save(notebookTracker: INotebookTracker): void {
+  async save(
+    notebookTracker: INotebookTracker,
+    filename: string
+  ): Promise<Contents.IModel> {
     // Get all widgets that haven't been removed.
     const records = filter(
       this._store.getWidgets(),
@@ -557,12 +556,15 @@ export class Dashboard extends MainAreaWidget<Widget> {
     );
 
     const file: DashboardSpec = {
+      name: this._name,
       version: DASHBOARD_VERSION,
       dashboardHeight: (this._dbArea.layout as DashboardLayout).height,
       dashboardWidth: (this._dbArea.layout as DashboardLayout).width,
       paths: {},
       outputs: {},
     };
+
+    this.setName(filename);
 
     each(records, (record) => {
       const notebookId = record.notebookId;
@@ -593,9 +595,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
       });
     });
 
-    const fileName = this._name;
-    renameDashboardFile(fileName, this);
-    dashboard2file(this, file);
+    await newfile(this);
+    await renameDashboardFile(filename, this);
+    return writeFile(this._contentsManager, this._path, file);
   }
 
   /**
@@ -648,32 +650,31 @@ export class Dashboard extends MainAreaWidget<Widget> {
       throw new Error("Dashboard file missing required field 'paths'");
     }
 
-    // for (const [notebookPath, notebookId] of Object.entries(parsed.paths)) {
-    //   if (notebookId === undefined) {
-    //     throw new Error(`No notebook id for notebook at ${notebookPath}`);
-    //   }
+    for (const [notebookPath, notebookId] of Object.entries(parsed.paths)) {
+      if (notebookId === undefined) {
+        throw new Error(`No notebook id for notebook at ${notebookPath}`);
+      }
 
-    //   const maybeNotebook = loadFileAsString(path);
+      await contentsManager.get(notebookPath).catch((error) => {
+        throw new Error(`Error reading notebook at ${notebookPath}`);
+      });
 
-    //   if (maybeNotebook === undefined) {
-    //     // TODO: Replace with file picker.
-    //     throw new Error(`Error reading notebook at ${notebookPath}`);
-    //   }
+      // JSON.parse doesn't work for double quotes (which .ipynb files use)
+      //
+      // const parsedMaybeNotebook = JSON.parse(maybeNotebook.content as string);
 
-    //   const parsedMaybeNotebook = JSON.parse(maybeNotebook);
+      // const maybeNotebookId = parsedMaybeNotebook.metadata?.presto.id;
 
-    //   const maybeNotebookId = parsedMaybeNotebook.metadata?.presto.id;
+      // if (maybeNotebookId === undefined) {
+      //   throw new Error(`No notebook id found for ${notebookPath}`);
+      // }
 
-    //   if (maybeNotebookId === undefined) {
-    //     throw new Error(`No notebook id found for ${notebookPath}`);
-    //   }
-
-    //   if (maybeNotebookId !== notebookId) {
-    //     throw new Error(
-    //       `Notebook id of ${notebookPath} (${maybeNotebookId}) does not match dashboard file notebook id (${notebookId})`
-    //     );
-    //   }
-    // }
+      // if (maybeNotebookId !== notebookId) {
+      //   throw new Error(
+      //     `Notebook id of ${notebookPath} (${maybeNotebookId}) does not match dashboard file notebook id (${notebookId})`
+      //   );
+      // }
+    }
 
     const paths = parsed.paths;
 
@@ -727,7 +728,19 @@ export class Dashboard extends MainAreaWidget<Widget> {
     }
 
     const name = parsed.name;
-    const panel = notebookTracker.currentWidget;
+    let dashboardWidth = 0;
+    let dashboardHeight = 0;
+
+    if (parsed.dashboardWidth !== undefined && !isNaN(+parsed.dashboardWidth)) {
+      dashboardWidth = +parsed.dashboardWidth;
+    }
+
+    if (
+      parsed.dashboardHeight !== undefined &&
+      !isNaN(+parsed.dashboardHeight)
+    ) {
+      dashboardHeight = +parsed.dashboardHeight;
+    }
 
     contentsManager.dispose();
 
@@ -736,9 +749,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
       name,
       notebookTracker,
       outputTracker,
-      panel,
       store,
       utils,
+      dashboardWidth,
+      dashboardHeight,
     });
   }
 
@@ -791,15 +805,37 @@ export class Dashboard extends MainAreaWidget<Widget> {
     }
   }
 
+  get mode(): Dashboard.Mode {
+    return this._mode;
+  }
+  set mode(newMode: Dashboard.Mode) {
+    this._mode = newMode;
+    (this._dbArea.layout as DashboardLayout).mode = newMode;
+  }
+
+  get height(): number {
+    return (this._dbArea.layout as DashboardLayout).height;
+  }
+  set height(newHeight: number) {
+    (this._dbArea.layout as DashboardLayout).height = newHeight;
+  }
+
+  get width(): number {
+    return (this._dbArea.layout as DashboardLayout).width;
+  }
+  set width(newWidth: number) {
+    (this._dbArea.layout as DashboardLayout).width = newWidth;
+  }
+
   private _name: string;
   private _store: Widgetstore;
   // Convenient alias so I don't have to type
   // (this.content as DashboardArea) every time.
   private _dbArea: DashboardArea;
-  private _contents: ContentsManager;
-  private _file: Contents.IModel;
+  private _contentsManager: ContentsManager;
   private _path: string;
   private _dirty: boolean;
+  private _mode: Dashboard.Mode;
 }
 
 export namespace Dashboard {
@@ -820,12 +856,7 @@ export namespace Dashboard {
     notebookTracker: INotebookTracker;
 
     /**
-     * NotebookPanel.
-     */
-    panel: NotebookPanel;
-
-    /**
-     * Optional widgetstore to restore state from.
+     * Dashboard canvas width (default is 1280).
      */
     store?: Widgetstore;
 
@@ -838,5 +869,13 @@ export namespace Dashboard {
      * clipboard, fullscreen and contents
      */
     utils: DBUtils;
+    dashboardWidth?: number;
+
+    /**
+     * Dashboard canvas height (default is 720).
+     */
+    dashboardHeight?: number;
   }
+
+  export type Mode = 'edit' | 'present';
 }

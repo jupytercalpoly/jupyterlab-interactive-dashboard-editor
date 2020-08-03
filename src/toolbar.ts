@@ -2,7 +2,7 @@ import { NotebookPanel, NotebookActions, INotebookTracker} from '@jupyterlab/not
 
 import { Widget } from '@lumino/widgets';
 
-import { ToolbarButton, WidgetTracker, sessionContextDialogs} from '@jupyterlab/apputils';
+import { ToolbarButton, WidgetTracker, sessionContextDialogs, InputDialog} from '@jupyterlab/apputils';
 
 import { CodeCell } from '@jupyterlab/cells';
 
@@ -24,18 +24,16 @@ import {openfullscreen} from './fullscreen';
 import { DBUtils } from './dbUtils';
 
 export function buildToolbar(notebookTrakcer: INotebookTracker,
-  dashboard: Dashboard, panel: NotebookPanel, tracker: WidgetTracker<DashboardWidget>, utils: DBUtils){
-  dashboard.toolbar.addItem('save', createSaveButton(dashboard, panel, notebookTrakcer));
-  dashboard.toolbar.addItem('undo', createUndoButton(dashboard, panel));
-  dashboard.toolbar.addItem('redo', createRedoButton(dashboard, panel));
-  dashboard.toolbar.addItem('cut', createCutButton(dashboard, panel, tracker, utils));
-  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, panel, tracker, utils));
-  dashboard.toolbar.addItem('paste', createPasteButton(dashboard, panel, utils));
-  dashboard.toolbar.addItem('run', createRunButton(dashboard, panel, tracker));
-  dashboard.toolbar.addItem('stop', createStopButton(dashboard, panel, tracker));
-  dashboard.toolbar.addItem('full screen', createFullScreenButton(dashboard, panel, notebookTrakcer));
-  // dashboard.toolbar.addItem('restart', createRestartButton(dashboard, panel));
-  // dashboard.toolbar.addItem('run all', createRunAllButton(dashboard, panel));
+  dashboard: Dashboard, tracker: WidgetTracker<DashboardWidget>, utils: DBUtils){
+  dashboard.toolbar.addItem('save', createSaveButton(dashboard, notebookTrakcer));
+  dashboard.toolbar.addItem('undo', createUndoButton(dashboard));
+  dashboard.toolbar.addItem('redo', createRedoButton(dashboard));
+  dashboard.toolbar.addItem('cut', createCutButton(dashboard, tracker, utils));
+  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, tracker, utils));
+  dashboard.toolbar.addItem('paste', createPasteButton(dashboard, utils));
+  dashboard.toolbar.addItem('run', createRunButton(dashboard, tracker));
+  dashboard.toolbar.addItem('stop', createStopButton(dashboard, tracker));
+  dashboard.toolbar.addItem('full screen', createFullScreenButton(dashboard));
 }
 
 /**
@@ -44,8 +42,6 @@ export function buildToolbar(notebookTrakcer: INotebookTracker,
 
 export function createFullScreenButton(
   dashboard: Dashboard,
-  panel: NotebookPanel,
-  notebookTrakcer: INotebookTracker
 ): Widget {
   const button = new ToolbarButton({
     icon: Icons.fullscreenToolbarIcon,
@@ -66,13 +62,17 @@ export function createFullScreenButton(
 
 export function createSaveButton(
   dashboard: Dashboard,
-  panel: NotebookPanel,
-  notebookTrakcer: INotebookTracker
+  notebookTracker: INotebookTracker
 ): Widget {
   const button = new ToolbarButton({
     icon: saveIcon,
     onClick: (): void => {
-      dashboard.save(notebookTrakcer);
+      const filename = `${dashboard.getName()}.dashboard`;
+      InputDialog.getText({ title: 'Save as', text: filename }).then(
+        (value) => {
+          dashboard.save(notebookTracker, value.value);
+        }
+      );
       dashboard.dirty = false;
       const dialog = saveDialog(dashboard);
       dialog.launch().then((result) => {
@@ -89,8 +89,7 @@ export function createSaveButton(
  */
 
 export function createUndoButton(
-  dashboard: Dashboard,
-  panel: NotebookPanel
+  dashboard: Dashboard
 ): Widget {
   const button = new ToolbarButton({
     icon: undoIcon,
@@ -107,8 +106,7 @@ export function createUndoButton(
  */
 
 export function createRedoButton(
-  dashboard: Dashboard,
-  panel: NotebookPanel
+  dashboard: Dashboard
 ): Widget {
   const button = new ToolbarButton({
     icon: Icons.redoToolbarIcon,
@@ -126,7 +124,6 @@ export function createRedoButton(
 
 export function createCutButton(
   dashboard: Dashboard,
-  panel: NotebookPanel, 
   outputTracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils
 ): Widget {
@@ -149,7 +146,6 @@ export function createCutButton(
 
 export function createCopyButton(
   dashboard: Dashboard,
-  panel: NotebookPanel,
   outputTracker: WidgetTracker<DashboardWidget>,
   untils: DBUtils
 ): Widget {
@@ -178,8 +174,8 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
     cellId: newWidget.cellId,
     left: 0,
     top: 0,
-    width: Widgetstore.DEFAULT_WIDTH,
-    height: Widgetstore.DEFAULT_HEIGHT,
+    width: Number(widget.node.style.width.split("p")[0]),
+    height: Number(widget.node.style.height.split("p")[0]),
     removed: false,
   };
   // console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
@@ -193,7 +189,6 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
 
 export function createPasteButton(
   dashboard: Dashboard,
-  panel: NotebookPanel,
   untils: DBUtils
 ): Widget {
   const button = new ToolbarButton({
@@ -212,7 +207,6 @@ export function createPasteButton(
 
 export function createRunButton(
   dashboard: Dashboard,
-  panel: NotebookPanel,
   tracker: WidgetTracker<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
@@ -233,7 +227,6 @@ export function createRunButton(
 
 export function createStopButton(
   dashboard: Dashboard,
-  panel: NotebookPanel,
   tracker: WidgetTracker<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
@@ -252,8 +245,7 @@ export function createStopButton(
  */
 
 export function createRestartButton(
-  dashboard: Dashboard,
-  panel: NotebookPanel
+  dashboard: Dashboard
 ): Widget {
   const button = new ToolbarButton({
     icon: refreshIcon,
@@ -278,8 +270,7 @@ export function createRestartButton(
  */
 
 export function createRunAllButton(
-  dashboard: Dashboard,
-  panel: NotebookPanel
+  dashboard: Dashboard
 ): Widget {
   const button = new ToolbarButton({
     icon: fastForwardIcon,
