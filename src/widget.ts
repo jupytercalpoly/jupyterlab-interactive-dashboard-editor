@@ -1,11 +1,9 @@
 import {
   NotebookPanel,
-  // , Notebook
 } from '@jupyterlab/notebook';
 
 import {
   CodeCell,
-  // , ICodeCellModel
 } from '@jupyterlab/cells';
 
 import { Panel } from '@lumino/widgets';
@@ -18,8 +16,6 @@ import { Message } from '@lumino/messaging';
 
 import { Drag } from './drag';
 
-// import { Widget } from '@lumino/widgets';
-
 import { shouldStartDrag } from './widgetdragutils';
 
 import { DashboardArea } from './dashboard';
@@ -27,6 +23,9 @@ import { DashboardArea } from './dashboard';
 import { getNotebookId, getCellId } from './utils';
 
 import { Signal, ISignal } from '@lumino/signaling';
+
+import { Icons } from './icons';
+
 
 // HTML element classes
 
@@ -96,8 +95,7 @@ export class DashboardWidget extends Panel {
         ? options.notebookId
         : getNotebookId(options.notebook);
 
-    const resizer = document.createElement('div');
-    resizer.classList.add('pr-Resizer');
+    const resizer = DashboardWidget.createResizer();
 
     this.node.appendChild(resizer);
 
@@ -443,6 +441,19 @@ export class DashboardWidget extends Panel {
 
   static createDashboardWidgetId(): string {
     return `DashboardWidget-${UUID.uuid4()}`;
+  }
+
+  static createResizer(): HTMLElement {
+    const resizer = document.createElement('div');
+    resizer.classList.add('pr-Resizer');
+    Icons.resizer.element({
+      container: resizer,
+      width: '15px',
+      height: '15px',
+      pointerEvents: 'none'
+    });
+
+    return resizer;
   }
 
   private _notebook: NotebookPanel;

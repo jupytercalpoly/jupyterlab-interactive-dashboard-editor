@@ -8,6 +8,7 @@ import greyDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_gr
 import redoIcon from '../style/icons/redo.svg';
 import fullscreenIcon from '../style/icons/fullscreen.svg';
 import statusIcon from '../style/icons/dummy.svg';
+import resizerSvgstr from '../style/icons/mdi_drag_indicator.svg';
 
 /**
  * Dashboard icons
@@ -51,6 +52,11 @@ export namespace Icons {
   export const statusToolbarIcon = new LabIcon({
     name: 'pr-icons:status-icon',
     svgstr: statusIcon,
+  });
+
+  export const resizer = new LabIcon({
+    name: 'pr-cons:resizer',
+    svgstr: resizerSvgstr
   });
 }
 

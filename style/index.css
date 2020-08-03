@@ -1,26 +1,18 @@
 .pr-DashboardWidget {
     border: var(--jp-border-width) solid var(--jp-layout-color0);
+    display: inline-block;
 }
 
-.pr-DashboardWidget:focus {
+.pr-EditableWidget.pr-DashboardWidget {
+    background: var(--jp-layout-color0);
+}
+
+.pr-EditableWidget.pr-DashboardWidget:focus {
     border: var(--jp-border-width) solid var(--jp-brand-color1);
 }
 
-.pr-DashboardWidget:hover {
+.pr-EditableWidget.pr-DashboardWidget:hover {
     border: var(--jp-border-width) solid var(--jp-brand-color1);
-}
-
-.pr-DashboardWidget.pr-DropTop {
-    box-shadow: inset 1px 4px 0 0 var(--jp-brand-color1);
-}
-
-.pr-DashboardWidget.pr-DropBottom {
-    box-shadow: inset 1px -4px 0 0 var(--jp-brand-color1);
-}
-
-.pr-JupyterDashboard.pr-DropTarget {
-    border: var(--jp-border-width) solid var(--jp-input-active-border-color);
-    box-shadow: var(--jp-input-box-shadow);
 }
 
 .pr-DashboardArea {
@@ -29,15 +21,25 @@
 
 .pr-Resizer {
     display: none;
-    width: 10px;
-    height: 10px;
+    width: 15px;
+    height: 15px;
     right: 0;
     bottom: 0;
     cursor: se-resize;
     position: absolute;
-    background: var(--jp-input-active-border-color);
 }
 
-.pr-DashboardWidget:hover .pr-Resizer {
+.pr-DashboardWidgetChild {
+    display: inline-block;
+}
+
+.pr-EditableWidget.pr-DashboardWidget:hover .pr-Resizer {
     display: block;
+}
+
+.pr-EditableBackground {
+    background-image: linear-gradient(45deg, rgba(128,128,128,.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.1) 70%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    pointer-events: none;
 }

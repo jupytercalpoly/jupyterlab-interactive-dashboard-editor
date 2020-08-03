@@ -340,9 +340,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
       ...options,
       content: content || dashboardArea,
     });
+    
     this._dbArea = this.content as DashboardArea;
-
-    super({ ...options, content: content || dashboardArea });
 
     this._dbArea = this.content as DashboardArea;
 

@@ -134,6 +134,7 @@ export function createCutButton(
       const widget = outputTracker.currentWidget;
       utils.clipboard.add(widget);
       dashboard.deleteWidget(widget);
+      dashboard.deleteWidgetInfo(widget);
     },
     tooltip: 'Cut the selected outputs',
   });
@@ -174,8 +175,8 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
     cellId: newWidget.cellId,
     left: 0,
     top: 0,
-    width: Number(widget.node.style.width.split("p")[0]),
-    height: Number(widget.node.style.height.split("p")[0]),
+    width: parseInt(widget.node.style.width, 10),
+    height: parseInt(widget.node.style.height, 10),
     removed: false,
   };
   // console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
@@ -189,12 +190,12 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
 
 export function createPasteButton(
   dashboard: Dashboard,
-  untils: DBUtils
+  utils: DBUtils
 ): Widget {
   const button = new ToolbarButton({
     icon: pasteIcon,
     onClick: (): void => {
-      untils.clipboard.forEach(widget => pasteWidget(dashboard, widget));
+      utils.clipboard.forEach(widget => pasteWidget(dashboard, widget));
     },
     tooltip: 'Paste outputs from the clipboard',
   });
