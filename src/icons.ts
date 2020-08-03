@@ -56,7 +56,7 @@ export namespace Icons {
 
   export const resizer = new LabIcon({
     name: 'pr-cons:resizer',
-    svgstr: resizerSvgstr
+    svgstr: resizerSvgstr,
   });
 }
 

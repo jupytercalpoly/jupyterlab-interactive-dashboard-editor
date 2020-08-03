@@ -1,7 +1,7 @@
 import { Dialog } from '@jupyterlab/apputils';
 import { Dashboard } from './dashboard';
 
-export function unsaveDialog(dashboard: Dashboard) {
+export function unsaveDialog(dashboard: Dashboard): Dialog<unknown> {
   const dialog = new Dialog({
     title: 'Close without saving?',
     body:
@@ -19,7 +19,7 @@ export function unsaveDialog(dashboard: Dashboard) {
   return dialog;
 }
 
-export function saveDialog(dashboard: Dashboard) {
+export function saveDialog(dashboard: Dashboard): Dialog<unknown> {
   const dialog = new Dialog({
     title: 'Dashboard saved',
     body:

@@ -1,4 +1,4 @@
-export function openfullscreen(node: HTMLElement) {
+export function openfullscreen(node: HTMLElement): void {
   // Trigger fullscreen
   const docElmWithBrowsersFullScreenFunctions = node as HTMLElement & {
     mozRequestFullScreen(): Promise<void>;

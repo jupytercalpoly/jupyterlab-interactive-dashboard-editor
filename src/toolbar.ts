@@ -1,12 +1,31 @@
-import { NotebookPanel, NotebookActions, INotebookTracker} from '@jupyterlab/notebook';
+import {
+  NotebookPanel,
+  NotebookActions,
+  INotebookTracker,
+} from '@jupyterlab/notebook';
 
 import { Widget } from '@lumino/widgets';
 
-import { ToolbarButton, WidgetTracker, sessionContextDialogs, InputDialog} from '@jupyterlab/apputils';
+import {
+  ToolbarButton,
+  WidgetTracker,
+  sessionContextDialogs,
+  InputDialog,
+} from '@jupyterlab/apputils';
 
 import { CodeCell } from '@jupyterlab/cells';
 
-import { saveIcon, refreshIcon, undoIcon, cutIcon, copyIcon, pasteIcon, runIcon, stopIcon, fastForwardIcon} from '@jupyterlab/ui-components';
+import {
+  saveIcon,
+  refreshIcon,
+  undoIcon,
+  cutIcon,
+  copyIcon,
+  pasteIcon,
+  runIcon,
+  stopIcon,
+  fastForwardIcon,
+} from '@jupyterlab/ui-components';
 
 import { Dashboard } from './dashboard';
 
@@ -14,22 +33,32 @@ import { DashboardWidget } from './widget';
 
 import { saveDialog } from './dialog';
 
-import { Icons} from './icons';
+import { Icons } from './icons';
 
 import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-import {openfullscreen} from './fullscreen';
+import { openfullscreen } from './fullscreen';
 import { DBUtils } from './dbUtils';
 
-export function buildToolbar(notebookTrakcer: INotebookTracker,
-  dashboard: Dashboard, tracker: WidgetTracker<DashboardWidget>, utils: DBUtils){
-  dashboard.toolbar.addItem('save', createSaveButton(dashboard, notebookTrakcer));
+export function buildToolbar(
+  notebookTrakcer: INotebookTracker,
+  dashboard: Dashboard,
+  tracker: WidgetTracker<DashboardWidget>,
+  utils: DBUtils
+): void {
+  dashboard.toolbar.addItem(
+    'save',
+    createSaveButton(dashboard, notebookTrakcer)
+  );
   dashboard.toolbar.addItem('undo', createUndoButton(dashboard));
   dashboard.toolbar.addItem('redo', createRedoButton(dashboard));
   dashboard.toolbar.addItem('cut', createCutButton(dashboard, tracker, utils));
-  dashboard.toolbar.addItem('copy', createCopyButton(dashboard, tracker, utils));
+  dashboard.toolbar.addItem(
+    'copy',
+    createCopyButton(dashboard, tracker, utils)
+  );
   dashboard.toolbar.addItem('paste', createPasteButton(dashboard, utils));
   dashboard.toolbar.addItem('run', createRunButton(dashboard, tracker));
   dashboard.toolbar.addItem('stop', createStopButton(dashboard, tracker));
@@ -40,9 +69,7 @@ export function buildToolbar(notebookTrakcer: INotebookTracker,
  * Create full screen toolbar item.
  */
 
-export function createFullScreenButton(
-  dashboard: Dashboard,
-): Widget {
+export function createFullScreenButton(dashboard: Dashboard): Widget {
   const button = new ToolbarButton({
     icon: Icons.fullscreenToolbarIcon,
     onClick: (): void => {
@@ -88,9 +115,7 @@ export function createSaveButton(
  * Create undo button toolbar item.
  */
 
-export function createUndoButton(
-  dashboard: Dashboard
-): Widget {
+export function createUndoButton(dashboard: Dashboard): Widget {
   const button = new ToolbarButton({
     icon: undoIcon,
     onClick: (): void => {
@@ -105,9 +130,7 @@ export function createUndoButton(
  * Create redo button toolbar item.
  */
 
-export function createRedoButton(
-  dashboard: Dashboard
-): Widget {
+export function createRedoButton(dashboard: Dashboard): Widget {
   const button = new ToolbarButton({
     icon: Icons.redoToolbarIcon,
     onClick: (): void => {
@@ -162,7 +185,7 @@ export function createCopyButton(
   return button;
 }
 
-function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
+function pasteWidget(dashboard: Dashboard, widget: DashboardWidget): void {
   const notebookId = addNotebookId(widget.notebook);
   const cellId = addCellId(widget.cell);
   const notebook = widget.notebook;
@@ -181,7 +204,7 @@ function pasteWidget(dashboard:Dashboard, widget: DashboardWidget){
   };
   // console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
   dashboard.area.addWidget(newWidget, info);
-  dashboard.area.updateWidgetInfo(info); 
+  dashboard.area.updateWidgetInfo(info);
 }
 
 /**
@@ -195,7 +218,7 @@ export function createPasteButton(
   const button = new ToolbarButton({
     icon: pasteIcon,
     onClick: (): void => {
-      utils.clipboard.forEach(widget => pasteWidget(dashboard, widget));
+      utils.clipboard.forEach((widget) => pasteWidget(dashboard, widget));
     },
     tooltip: 'Paste outputs from the clipboard',
   });
@@ -213,7 +236,7 @@ export function createRunButton(
   const button = new ToolbarButton({
     icon: runIcon,
     onClick: (): void => {
-      const cell = (tracker.currentWidget.cell as CodeCell);
+      const cell = tracker.currentWidget.cell as CodeCell;
       const sessionContext = tracker.currentWidget.notebook.sessionContext;
       CodeCell.execute(cell, sessionContext);
     },
@@ -245,9 +268,7 @@ export function createStopButton(
  * Create restart button toolbar item.
  */
 
-export function createRestartButton(
-  dashboard: Dashboard
-): Widget {
+export function createRestartButton(dashboard: Dashboard): Widget {
   const button = new ToolbarButton({
     icon: refreshIcon,
     onClick: (): void => {
@@ -256,10 +277,12 @@ export function createRestartButton(
       let widget = widgets.next() as DashboardWidget;
       while (widget) {
         notebooks.add(widget.notebook);
-        console.log("notebook here one", widget.notebook);
+        console.log('notebook here one', widget.notebook);
         widget = widgets.next() as DashboardWidget;
       }
-      notebooks.forEach(nb => void sessionContextDialogs.restart(nb.sessionContext));      
+      notebooks.forEach(
+        (nb) => void sessionContextDialogs.restart(nb.sessionContext)
+      );
     },
     tooltip: 'Restart all kernels',
   });
@@ -270,9 +293,7 @@ export function createRestartButton(
  * Create run all button toolbar item.
  */
 
-export function createRunAllButton(
-  dashboard: Dashboard
-): Widget {
+export function createRunAllButton(dashboard: Dashboard): Widget {
   const button = new ToolbarButton({
     icon: fastForwardIcon,
     onClick: (): void => {
@@ -285,13 +306,17 @@ export function createRunAllButton(
         widget = widgets.next() as DashboardWidget;
       }
 
-      console.log("notebooks", notebooks);
-      notebooks.forEach(nb => void sessionContextDialogs.restart(nb.sessionContext)
-      .then(restarted => {
-        if (restarted) {
-          void NotebookActions.runAll(nb.content, nb.sessionContext);
-        }
-      }));
+      console.log('notebooks', notebooks);
+      notebooks.forEach(
+        (nb) =>
+          void sessionContextDialogs
+            .restart(nb.sessionContext)
+            .then((restarted) => {
+              if (restarted) {
+                void NotebookActions.runAll(nb.content, nb.sessionContext);
+              }
+            })
+      );
     },
     tooltip: 'Restart all kernels, then re-run all notebooks',
   });

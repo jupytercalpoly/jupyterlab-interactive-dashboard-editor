@@ -1,10 +1,6 @@
-import {
-  NotebookPanel,
-} from '@jupyterlab/notebook';
+import { NotebookPanel } from '@jupyterlab/notebook';
 
-import {
-  CodeCell,
-} from '@jupyterlab/cells';
+import { CodeCell } from '@jupyterlab/cells';
 
 import { Panel } from '@lumino/widgets';
 
@@ -25,7 +21,6 @@ import { getNotebookId, getCellId } from './utils';
 import { Signal, ISignal } from '@lumino/signaling';
 
 import { Icons } from './icons';
-
 
 // HTML element classes
 
@@ -147,8 +142,6 @@ export class DashboardWidget extends Panel {
     this.node.addEventListener('dblclick', this);
   }
 
-
-
   /**
    * Remove click listeners on detach
    */
@@ -180,17 +173,18 @@ export class DashboardWidget extends Panel {
           blur
         );
         this.node.focus();
+        break;
       case 'dblclick':
         this._evtDblClick(event as MouseEvent);
         break;
     }
   }
 
-   /**
+  /**
    * Handle the `'dblclick'` event for the widget.
    */
   private _evtDblClick(event: MouseEvent): void {
-    console.log("_evtDblClick");
+    console.log('_evtDblClick');
     // Do nothing if it's not a left mouse press.
     if (event.button !== 0) {
       return;
@@ -273,7 +267,7 @@ export class DashboardWidget extends Panel {
    * Handle `mousemove` event of widget
    */
   private _evtMouseMove(event: MouseEvent): void {
-    console.log("_evtMouseMove");
+    console.log('_evtMouseMove');
     switch (this._mouseMode) {
       case 'drag':
         this._dragMouseMove(event);
@@ -286,7 +280,6 @@ export class DashboardWidget extends Panel {
     }
   }
 
-  
   private _dragMouseMove(event: MouseEvent): void {
     const data = this._clickData;
     const { clientX, clientY } = event;
@@ -367,7 +360,7 @@ export class DashboardWidget extends Panel {
   }
 
   private _evtMouseUp(event: MouseEvent): void {
-    console.log("_evtMouseUp");
+    console.log('_evtMouseUp');
     event.stopPropagation();
     event.preventDefault();
 
@@ -450,7 +443,7 @@ export class DashboardWidget extends Panel {
       container: resizer,
       width: '15px',
       height: '15px',
-      pointerEvents: 'none'
+      pointerEvents: 'none',
     });
 
     return resizer;

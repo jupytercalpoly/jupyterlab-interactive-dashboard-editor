@@ -340,7 +340,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       ...options,
       content: content || dashboardArea,
     });
-    
+
     this._dbArea = this.content as DashboardArea;
 
     this._dbArea = this.content as DashboardArea;
@@ -422,7 +422,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     return this._dbArea.updateWidget(widget, pos);
   }
 
-  dispose() {
+  dispose(): void {
     if (this._dirty) {
       const dialog = unsaveDialog(this);
       dialog.launch().then((result) => {
