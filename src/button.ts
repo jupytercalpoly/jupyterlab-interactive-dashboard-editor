@@ -20,11 +20,8 @@ import { DashboardWidget } from './widget';
 
 import { Dashboard } from './dashboard';
 
-// import { Widgetstore } from './widgetstore';
-
-// import { addCellId, addNotebookId } from './utils';
-
 import { DBUtils } from './dbUtils';
+
 
 /**
  * Adds a button to the main toolbar.
@@ -86,6 +83,7 @@ export class DashboardButton
 
     return new DisposableDelegate(() => button.dispose());
   }
+    
   private _app: JupyterFrontEnd;
   private _outputTracker: WidgetTracker<DashboardWidget>;
   private _dashboardTracker: WidgetTracker<Dashboard>;

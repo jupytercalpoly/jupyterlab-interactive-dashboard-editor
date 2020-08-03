@@ -38,6 +38,7 @@ import { unsaveDialog } from './dialog';
 
 import { DBUtils } from './dbUtils';
 
+
 // HTML element classes
 
 const DASHBOARD_CLASS = 'pr-JupyterDashboard';
@@ -323,7 +324,10 @@ export class Dashboard extends MainAreaWidget<Widget> {
     const { notebookTracker, content, outputTracker, utils } = options;
     const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
-    // const contentsManager = new ContentsManager();
+
+    const { notebookTracker, content, outputTracker } = options;
+    const restore = options.store !== undefined;
+    const store = options.store || new Widgetstore({ id: 0, notebookTracker });
 
     const dashboardArea = new DashboardArea({
       outputTracker,
@@ -335,13 +339,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
         mode: restore ? 'present' : 'edit',
       }),
     });
-
-    super({
-      ...options,
-      content: content || dashboardArea,
-    });
-
-    this._dbArea = this.content as DashboardArea;
+    
+    super({...options, content: content || dashboardArea});
 
     this._dbArea = this.content as DashboardArea;
 
@@ -364,6 +363,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
       { schema: Widgetstore.WIDGET_SCHEMA },
       (change) => (this._dirty = true)
     );
+    
+    // Adds save button to dashboard toolbar.
+    this.toolbar.addItem('save', createSaveButton(this, notebookTracker));
 
     if (restore) {
       this._mode = 'present';
@@ -858,15 +860,19 @@ export namespace Dashboard {
      */
     store?: Widgetstore;
 
-    // /**
-    //  * Optional DashboardWidget Array for cut, copy and paste
-    //  */
-    // clipboard: Set<DashboardWidget>;
-
     /**
      * clipboard, fullscreen and contents
      */
     utils: DBUtils;
+    
+    /**
+     * Optional widgetstore to restore state from.
+     */
+    store?: Widgetstore;
+
+    /**
+     * Dashboard canvas width (default is 1280).
+     */
     dashboardWidth?: number;
 
     /**

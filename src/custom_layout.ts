@@ -38,7 +38,7 @@ export class DashboardLayout extends Layout {
     this._mode = options.mode;
   }
 
-  public get corner(): Widget {
+  get corner(): Widget {
     return this._corner;
   }
 

@@ -17,7 +17,9 @@ import { Dashboard } from './dashboard';
 import { DashboardWidget } from './widget';
 
 import { DashboardButton } from './button';
+
 import { DBUtils } from './dbUtils';
+
 
 /**
  * Command IDs used
@@ -59,9 +61,6 @@ const extension: JupyterFrontEndPlugin<void> = {
   ): void => {
     console.log('JupyterLab extension presto is activated!');
 
-    // Datastore for Dashboard info
-    // TODO
-
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({
       namespace: 'dashboards',
@@ -72,10 +71,8 @@ const extension: JupyterFrontEndPlugin<void> = {
       namespace: 'dashboard-outputs',
     });
 
-    // //Clipboard for DashboardWidgets
-    // const clipboard = new Set<DashboardWidget>();
-
     const utils = new DBUtils();
+  
     addCommands(app, tracker, dashboardTracker, outputTracker, utils);
 
     app.contextMenu.addItem({

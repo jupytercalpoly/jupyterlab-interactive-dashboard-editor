@@ -22,6 +22,7 @@ import { Signal, ISignal } from '@lumino/signaling';
 
 import { Icons } from './icons';
 
+
 // HTML element classes
 
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
