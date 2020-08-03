@@ -6,7 +6,6 @@ export function openfullscreen(node: HTMLElement): void {
     msRequestFullscreen(): Promise<void>;
   };
 
-  console.log(node);
   if (docElmWithBrowsersFullScreenFunctions.requestFullscreen) {
     docElmWithBrowsersFullScreenFunctions.requestFullscreen();
   } else if (docElmWithBrowsersFullScreenFunctions.mozRequestFullScreen) {
@@ -20,21 +19,3 @@ export function openfullscreen(node: HTMLElement): void {
     docElmWithBrowsersFullScreenFunctions.msRequestFullscreen();
   }
 }
-
-//   export function closefullscreen(){
-//     const docWithBrowsersExitFunctions = document as Document & {
-//       mozCancelFullScreen(): Promise<void>;
-//       webkitExitFullscreen(): Promise<void>;
-//       msExitFullscreen(): Promise<void>;
-//     };
-//     if (docWithBrowsersExitFunctions.exitFullscreen) {
-//       docWithBrowsersExitFunctions.exitFullscreen();
-//     } else if (docWithBrowsersExitFunctions.mozCancelFullScreen) { /* Firefox */
-//       docWithBrowsersExitFunctions.mozCancelFullScreen();
-//     } else if (docWithBrowsersExitFunctions.webkitExitFullscreen) { /* Chrome, Safari and Opera */
-//       docWithBrowsersExitFunctions.webkitExitFullscreen();
-//     } else if (docWithBrowsersExitFunctions.msExitFullscreen) { /* IE/Edge */
-//       docWithBrowsersExitFunctions.msExitFullscreen();
-//     }
-//     // this.isfullscreen = false;
-// }

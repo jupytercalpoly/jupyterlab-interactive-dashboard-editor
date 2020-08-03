@@ -73,10 +73,7 @@ export function createFullScreenButton(dashboard: Dashboard): Widget {
   const button = new ToolbarButton({
     icon: Icons.fullscreenToolbarIcon,
     onClick: (): void => {
-      // console.log("clicked to view");
-
       openfullscreen(dashboard.area.node);
-      // console.log("getting corner node?");
     },
     tooltip: 'View in full screen',
   });
@@ -97,14 +94,16 @@ export function createSaveButton(
       const filename = `${dashboard.getName()}.dashboard`;
       InputDialog.getText({ title: 'Save as', text: filename }).then(
         (value) => {
+          if (value.button.accept) {
+            dashboard.dirty = false;
+            const dialog = saveDialog(dashboard);
+            dialog.launch().then((result) => {
+              dialog.dispose();
+            });
+          }
           dashboard.save(notebookTracker, value.value);
         }
       );
-      dashboard.dirty = false;
-      const dialog = saveDialog(dashboard);
-      dialog.launch().then((result) => {
-        dialog.dispose();
-      });
     },
     tooltip: 'Save Dashboard',
   });
@@ -171,14 +170,14 @@ export function createCutButton(
 export function createCopyButton(
   dashboard: Dashboard,
   outputTracker: WidgetTracker<DashboardWidget>,
-  untils: DBUtils
+  utils: DBUtils
 ): Widget {
   const button = new ToolbarButton({
     icon: copyIcon,
     onClick: (): void => {
-      untils.clipboard.clear();
+      utils.clipboard.clear();
       const widget = outputTracker.currentWidget;
-      untils.clipboard.add(widget);
+      utils.clipboard.add(widget);
     },
     tooltip: 'Copy the selected outputs',
   });
@@ -202,7 +201,6 @@ function pasteWidget(dashboard: Dashboard, widget: DashboardWidget): void {
     height: parseInt(widget.node.style.height, 10),
     removed: false,
   };
-  // console.log(cell, notebook.sessionContext?.kernelDisplayStatus);
   dashboard.area.addWidget(newWidget, info);
   dashboard.area.updateWidgetInfo(info);
 }
@@ -277,7 +275,6 @@ export function createRestartButton(dashboard: Dashboard): Widget {
       let widget = widgets.next() as DashboardWidget;
       while (widget) {
         notebooks.add(widget.notebook);
-        console.log('notebook here one', widget.notebook);
         widget = widgets.next() as DashboardWidget;
       }
       notebooks.forEach(
@@ -302,11 +299,9 @@ export function createRunAllButton(dashboard: Dashboard): Widget {
       let widget = widgets.next() as DashboardWidget;
       while (widget) {
         notebooks.add(widget.notebook);
-        console.log(widget);
         widget = widgets.next() as DashboardWidget;
       }
 
-      console.log('notebooks', notebooks);
       notebooks.forEach(
         (nb) =>
           void sessionContextDialogs

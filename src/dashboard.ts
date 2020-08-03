@@ -427,7 +427,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
       const dialog = unsaveDialog(this);
       dialog.launch().then((result) => {
         dialog.dispose();
-        // console.log(dialog.dispose());
         if (result.button.accept) {
           return super.dispose();
         }
