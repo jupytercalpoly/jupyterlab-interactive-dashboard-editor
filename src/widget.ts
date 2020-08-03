@@ -196,6 +196,7 @@ export class DashboardWidget extends Panel {
    * Handle the `'dblclick'` event for the widget.
    */
   private _evtDblClick(event: MouseEvent): void {
+    console.log("_evtDblClick");
     // Do nothing if it's not a left mouse press.
     if (event.button !== 0) {
       return;
@@ -210,7 +211,7 @@ export class DashboardWidget extends Panel {
     event.preventDefault();
     event.stopPropagation();
 
-    console.log("double clicked", this);
+    // console.log("double clicked", this);
 
     // clearTimeout(this._selectTimer);
     // this._editNode.blur();
@@ -232,6 +233,7 @@ export class DashboardWidget extends Panel {
    * Handle `mousedown` events for the widget.
    */
   private _evtMouseDown(event: MouseEvent): void {
+    console.log("_evtMouseDown");
     const { button, shiftKey, target } = event;
 
     // We only handle main or secondary button actions.
@@ -270,6 +272,7 @@ export class DashboardWidget extends Panel {
    * Handle `mousemove` event of widget
    */
   private _evtMouseMove(event: MouseEvent): void {
+    console.log("_evtMouseMove");
     switch (this._mouseMode) {
       case 'drag':
         this._dragMouseMove(event);
@@ -353,6 +356,7 @@ export class DashboardWidget extends Panel {
   }
 
   private _evtMouseUp(event: MouseEvent): void {
+    console.log("_evtMouseUp");
     event.stopPropagation();
     event.preventDefault();
 
