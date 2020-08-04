@@ -40,6 +40,7 @@ import { Widgetstore } from './widgetstore';
 import { addCellId, addNotebookId } from './utils';
 
 import { openfullscreen } from './fullscreen';
+
 import { DBUtils } from './dbUtils';
 
 export function buildToolbar(
@@ -91,11 +92,11 @@ export function createSaveButton(
   const button = new ToolbarButton({
     icon: saveIcon,
     onClick: (): void => {
-      var name = dashboard.getName();
-      if(name == null){
-        name = "null";
-      }else{
-        name = name.split(".")[0];
+      let name = dashboard.getName();
+      if (name === null) {
+        name = 'null';
+      } else {
+        name = name.split('.')[0];
       }
       const filename = `${name}.dashboard`;
       InputDialog.getText({ title: 'Save as', text: filename }).then(

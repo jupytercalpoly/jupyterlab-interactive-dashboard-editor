@@ -204,11 +204,11 @@ export class Widgetstore extends Litestore {
     if (notebook === undefined) {
       throw new Error('notebook not found');
     }
-    let cell: CodeCell|MarkdownCell;
+    let cell: CodeCell | MarkdownCell;
     cell = this.getCellById(cellId) as CodeCell;
     if (cell === undefined) {
       cell = this.getCellById(cellId) as MarkdownCell;
-      if (cell === undefined){
+      if (cell === undefined) {
         throw new Error('cell not found');
       }
     }

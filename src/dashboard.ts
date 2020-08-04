@@ -1,6 +1,6 @@
 import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
-import { CodeCell, MarkdownCell, Cell} from '@jupyterlab/cells';
+import { CodeCell, MarkdownCell, Cell } from '@jupyterlab/cells';
 
 import { filter, each } from '@lumino/algorithm';
 
@@ -165,10 +165,10 @@ export class DashboardArea extends Widget {
     } else if (event.proposedAction === 'copy') {
       const notebook = event.source.parent as NotebookPanel;
       let cell: Cell;
-      if (event.source.activeCell instanceof MarkdownCell){
+      if (event.source.activeCell instanceof MarkdownCell) {
         // dragging markdown from notebook to dashboard
         cell = notebook.content.activeCell as MarkdownCell;
-      }else{
+      } else {
         cell = notebook.content.activeCell as CodeCell;
       }
       const info: Widgetstore.WidgetInfo = {
@@ -182,14 +182,13 @@ export class DashboardArea extends Widget {
         removed: false,
       };
 
-        const widget = this._dbLayout.createWidget(info);
-        this._dbLayout.addWidget(widget, info);
-        // Wait until the widget is fit to content then add it to the widgetstore.
-        widget.ready.connect(() => {
-          const newInfo = this.getWidgetInfo(widget);
-          this.updateWidgetInfo(newInfo);
-        }, this);
-
+      const widget = this._dbLayout.createWidget(info);
+      this._dbLayout.addWidget(widget, info);
+      // Wait until the widget is fit to content then add it to the widgetstore.
+      widget.ready.connect(() => {
+        const newInfo = this.getWidgetInfo(widget);
+        this.updateWidgetInfo(newInfo);
+      }, this);
     } else {
       return;
     }
@@ -862,7 +861,6 @@ export namespace Dashboard {
      * clipboard, fullscreen and contents
      */
     utils: DBUtils;
-
 
     dashboardWidth?: number;
 

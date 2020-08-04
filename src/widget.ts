@@ -1,6 +1,6 @@
 import { NotebookPanel } from '@jupyterlab/notebook';
 
-import { CodeCell, MarkdownCell} from '@jupyterlab/cells';
+import { CodeCell, MarkdownCell } from '@jupyterlab/cells';
 
 import { Panel, Widget } from '@lumino/widgets';
 
@@ -55,14 +55,15 @@ export class DashboardWidget extends Panel {
     } else {
       // Wait for the notebook to be loaded before cloning the output area.
       void this._notebook.context.ready.then(() => {
+        let clone: Widget;
         if (!this._cell) {
           this._cell = this._notebook.content.widgets[this._index] as CodeCell;
         }
-        if(this._cell.model.type == 'markdown'){
+        if (this._cell.model.type === 'markdown') {
           const markdown = this._cell as MarkdownCell;
-          var clone = markdown.clone().editorWidget.parent;
-        }else{
-          var clone = (this._cell as CodeCell).cloneOutputArea() as Widget;
+          clone = markdown.clone().editorWidget.parent;
+        } else {
+          clone = (this._cell as CodeCell).cloneOutputArea() as Widget;
         }
 
         clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
@@ -101,7 +102,7 @@ export class DashboardWidget extends Panel {
   /**
    * The cell the widget is generated from.
    */
-  get cell(): CodeCell|MarkdownCell {
+  get cell(): CodeCell | MarkdownCell {
     return this._cell;
   }
 
@@ -448,7 +449,7 @@ export class DashboardWidget extends Panel {
 
   private _notebook: NotebookPanel;
   private _index: number;
-  private _cell: CodeCell | MarkdownCell| null = null;
+  private _cell: CodeCell | MarkdownCell | null = null;
   private _cellId: string;
   private _notebookId: string;
   private _clickData: {
@@ -457,7 +458,7 @@ export class DashboardWidget extends Panel {
     pressWidth: number;
     pressHeight: number;
     target: HTMLElement;
-    cell: CodeCell|MarkdownCell;
+    cell: CodeCell | MarkdownCell;
     widgetX: number;
     widgetY: number;
   } | null = null;
