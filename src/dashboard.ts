@@ -1,6 +1,6 @@
 import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
-import { CodeCell } from '@jupyterlab/cells';
+import { CodeCell, MarkdownCell, Cell} from '@jupyterlab/cells';
 
 import { filter, each } from '@lumino/algorithm';
 
@@ -129,12 +129,10 @@ export class DashboardArea extends Widget {
    */
   private _evtDrop(event: IDragEvent): void {
     if (event.proposedAction === 'move') {
-      const widget = event.source[0] as DashboardWidget;
-      const oldArea = event.source[1] as DashboardArea;
+      const widget = event.source as DashboardWidget;
+      const oldArea = event.source.parent as DashboardArea;
       if (oldArea === this) {
         // dragging in same dashboard.
-        console.log('same dashboard', widget);
-
         const pos: Widgetstore.WidgetPosition = {
           left: event.offsetX,
           top: event.offsetY,
@@ -145,7 +143,6 @@ export class DashboardArea extends Widget {
         this._dbLayout.updateInfoFromWidget(widget);
       } else {
         // dragging between dashboards
-        console.log('between dashboards', widget);
         const info: Widgetstore.WidgetInfo = {
           widgetId: DashboardWidget.createDashboardWidgetId(),
           notebookId: widget.notebookId,
@@ -167,8 +164,13 @@ export class DashboardArea extends Widget {
       // dragging from notebook -> dashboard.
     } else if (event.proposedAction === 'copy') {
       const notebook = event.source.parent as NotebookPanel;
-      const cell = notebook.content.activeCell as CodeCell;
-
+      let cell: Cell;
+      if (event.source.activeCell instanceof MarkdownCell){
+        // dragging markdown from notebook to dashboard
+        cell = notebook.content.activeCell as MarkdownCell;
+      }else{
+        cell = notebook.content.activeCell as CodeCell;
+      }
       const info: Widgetstore.WidgetInfo = {
         widgetId: DashboardWidget.createDashboardWidgetId(),
         notebookId: addNotebookId(notebook),
@@ -180,13 +182,14 @@ export class DashboardArea extends Widget {
         removed: false,
       };
 
-      const widget = this._dbLayout.createWidget(info);
-      this._dbLayout.addWidget(widget, info);
-      // Wait until the widget is fit to content then add it to the widgetstore.
-      widget.ready.connect(() => {
-        const newInfo = this.getWidgetInfo(widget);
-        this.updateWidgetInfo(newInfo);
-      }, this);
+        const widget = this._dbLayout.createWidget(info);
+        this._dbLayout.addWidget(widget, info);
+        // Wait until the widget is fit to content then add it to the widgetstore.
+        widget.ready.connect(() => {
+          const newInfo = this.getWidgetInfo(widget);
+          this.updateWidgetInfo(newInfo);
+        }, this);
+
     } else {
       return;
     }
@@ -323,7 +326,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
     const { notebookTracker, content, outputTracker, utils } = options;
     const restore = options.store !== undefined;
     const store = options.store || new Widgetstore({ id: 0, notebookTracker });
-    // const contentsManager = new ContentsManager();
 
     const dashboardArea = new DashboardArea({
       outputTracker,
@@ -340,8 +342,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
       ...options,
       content: content || dashboardArea,
     });
-
-    this._dbArea = this.content as DashboardArea;
 
     this._dbArea = this.content as DashboardArea;
 
@@ -423,7 +423,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   }
 
   dispose(): void {
-    if (this._dirty) {
+    if (this._dirty && !this.isDisposed) {
       const dialog = unsaveDialog(this);
       dialog.launch().then((result) => {
         dialog.dispose();
@@ -858,15 +858,12 @@ export namespace Dashboard {
      */
     store?: Widgetstore;
 
-    // /**
-    //  * Optional DashboardWidget Array for cut, copy and paste
-    //  */
-    // clipboard: Set<DashboardWidget>;
-
     /**
      * clipboard, fullscreen and contents
      */
     utils: DBUtils;
+
+
     dashboardWidth?: number;
 
     /**

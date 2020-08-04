@@ -20,10 +20,6 @@ import { DashboardWidget } from './widget';
 
 import { Dashboard } from './dashboard';
 
-// import { Widgetstore } from './widgetstore';
-
-// import { addCellId, addNotebookId } from './utils';
-
 import { DBUtils } from './dbUtils';
 
 /**

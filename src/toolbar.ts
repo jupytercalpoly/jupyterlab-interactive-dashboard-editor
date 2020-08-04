@@ -91,12 +91,18 @@ export function createSaveButton(
   const button = new ToolbarButton({
     icon: saveIcon,
     onClick: (): void => {
-      const filename = `${dashboard.getName()}.dashboard`;
+      var name = dashboard.getName();
+      if(name == null){
+        name = "null";
+      }else{
+        name = name.split(".")[0];
+      }
+      const filename = `${name}.dashboard`;
       InputDialog.getText({ title: 'Save as', text: filename }).then(
         (value) => {
           if (value.button.accept) {
             dashboard.dirty = false;
-            const dialog = saveDialog(dashboard);
+            const dialog = saveDialog(value.value);
             dialog.launch().then((result) => {
               dialog.dispose();
             });
