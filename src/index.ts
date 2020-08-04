@@ -10,8 +10,6 @@ import {
   WidgetTracker,
   showErrorMessage,
   InputDialog,
-  showDialog,
-  Dialog,
 } from '@jupyterlab/apputils';
 
 import { Dashboard } from './dashboard';
@@ -21,10 +19,6 @@ import { DashboardWidget } from './widget';
 import { DashboardButton } from './button';
 
 import { DBUtils } from './dbUtils';
-
-import { IMainMenu } from '@jupyterlab/mainmenu';
-
-import { Widget } from '@lumino/widgets';
 
 /**
  * Command IDs used
@@ -46,8 +40,6 @@ namespace CommandIDs {
 
   export const save = 'dashboard:save';
 
-  export const saveAs = 'dashboard:save-as';
-
   export const load = 'dashboard:load';
 
   export const toggleARLock = 'dashboard-widget:toggleARLock';
@@ -55,19 +47,16 @@ namespace CommandIDs {
   export const toggleFitContent = 'dashboard-widget:toggleFitContent';
 
   export const toggleMode = 'dashboard:toggleMode';
-
-  export const setDimensions = 'dashboard:setDimensions';
 }
 
 const extension: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell, IMainMenu],
+  requires: [INotebookTracker, ILabShell],
   activate: (
     app: JupyterFrontEnd,
     tracker: INotebookTracker,
-    labShell: ILabShell,
-    mainMenu: IMainMenu
+    labShell: ILabShell
   ): void => {
     console.log('JupyterLab extension presto is activated!');
 
@@ -86,7 +75,6 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     addCommands(app, tracker, dashboardTracker, outputTracker, utils);
 
-    // Add commands to context menus.
     app.contextMenu.addItem({
       command: CommandIDs.save,
       selector: '.pr-JupyterDashboard',
@@ -130,13 +118,13 @@ const extension: JupyterFrontEndPlugin<void> = {
     });
 
     app.contextMenu.addItem({
-      command: CommandIDs.toggleFitContent,
+      command: CommandIDs.toggleARLock,
       selector: '.pr-EditableWidget',
       rank: 1,
     });
 
     app.contextMenu.addItem({
-      type: 'separator',
+      command: CommandIDs.toggleFitContent,
       selector: '.pr-EditableWidget',
       rank: 2,
     });
@@ -146,7 +134,7 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.deleteOutput,
       args: {},
       keys: ['Backspace'],
-      selector: '.pr-EditableWidget',
+      selector: '.pr-DashboardWidget',
     });
 
     app.commands.addKeyBinding({
@@ -162,43 +150,6 @@ const extension: JupyterFrontEndPlugin<void> = {
       keys: ['Shift Z'],
       selector: '.pr-JupyterDashboard',
     });
-
-    app.commands.addKeyBinding({
-      command: CommandIDs.toggleMode,
-      args: {},
-      keys: ['I'],
-      selector: '.pr-JupyterDashboard',
-    });
-
-    app.commands.addKeyBinding({
-      command: CommandIDs.toggleFitContent,
-      args: {},
-      keys: ['K'],
-      selector: '.pr-EditableWidget',
-    });
-
-    // Add commands to file menu.
-    mainMenu.fileMenu.addGroup([
-      {
-        command: CommandIDs.load,
-      },
-      {
-        command: CommandIDs.renameDashboard,
-      },
-      {
-        command: CommandIDs.save,
-      },
-      {
-        command: CommandIDs.saveAs,
-      },
-    ]);
-
-    // Add commands to edit menu.
-    mainMenu.editMenu.addGroup([
-      {
-        command: CommandIDs.setDimensions,
-      },
-    ]);
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
@@ -221,13 +172,37 @@ function addCommands(
   outputTracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils
 ): void {
-  const { commands } = app;
+  const { commands, shell } = app;
 
   /**
-   * Whether there is an active dashboard.
+   * Whether there is an active notebook.
+   * jupyterlab/packages/notebook-extension/src/index.ts
    */
-  function hasDashboard(): boolean {
-    return dashboardTracker.currentWidget !== null;
+  function isEnabled(): boolean {
+    return (
+      tracker.currentWidget !== null &&
+      tracker.currentWidget === shell.currentWidget
+    );
+  }
+
+  /**
+   * Whether there is an notebook active, with a single selected cell.
+   * jupyterlab/packages/notebook-extension/src/index.ts
+   */
+  function isEnabledAndSingleSelected(): boolean {
+    if (!isEnabled()) {
+      return false;
+    }
+    const { content } = tracker.currentWidget!;
+    const index = content.activeCellIndex;
+    // If there are selections that are not the active cell,
+    // this command is confusing, so disable it.
+    for (let i = 0; i < content.widgets.length; ++i) {
+      if (content.isSelected(content.widgets[i]) && i !== index) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -296,11 +271,22 @@ function addCommands(
         });
       }
     },
-    isEnabled: hasDashboard,
   });
 
-  commands.addCommand(CommandIDs.saveAs, {
-    label: 'Save Dashboard As',
+  /**
+   * Logs the outputTracker to console for debugging.
+   */
+  commands.addCommand(CommandIDs.printTracker, {
+    label: 'Print Tracker',
+    execute: (args) => {
+      console.log(outputTracker);
+    },
+    isEnabled: isEnabledAndSingleSelected,
+    isVisible: () => false,
+  });
+
+  commands.addCommand(CommandIDs.save, {
+    label: 'Save Dashboard',
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
       const filename = `${dashboard.getName()}.dashboard`;
@@ -310,17 +296,6 @@ function addCommands(
         }
       );
     },
-    isEnabled: hasDashboard,
-  });
-
-  commands.addCommand(CommandIDs.save, {
-    label: 'Save Dashboard',
-    execute: (args) => {
-      const dashboard = dashboardTracker.currentWidget;
-      const filename = `${dashboard.getName()}.dashboard`;
-      dashboard.save(tracker, filename);
-    },
-    isEnabled: hasDashboard,
   });
 
   commands.addCommand(CommandIDs.load, {
@@ -344,7 +319,7 @@ function addCommands(
       const currentNotebook = tracker.currentWidget;
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-right',
+        mode: 'split-left',
       });
       dashboardTracker.add(dashboard);
     },
@@ -389,59 +364,6 @@ function addCommands(
       }
     },
   });
-
-  commands.addCommand(CommandIDs.setDimensions, {
-    label: 'Set Dashboard Dimensions',
-    execute: async (args) => {
-      const dashboard = dashboardTracker.currentWidget;
-      await showDialog({
-        title: 'Enter Dimensions',
-        body: new Private.ResizeHandler(dashboard.width, dashboard.height),
-        focusNodeSelector: 'input',
-        buttons: [Dialog.cancelButton(), Dialog.okButton()],
-      }).then((result) => {
-        dashboard.width = result.value[0];
-        dashboard.height = result.value[1];
-      });
-    },
-    isEnabled: hasDashboard,
-  });
-}
-
-namespace Private {
-  export class ResizeHandler extends Widget {
-    constructor(oldWidth: number, oldHeight: number) {
-      const node = document.createElement('div');
-      const name = document.createElement('label');
-      name.textContent = 'Enter New Width/Height';
-
-      const width = document.createElement('input');
-      const height = document.createElement('input');
-      width.type = 'number';
-      height.type = 'number';
-      width.min = '0';
-      width.max = '10000';
-      height.min = '0';
-      height.max = '10000';
-      width.required = true;
-      height.required = true;
-      width.placeholder = `Width (${oldWidth})`;
-      height.placeholder = `Height (${oldHeight})`;
-
-      node.appendChild(name);
-      node.appendChild(width);
-      node.appendChild(height);
-
-      super({ node });
-    }
-
-    getValue(): number[] {
-      const inputs = this.node.getElementsByTagName('input');
-      const widthInput = inputs[0];
-      const heightInput = inputs[1];
-      return [+widthInput.value, +heightInput.value];
-    }
-  }
 }
 
 export default extension;

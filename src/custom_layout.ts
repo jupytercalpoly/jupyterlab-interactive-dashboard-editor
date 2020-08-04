@@ -176,7 +176,6 @@ export class DashboardLayout extends Layout {
     }
 
     // Update the widget's position.
-    console.log('updating', left, top, width, height);
     item.update(left, top, width, height);
 
     return true;

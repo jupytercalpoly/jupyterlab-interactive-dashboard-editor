@@ -9,8 +9,6 @@ import redoIcon from '../style/icons/redo.svg';
 import fullscreenIcon from '../style/icons/fullscreen.svg';
 import statusIcon from '../style/icons/dummy.svg';
 import resizerSvgstr from '../style/icons/mdi_drag_indicator.svg';
-import editSvgstr from '../style/icons/edit.svg';
-import viewSvgstr from '../style/icons/view.svg';
 
 /**
  * Dashboard icons
@@ -57,18 +55,8 @@ export namespace Icons {
   });
 
   export const resizer = new LabIcon({
-    name: 'pr-icons:resizer',
+    name: 'pr-cons:resizer',
     svgstr: resizerSvgstr,
-  });
-
-  export const view = new LabIcon({
-    name: 'pr-icons:view',
-    svgstr: viewSvgstr,
-  });
-
-  export const edit = new LabIcon({
-    name: 'pr-icons:edit',
-    svgstr: editSvgstr,
   });
 }
 

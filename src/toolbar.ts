@@ -25,7 +25,6 @@ import {
   runIcon,
   stopIcon,
   fastForwardIcon,
-  LabIcon,
 } from '@jupyterlab/ui-components';
 
 import { Dashboard } from './dashboard';
@@ -65,70 +64,13 @@ export function buildToolbar(
   dashboard.toolbar.addItem('run', createRunButton(dashboard, tracker));
   dashboard.toolbar.addItem('stop', createStopButton(dashboard, tracker));
   dashboard.toolbar.addItem('full screen', createFullScreenButton(dashboard));
-  dashboard.toolbar.addItem('switch mode', createModeSwitchButton(dashboard));
-}
-
-/**
- * Create a dashboard mode switching toolbar item.
- */
-export function createModeSwitchButton(dashboard: Dashboard): Widget {
-  const button = new Widget();
-  const buttonElementClasses = [
-    'bp3-button',
-    'bp3-minimal',
-    'jp-ToolbarButtonComponent',
-    'minimal',
-    'jp-Button',
-  ];
-
-  const buttonElement = document.createElement('button');
-  buttonElement.classList.add(...buttonElementClasses);
-
-  button.node.appendChild(buttonElement);
-  button.addClass('jp-Toolbar-item');
-  button.addClass('jp-ToolbarButton');
-
-  if (dashboard.mode === 'edit') {
-    Icons.view.element({ container: buttonElement });
-    buttonElement.title = 'Switch To Presentation Mode';
-  } else {
-    Icons.edit.element({ container: buttonElement });
-    buttonElement.title = 'Switch To Edit Mode';
-  }
-
-  const onClick = (event: MouseEvent): void => {
-    if (event.button !== 0) {
-      return;
-    }
-
-    event.preventDefault();
-
-    LabIcon.remove(buttonElement);
-    buttonElement.classList.add(...buttonElementClasses);
-    if (dashboard.mode === 'edit') {
-      dashboard.mode = 'present';
-      Icons.edit.element({ container: buttonElement });
-      buttonElement.title = 'Switch To Edit Mode';
-    } else {
-      dashboard.mode = 'edit';
-      Icons.view.element({ container: buttonElement });
-      buttonElement.title = 'Switch To Presentation Mode';
-    }
-  };
-
-  button.node.addEventListener('mousedown', onClick);
-
-  button.disposed.connect(() =>
-    button.node.removeEventListener('mousedown', onClick)
-  );
-
-  return button;
 }
 
 /**
  * Create full screen toolbar item.
  */
-export function createFullScreenButton(dashboard: Dashboard): ToolbarButton {
+
+export function createFullScreenButton(dashboard: Dashboard): Widget {
   const button = new ToolbarButton({
     icon: Icons.fullscreenToolbarIcon,
     onClick: (): void => {

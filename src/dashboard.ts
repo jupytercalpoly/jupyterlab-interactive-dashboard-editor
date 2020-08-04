@@ -128,8 +128,6 @@ export class DashboardArea extends Widget {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
-    console.log('dropped at ', event.clientX, event.clientY);
-    console.log('offsets', event.offsetX, event.offsetY);
     if (event.proposedAction === 'move') {
       const widget = event.source as DashboardWidget;
       const oldArea = event.source.parent as DashboardArea;
@@ -353,6 +351,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this.addClass(DASHBOARD_CLASS);
     this.node.setAttribute('style', 'overflow:auto');
 
+    // Adds buttons to dashboard toolbar.
+    buildToolbar(notebookTracker, this, outputTracker, utils);
+
     this._store.listenTable(
       { schema: Widgetstore.WIDGET_SCHEMA },
       (change) => (this._dirty = true)
@@ -367,9 +368,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
     } else {
       this._mode = 'edit';
     }
-
-    // Adds buttons to dashboard toolbar.
-    buildToolbar(notebookTracker, this, outputTracker, utils);
   }
 
   public get area(): DashboardArea {
@@ -561,7 +559,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       outputs: {},
     };
 
-    this.setName(filename.split('.')[0]);
+    this.setName(filename);
 
     each(records, (record) => {
       const notebookId = record.notebookId;

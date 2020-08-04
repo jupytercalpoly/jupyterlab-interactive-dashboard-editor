@@ -64,7 +64,7 @@ export class DashboardButton
       this._shell.collapseLeft();
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-right',
+        mode: 'split-left',
       });
 
       void this._dashboardTracker.add(dashboard);
