@@ -69,6 +69,7 @@ export class DashboardArea extends Widget {
     this.layout = options.layout;
     this._dbLayout = options.layout as DashboardLayout;
     this.addClass(DASHBOARD_AREA_CLASS);
+    this.node.setAttribute('data-p-dragscroll', 'true');
   }
 
   public get dblayout(): DashboardLayout {
@@ -128,16 +129,17 @@ export class DashboardArea extends Widget {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
-    console.log('dropped at ', event.clientX, event.clientY);
-    console.log('offsets', event.offsetX, event.offsetY);
+    const x = event.offsetX + this.node.scrollLeft;
+    const y = event.offsetY + this.node.scrollTop;
+
     if (event.proposedAction === 'move') {
       const widget = event.source as DashboardWidget;
       const oldArea = event.source.parent as DashboardArea;
       if (oldArea === this) {
         // dragging in same dashboard.
         const pos: Widgetstore.WidgetPosition = {
-          left: event.offsetX,
-          top: event.offsetY,
+          left: x,
+          top: y,
           width: widget.node.offsetWidth,
           height: widget.node.offsetHeight,
         };
@@ -149,8 +151,8 @@ export class DashboardArea extends Widget {
           widgetId: DashboardWidget.createDashboardWidgetId(),
           notebookId: widget.notebookId,
           cellId: widget.cellId,
-          left: event.offsetX,
-          top: event.offsetY,
+          left: x,
+          top: y,
           width: widget.node.offsetWidth,
           height: widget.node.offsetHeight,
           removed: false,
@@ -177,8 +179,8 @@ export class DashboardArea extends Widget {
         widgetId: DashboardWidget.createDashboardWidgetId(),
         notebookId: addNotebookId(notebook),
         cellId: addCellId(cell),
-        left: event.offsetX,
-        top: event.offsetY,
+        left: x,
+        top: y,
         width: DashboardWidget.DEFAULT_WIDTH,
         height: DashboardWidget.DEFAULT_HEIGHT,
         removed: false,
@@ -345,6 +347,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
     this._store = store;
     this.setName(options.name || 'Unnamed Dashboard');
     this._contentsManager = utils.contents;
+    this._dbArea = (content || dashboardArea) as DashboardArea;
     this.id = `JupyterDashboard-${UUID.uuid4()}`;
     this.title.label = this._name;
     this.title.icon = Icons.blueDashboard;
@@ -370,6 +373,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     // Adds buttons to dashboard toolbar.
     buildToolbar(notebookTracker, this, outputTracker, utils);
+
+    this.node.setAttribute('data-p-dragscroll', 'true');
   }
 
   public get area(): DashboardArea {

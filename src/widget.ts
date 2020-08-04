@@ -71,6 +71,7 @@ export class DashboardWidget extends Panel {
         clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
 
         this.node.style.opacity = '0';
+
         this.addWidget(clone);
 
         // Wait a moment then fit content. This allows all components to load
@@ -309,8 +310,6 @@ export class DashboardWidget extends Panel {
       widgetX: rect.left,
       widgetY: rect.top,
     };
-
-    console.log('Mouse down', this._clickData);
   }
 
   /**
@@ -395,8 +394,6 @@ export class DashboardWidget extends Panel {
       widgetX: this._clickData.widgetX,
       widgetY: this._clickData.widgetY,
     });
-
-    console.log('Drag', this._drag);
 
     this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
 
