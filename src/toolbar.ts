@@ -38,21 +38,19 @@ import { Icons } from './icons';
 
 import { Widgetstore } from './widgetstore';
 
-import { addCellId, addNotebookId } from './utils';
-
 import { openfullscreen } from './fullscreen';
 
 import { DBUtils } from './dbUtils';
 
 export function buildToolbar(
-  notebookTrakcer: INotebookTracker,
+  notebookTracker: INotebookTracker,
   dashboard: Dashboard,
   tracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils
 ): void {
   dashboard.toolbar.addItem(
     'save',
-    createSaveButton(dashboard, notebookTrakcer)
+    createSaveButton(dashboard, notebookTracker)
   );
   dashboard.toolbar.addItem('undo', createUndoButton(dashboard));
   dashboard.toolbar.addItem('redo', createRedoButton(dashboard));
@@ -220,8 +218,8 @@ export function createCutButton(
       utils.clipboard.clear();
       const widget = outputTracker.currentWidget;
       utils.clipboard.add(widget);
-      dashboard.deleteWidget(widget);
       dashboard.deleteWidgetInfo(widget);
+      dashboard.deleteWidget(widget);
     },
     tooltip: 'Cut the selected outputs',
   });
@@ -250,24 +248,20 @@ export function createCopyButton(
 }
 
 function pasteWidget(dashboard: Dashboard, widget: DashboardWidget): void {
-  const notebookId = addNotebookId(widget.notebook);
-  const cellId = addCellId(widget.cell);
-  const notebook = widget.notebook;
-  const cell = widget.cell;
-  const newWidget = new DashboardWidget({ notebook, cell, notebookId, cellId });
-
   const info: Widgetstore.WidgetInfo = {
     widgetId: DashboardWidget.createDashboardWidgetId(),
-    notebookId: newWidget.notebookId,
-    cellId: newWidget.cellId,
+    notebookId: widget.notebookId,
+    cellId: widget.cellId,
     left: 0,
     top: 0,
     width: parseInt(widget.node.style.width, 10),
     height: parseInt(widget.node.style.height, 10),
     removed: false,
   };
-  dashboard.area.addWidget(newWidget, info);
-  dashboard.area.updateWidgetInfo(info);
+
+  const newWidget = dashboard.store.createWidget(info);
+  dashboard.addWidget(newWidget, info as Widgetstore.WidgetPosition);
+  dashboard.updateWidgetInfo(info);
 }
 
 /**
