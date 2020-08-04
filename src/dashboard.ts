@@ -1,6 +1,6 @@
 import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
-import { CodeCell } from '@jupyterlab/cells';
+import { CodeCell, MarkdownCell, Cell } from '@jupyterlab/cells';
 
 import { filter, each } from '@lumino/algorithm';
 
@@ -129,11 +129,10 @@ export class DashboardArea extends Widget {
    */
   private _evtDrop(event: IDragEvent): void {
     if (event.proposedAction === 'move') {
-      const widget = event.source[0] as DashboardWidget;
-      const oldArea = event.source[1] as DashboardArea;
+      const widget = event.source as DashboardWidget;
+      const oldArea = event.source.parent as DashboardArea;
       if (oldArea === this) {
         // dragging in same dashboard.
-
         const pos: Widgetstore.WidgetPosition = {
           left: event.offsetX,
           top: event.offsetY,
@@ -165,8 +164,13 @@ export class DashboardArea extends Widget {
       // dragging from notebook -> dashboard.
     } else if (event.proposedAction === 'copy') {
       const notebook = event.source.parent as NotebookPanel;
-      const cell = notebook.content.activeCell as CodeCell;
-
+      let cell: Cell;
+      if (event.source.activeCell instanceof MarkdownCell) {
+        // dragging markdown from notebook to dashboard
+        cell = notebook.content.activeCell as MarkdownCell;
+      } else {
+        cell = notebook.content.activeCell as CodeCell;
+      }
       const info: Widgetstore.WidgetInfo = {
         widgetId: DashboardWidget.createDashboardWidgetId(),
         notebookId: addNotebookId(notebook),
@@ -335,8 +339,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     super({ ...options, content: content || dashboardArea });
 
-    this._dbArea = this.content as DashboardArea;
-
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
     this.setName(options.name || 'Unnamed Dashboard');
@@ -418,7 +420,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
   }
 
   dispose(): void {
-    if (this._dirty) {
+    if (this._dirty && !this.isDisposed) {
       const dialog = unsaveDialog(this);
       dialog.launch().then((result) => {
         dialog.dispose();
