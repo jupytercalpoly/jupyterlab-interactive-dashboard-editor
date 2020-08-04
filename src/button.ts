@@ -82,6 +82,7 @@ export class DashboardButton
 
     return new DisposableDelegate(() => button.dispose());
   }
+
   private _app: JupyterFrontEnd;
   private _outputTracker: WidgetTracker<DashboardWidget>;
   private _dashboardTracker: WidgetTracker<Dashboard>;

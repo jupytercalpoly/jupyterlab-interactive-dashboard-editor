@@ -17,6 +17,7 @@ import { Dashboard } from './dashboard';
 import { DashboardWidget } from './widget';
 
 import { DashboardButton } from './button';
+
 import { DBUtils } from './dbUtils';
 
 /**
@@ -58,9 +59,6 @@ const extension: JupyterFrontEndPlugin<void> = {
     labShell: ILabShell
   ): void => {
     console.log('JupyterLab extension presto is activated!');
-
-    // Datastore for Dashboard info
-    // TODO
 
     // Tracker for Dashboard
     const dashboardTracker = new WidgetTracker<Dashboard>({

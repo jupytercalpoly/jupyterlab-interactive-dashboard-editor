@@ -273,7 +273,7 @@ export function createStopButton(
  * Create restart button toolbar item.
  */
 
-export function createRestartButton(dashboard: Dashboard): Widget {
+export function createRestartButton(dashboard: Dashboard): ToolbarButton {
   const button = new ToolbarButton({
     icon: refreshIcon,
     onClick: (): void => {

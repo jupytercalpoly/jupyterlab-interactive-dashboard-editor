@@ -22,7 +22,7 @@ import { DashboardWidget } from './widget';
 
 import { Icons } from './icons';
 
-import { buildToolbar } from './toolbar';
+import { buildToolbar, createSaveButton } from './toolbar';
 
 import { Widgetstore } from './widgetstore';
 
@@ -182,7 +182,7 @@ export class DashboardArea extends Widget {
         removed: false,
       };
 
-      const widget = this._dbLayout.createWidget(info);
+      const widget = this._dbLayout.createWidget(info, true);
       this._dbLayout.addWidget(widget, info);
       // Wait until the widget is fit to content then add it to the widgetstore.
       widget.ready.connect(() => {
@@ -337,12 +337,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
       }),
     });
 
-    super({
-      ...options,
-      content: content || dashboardArea,
-    });
-
-    this._dbArea = this.content as DashboardArea;
+    super({ ...options, content: content || dashboardArea });
 
     // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
@@ -363,6 +358,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
       { schema: Widgetstore.WIDGET_SCHEMA },
       (change) => (this._dirty = true)
     );
+
+    // Adds save button to dashboard toolbar.
+    this.toolbar.addItem('save', createSaveButton(this, notebookTracker));
 
     if (restore) {
       this._mode = 'present';
@@ -862,6 +860,9 @@ export namespace Dashboard {
      */
     utils: DBUtils;
 
+    /**
+     * Dashboard canvas width (default is 1280).
+     */
     dashboardWidth?: number;
 
     /**
