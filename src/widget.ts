@@ -1,8 +1,8 @@
 import { NotebookPanel } from '@jupyterlab/notebook';
 
-import { CodeCell } from '@jupyterlab/cells';
+import { CodeCell, MarkdownCell } from '@jupyterlab/cells';
 
-import { Panel } from '@lumino/widgets';
+import { Panel, Widget } from '@lumino/widgets';
 
 import { UUID, MimeData } from '@lumino/coreutils';
 
@@ -57,14 +57,16 @@ export class DashboardWidget extends Panel {
     } else {
       // Wait for the notebook to be loaded before cloning the output area.
       void this._notebook.context.ready.then(() => {
+        let clone: Widget;
         if (!this._cell) {
           this._cell = this._notebook.content.widgets[this._index] as CodeCell;
         }
-        if (!this._cell || this._cell.model.type !== 'code') {
-          this.dispose();
-          return;
+        if (this._cell.model.type === 'markdown') {
+          const markdown = this._cell as MarkdownCell;
+          clone = markdown.clone().editorWidget.parent;
+        } else {
+          clone = (this._cell as CodeCell).cloneOutputArea() as Widget;
         }
-        const clone = this._cell.cloneOutputArea();
 
         clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
 
@@ -106,7 +108,7 @@ export class DashboardWidget extends Panel {
   /**
    * The cell the widget is generated from.
    */
-  get cell(): CodeCell {
+  get cell(): CodeCell | MarkdownCell {
     return this._cell;
   }
 
@@ -246,8 +248,6 @@ export class DashboardWidget extends Panel {
     // Stop the event propagation.
     event.preventDefault();
     event.stopPropagation();
-
-    // console.log("double clicked", this);
 
     // clearTimeout(this._selectTimer);
     // this._editNode.blur();
@@ -391,7 +391,7 @@ export class DashboardWidget extends Panel {
       dragImage,
       proposedAction: 'move',
       supportedActions: 'copy-move',
-      source: [this, this.parent],
+      source: this,
       widgetX: this._clickData.widgetX,
       widgetY: this._clickData.widgetY,
     });
@@ -507,7 +507,7 @@ export class DashboardWidget extends Panel {
 
   private _notebook: NotebookPanel;
   private _index: number;
-  private _cell: CodeCell | null = null;
+  private _cell: CodeCell | MarkdownCell | null = null;
   private _cellId: string;
   private _notebookId: string;
   private _clickData: {
@@ -516,7 +516,7 @@ export class DashboardWidget extends Panel {
     pressWidth: number;
     pressHeight: number;
     target: HTMLElement;
-    cell: CodeCell;
+    cell: CodeCell | MarkdownCell;
     widgetX: number;
     widgetY: number;
   } | null = null;
@@ -541,7 +541,7 @@ export namespace DashboardWidget {
     /**
      * The cell for which to clone the output area.
      */
-    cell?: CodeCell;
+    cell?: CodeCell | MarkdownCell;
 
     /**
      * If the cell is not available, provide the index

@@ -8,7 +8,7 @@ import { DashboardWidget } from './widget';
 
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 
-import { Cell, CodeCell } from '@jupyterlab/cells';
+import { Cell, CodeCell, MarkdownCell } from '@jupyterlab/cells';
 
 import { getNotebookById, getCellById } from './utils';
 
@@ -206,9 +206,13 @@ export class Widgetstore extends Litestore {
     if (notebook === undefined) {
       throw new Error('notebook not found');
     }
-    const cell = this.getCellById(cellId) as CodeCell;
+    let cell: CodeCell | MarkdownCell;
+    cell = this.getCellById(cellId) as CodeCell;
     if (cell === undefined) {
-      throw new Error('cell not found');
+      cell = this.getCellById(cellId) as MarkdownCell;
+      if (cell === undefined) {
+        throw new Error('cell not found');
+      }
     }
     const widget = new DashboardWidget({
       notebook,

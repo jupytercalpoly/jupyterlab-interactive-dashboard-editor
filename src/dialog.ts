@@ -15,11 +15,10 @@ export function unsaveDialog(dashboard: Dashboard): Dialog<unknown> {
   return dialog;
 }
 
-export function saveDialog(dashboard: Dashboard): Dialog<unknown> {
+export function saveDialog(filename: string): Dialog<unknown> {
   const dialog = new Dialog({
     title: 'Dashboard saved',
-    body:
-      'All changes to "' + dashboard.getName() + '.dashboard"' + ' are saved',
+    body: 'All changes to "' + filename + ' have been saved.',
     buttons: [Dialog.okButton()],
   });
   return dialog;

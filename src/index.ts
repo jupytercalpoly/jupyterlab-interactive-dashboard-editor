@@ -81,6 +81,7 @@ const extension: JupyterFrontEndPlugin<void> = {
       namespace: 'dashboard-outputs',
     });
 
+    //Singleton Utils: clipboard, fullscreen, content manager
     const utils = new DBUtils();
 
     addCommands(app, tracker, dashboardTracker, outputTracker, utils);
