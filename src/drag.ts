@@ -230,8 +230,6 @@ export class Drag implements IDisposable {
 
     this._deltaX = this._widgetX - clientX;
     this._deltaY = this._widgetY - clientY;
-    console.log('deltaX', this._deltaX);
-    console.log('deltaY', this._deltaY);
 
     // Install the document listeners for the drag object.
     this._addListeners();
@@ -307,8 +305,6 @@ export class Drag implements IDisposable {
     // Stop all input events during drag-drop.
     event.preventDefault();
     event.stopPropagation();
-
-    console.log('final position', event.clientX, event.clientY);
 
     // Do nothing if the left button is not released.
     if (event.button !== 0) {
@@ -838,8 +834,8 @@ namespace Private {
     drag: Drag
   ): IScrollTarget | null {
     // Look up the client mouse position.
-    const x = event.clientX - drag.deltaX;
-    const y = event.clientY - drag.deltaY;
+    const x = event.clientX + drag.deltaX;
+    const y = event.clientY + drag.deltaY;
 
     // Get the element under the mouse.
     let element: Element | null = document.elementFromPoint(x, y);
