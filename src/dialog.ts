@@ -4,11 +4,7 @@ import { Dashboard } from './dashboard';
 export function unsaveDialog(dashboard: Dashboard): Dialog<unknown> {
   const dialog = new Dialog({
     title: 'Close without saving?',
-    body:
-      '"' +
-      dashboard.getName() +
-      '.dashboard"' +
-      ' has unsaved changes, close without saving?',
+    body: `"${dashboard.getName()}.dashboard" has unsaved changes, close without saving?`,
     buttons: [
       Dialog.cancelButton(),
       Dialog.okButton({
@@ -23,7 +19,7 @@ export function saveDialog(dashboard: Dashboard): Dialog<unknown> {
   const dialog = new Dialog({
     title: 'Dashboard saved',
     body:
-      'All changes to "' + dashboard.getName() + '.dashboard"' + ' is saved',
+      'All changes to "' + dashboard.getName() + '.dashboard"' + ' are saved',
     buttons: [Dialog.okButton()],
   });
   return dialog;
