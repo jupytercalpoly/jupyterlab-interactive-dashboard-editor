@@ -22,6 +22,8 @@ import { Signal, ISignal } from '@lumino/signaling';
 
 import { Icons } from './icons';
 
+import { Widgetstore } from './widgetstore';
+
 // HTML element classes
 
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
@@ -146,6 +148,7 @@ export class DashboardWidget extends Panel {
     this.node.addEventListener('lm-drop', this);
     this.node.addEventListener('mousedown', this);
     this.node.addEventListener('dblclick', this);
+    this.node.addEventListener('keydown', this);
   }
 
   /**
@@ -158,10 +161,14 @@ export class DashboardWidget extends Panel {
     this.node.removeEventListener('lm-drop', this);
     this.node.removeEventListener('mousedown', this);
     this.node.removeEventListener('dblclick', this);
+    this.node.removeEventListener('keydown', this);
   }
 
   handleEvent(event: Event): void {
     switch (event.type) {
+      case 'keydown':
+        this._evtKeyDown(event as KeyboardEvent);
+        break;
       case 'mousedown':
         this._evtMouseDown(event as MouseEvent);
         break;
@@ -184,6 +191,44 @@ export class DashboardWidget extends Panel {
         this._evtDblClick(event as MouseEvent);
         break;
     }
+  }
+
+  /**
+   * Handle the `'keydown'` event for the widget.
+   */
+  private _evtKeyDown(event: KeyboardEvent): void {
+    // Do nothing if in present mode.
+    if (this._mode === 'present') {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const info = (this.parent as DashboardArea).getWidgetInfo(this);
+    const pos = info as Widgetstore.WidgetPosition;
+
+    switch (event.keyCode) {
+      // Left arrow key
+      case 37:
+        pos.left -= DashboardWidget.BUMP_DISTANCE;
+        break;
+      // Up arrow key
+      case 38:
+        pos.top -= DashboardWidget.BUMP_DISTANCE;
+        break;
+      // Right arrow key
+      case 39:
+        pos.left += DashboardWidget.BUMP_DISTANCE;
+        break;
+      // Down arrow key
+      case 40:
+        pos.top += DashboardWidget.BUMP_DISTANCE;
+        break;
+    }
+
+    (this.parent as DashboardArea).updateWidget(this, pos);
+    (this.parent as DashboardArea).updateWidgetInfo({ ...info, ...pos });
   }
 
   /**
@@ -264,6 +309,8 @@ export class DashboardWidget extends Panel {
       widgetX: rect.left,
       widgetY: rect.top,
     };
+
+    console.log('Mouse down', this._clickData);
   }
 
   /**
@@ -335,6 +382,9 @@ export class DashboardWidget extends Panel {
     dragImage.style.opacity = '0.6';
     // Make original image invisible.
     this.node.style.opacity = '0';
+    // Disabling mouse events prevents weird behavior from dragging a
+    // widget on to itself.
+    this.node.style.pointerEvents = 'none';
 
     this._drag = new Drag({
       mimeData: new MimeData(),
@@ -345,6 +395,8 @@ export class DashboardWidget extends Panel {
       widgetX: this._clickData.widgetX,
       widgetY: this._clickData.widgetY,
     });
+
+    console.log('Drag', this._drag);
 
     this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
 
@@ -357,6 +409,8 @@ export class DashboardWidget extends Panel {
       }
       // Make original image visible again.
       this.node.style.opacity = '1.0';
+      // Re-enable mouse events.
+      this.node.style.pointerEvents = 'auto';
       this._drag = null;
       this._clickData = null;
     });
@@ -469,7 +523,7 @@ export class DashboardWidget extends Panel {
   private _drag: Drag | null = null;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
   private _ready = new Signal<this, void>(this);
-  private _fitToContent = false;
+  private _fitToContent = true;
   private _lockAR = false;
   private _mode: DashboardWidget.Mode = 'edit';
 }
@@ -539,6 +593,11 @@ export namespace DashboardWidget {
    * Minimum height of added widgets.
    */
   export const MIN_HEIGHT = 10;
+
+  /**
+   * How many pixels to adjust a widget by using the arrow keys.
+   */
+  export const BUMP_DISTANCE = 10;
 }
 
 export default DashboardWidget;

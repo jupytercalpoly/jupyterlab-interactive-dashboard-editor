@@ -43,6 +43,7 @@
     "@jupyterlab/apputils": "^2.1.1",
     "@jupyterlab/cells": "^2.1.2",
     "@jupyterlab/coreutils": "^4.0.0",
+    "@jupyterlab/mainmenu": "^2.2.0",
     "@jupyterlab/notebook": "^2.1.2",
     "@jupyterlab/services": "^5.0.0",
     "@jupyterlab/ui-components": "^2.1.1",
