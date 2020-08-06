@@ -83,8 +83,7 @@ export function createModeSwitchButton(dashboard: Dashboard): Widget {
   buttonElement.classList.add(...buttonElementClasses);
 
   button.node.appendChild(buttonElement);
-  button.addClass('jp-Toolbar-item');
-  button.addClass('jp-ToolbarButton');
+  button.node.classList.add('jp-Toolbar-item', 'jp-ToolbarButton');
 
   if (dashboard.mode === 'edit') {
     Icons.view.element({ container: buttonElement });

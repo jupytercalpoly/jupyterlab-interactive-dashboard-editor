@@ -69,10 +69,9 @@ export class DashboardArea extends Widget {
     this.layout = options.layout;
     this._dbLayout = options.layout as DashboardLayout;
     this.addClass(DASHBOARD_AREA_CLASS);
-    this.node.setAttribute('data-p-dragscroll', 'true');
   }
 
-  public get dblayout(): DashboardLayout {
+  get dblayout(): DashboardLayout {
     return this._dbLayout;
   }
 
@@ -189,10 +188,7 @@ export class DashboardArea extends Widget {
       const widget = this._dbLayout.createWidget(info, true);
       this._dbLayout.addWidget(widget, info);
       // Wait until the widget is fit to content then add it to the widgetstore.
-      widget.ready.connect(() => {
-        const newInfo = this.getWidgetInfo(widget);
-        this.updateWidgetInfo(newInfo);
-      }, this);
+      widget.ready.connect(() => this.updateWidgetInfo(widget.info), this);
     } else {
       return;
     }
@@ -268,15 +264,6 @@ export class DashboardArea extends Widget {
   }
 
   /**
-   * Gets information from a widget.
-   *
-   * @param widget - the widget to collect information from.
-   */
-  getWidgetInfo(widget: DashboardWidget): Widgetstore.WidgetInfo {
-    return this._dbLayout.getWidgetInfo(widget);
-  }
-
-  /**
    * Mark a widget as deleted in the widgetstore.
    *
    * @param widget - the widget to mark as deleted.
@@ -335,15 +322,14 @@ export class Dashboard extends MainAreaWidget<Widget> {
       layout: new DashboardLayout({
         store,
         outputTracker,
-        width: options.dashboardWidth || 1280,
-        height: options.dashboardHeight || 720,
+        width: options.dashboardWidth || Dashboard.DEFAULT_WIDTH,
+        height: options.dashboardHeight || Dashboard.DEFAULT_HEIGHT,
         mode: restore ? 'present' : 'edit',
       }),
     });
 
     super({ ...options, content: content || dashboardArea });
 
-    // Having all widgetstores across dashboards have the same id might cause issues.
     this._store = store;
     this.setName(options.name || 'Unnamed Dashboard');
     this._contentsManager = utils.contents;
@@ -373,11 +359,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     // Adds buttons to dashboard toolbar.
     buildToolbar(notebookTracker, this, outputTracker, utils);
-
-    this.node.setAttribute('data-p-dragscroll', 'true');
   }
 
-  public get area(): DashboardArea {
+  get area(): DashboardArea {
     return this._dbArea;
   }
 
@@ -386,7 +370,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    * @returns ContentsManage
    */
-  public get contentsManager(): ContentsManager {
+  get contentsManager(): ContentsManager {
     return this._contentsManager;
   }
 
@@ -394,7 +378,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
    * Gets the path as string of dashboard
    *
    */
-  public get path(): string {
+  get path(): string {
     return this._path;
   }
 
@@ -402,11 +386,11 @@ export class Dashboard extends MainAreaWidget<Widget> {
    * Sets the path of dashboard
    *
    */
-  public set path(v: string) {
+  set path(v: string) {
     this._path = v;
   }
 
-  public set dirty(v: boolean) {
+  set dirty(v: boolean) {
     this._dirty = v;
   }
 
@@ -470,15 +454,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
    */
   updateWidgetInfo(info: Widgetstore.WidgetInfo): void {
     this._dbArea.updateWidgetInfo(info);
-  }
-
-  /**
-   * Gets information from a widget.
-   *
-   * @param widget - the widget to collect information from.
-   */
-  getWidgetInfo(widget: DashboardWidget): Widgetstore.WidgetInfo {
-    return this._dbArea.getWidgetInfo(widget);
   }
 
   /**
@@ -557,6 +532,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
       (widget) => widget.widgetId && !widget.removed
     );
 
+    this.setName(filename.split('.')[0]);
+
     const file: DashboardSpec = {
       name: this._name,
       version: DASHBOARD_VERSION,
@@ -565,8 +542,6 @@ export class Dashboard extends MainAreaWidget<Widget> {
       paths: {},
       outputs: {},
     };
-
-    this.setName(filename.split('.')[0]);
 
     each(records, (record) => {
       const notebookId = record.notebookId;
@@ -602,6 +577,77 @@ export class Dashboard extends MainAreaWidget<Widget> {
     return writeFile(this._contentsManager, this._path, file);
   }
 
+  get mode(): Dashboard.Mode {
+    return this._mode;
+  }
+  set mode(newMode: Dashboard.Mode) {
+    this._mode = newMode;
+    (this._dbArea.layout as DashboardLayout).mode = newMode;
+  }
+
+  get height(): number {
+    return (this._dbArea.layout as DashboardLayout).height;
+  }
+  set height(newHeight: number) {
+    (this._dbArea.layout as DashboardLayout).height = newHeight;
+  }
+
+  get width(): number {
+    return (this._dbArea.layout as DashboardLayout).width;
+  }
+  set width(newWidth: number) {
+    (this._dbArea.layout as DashboardLayout).width = newWidth;
+  }
+
+  private _name: string;
+  private _store: Widgetstore;
+  // Convenient alias so I don't have to type
+  // (this.content as DashboardArea) every time.
+  private _dbArea: DashboardArea;
+  private _contentsManager: ContentsManager;
+  private _path: string;
+  private _dirty: boolean;
+  private _mode: Dashboard.Mode;
+}
+
+export namespace Dashboard {
+  export interface IOptions extends MainAreaWidget.IOptionsOptionalContent {
+    /**
+     * Dashboard name.
+     */
+    name?: string;
+
+    /**
+     * Tracker for child widgets.
+     */
+    outputTracker: WidgetTracker<DashboardWidget>;
+
+    /**
+     * Tracker for notebooks.
+     */
+    notebookTracker: INotebookTracker;
+
+    /**
+     * Dashboard canvas width (default is 1280).
+     */
+    store?: Widgetstore;
+
+    /**
+     * clipboard, fullscreen and contents
+     */
+    utils: DBUtils;
+
+    /**
+     * Dashboard canvas width (default is 1280).
+     */
+    dashboardWidth?: number;
+
+    /**
+     * Dashboard canvas height (default is 720).
+     */
+    dashboardHeight?: number;
+  }
+
   /**
    * Load a dashboard from a file.
    *
@@ -616,7 +662,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
    * @throws - an error if the dashboard file is not well-formated, notebooks
    * are missing, or there is an issue reading them.
    */
-  static async load(
+  export async function load(
     path: string,
     notebookTracker: INotebookTracker,
     outputTracker: WidgetTracker<DashboardWidget>,
@@ -746,7 +792,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
 
     contentsManager.dispose();
 
-    // Create and return a notebook based on the contents of the widgetstore.
+    // Create and return a dashboard based on the contents of the widgetstore.
     return new Dashboard({
       name,
       notebookTracker,
@@ -767,7 +813,7 @@ export class Dashboard extends MainAreaWidget<Widget> {
    *
    * @throws - an error if the entry is not well-formated.
    */
-  static validateOutput(notebookId: string, output: any): void {
+  export function validateOutput(notebookId: string, output: any): void {
     if (output.left === undefined) {
       throw new Error(
         `Output of notebook ${notebookId} is missing the 'left' field`
@@ -807,76 +853,9 @@ export class Dashboard extends MainAreaWidget<Widget> {
     }
   }
 
-  get mode(): Dashboard.Mode {
-    return this._mode;
-  }
-  set mode(newMode: Dashboard.Mode) {
-    this._mode = newMode;
-    (this._dbArea.layout as DashboardLayout).mode = newMode;
-  }
-
-  get height(): number {
-    return (this._dbArea.layout as DashboardLayout).height;
-  }
-  set height(newHeight: number) {
-    (this._dbArea.layout as DashboardLayout).height = newHeight;
-  }
-
-  get width(): number {
-    return (this._dbArea.layout as DashboardLayout).width;
-  }
-  set width(newWidth: number) {
-    (this._dbArea.layout as DashboardLayout).width = newWidth;
-  }
-
-  private _name: string;
-  private _store: Widgetstore;
-  // Convenient alias so I don't have to type
-  // (this.content as DashboardArea) every time.
-  private _dbArea: DashboardArea;
-  private _contentsManager: ContentsManager;
-  private _path: string;
-  private _dirty: boolean;
-  private _mode: Dashboard.Mode;
-}
-
-export namespace Dashboard {
-  export interface IOptions extends MainAreaWidget.IOptionsOptionalContent {
-    /**
-     * Dashboard name.
-     */
-    name?: string;
-
-    /**
-     * Tracker for child widgets.
-     */
-    outputTracker: WidgetTracker<DashboardWidget>;
-
-    /**
-     * Tracker for notebooks.
-     */
-    notebookTracker: INotebookTracker;
-
-    /**
-     * Dashboard canvas width (default is 1280).
-     */
-    store?: Widgetstore;
-
-    /**
-     * clipboard, fullscreen and contents
-     */
-    utils: DBUtils;
-
-    /**
-     * Dashboard canvas width (default is 1280).
-     */
-    dashboardWidth?: number;
-
-    /**
-     * Dashboard canvas height (default is 720).
-     */
-    dashboardHeight?: number;
-  }
-
   export type Mode = 'edit' | 'present';
+
+  export const DEFAULT_WIDTH = 1270;
+
+  export const DEFAULT_HEIGHT = 720;
 }
