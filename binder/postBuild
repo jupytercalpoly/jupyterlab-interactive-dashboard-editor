@@ -1,3 +1,15 @@
-jupyter labextension install .
-jlpm build
-jupyter lab build
+#!/bin/bash
+
+# install extension
+# jupyter labextension update jupyter-offlinenotebook --no-build
+jupyter labextension install jupyterlab-interactive-dashboard-editor
+
+# remove unnecessary directories when using the binder
+rm -rf src
+rm -rf style
+rm -rf Design/user_research
+rm -rf .github
+jupyter lab clean
+
+# Import workspace into JupyterLab
+# jupyter lab workspaces import binder/workspace.json
