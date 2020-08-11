@@ -50,8 +50,6 @@ namespace CommandIDs {
 
   export const load = 'dashboard:load';
 
-  export const toggleARLock = 'dashboard-widget:toggleARLock';
-
   export const toggleFitContent = 'dashboard-widget:toggleFitContent';
 
   export const toggleMode = 'dashboard:toggleMode';
@@ -344,19 +342,10 @@ function addCommands(
       const currentNotebook = tracker.currentWidget;
       currentNotebook.context.addSibling(dashboard, {
         ref: currentNotebook.id,
-        mode: 'split-right',
+        mode: 'split-left',
       });
       dashboardTracker.add(dashboard);
     },
-  });
-
-  commands.addCommand(CommandIDs.toggleARLock, {
-    label: 'Lock Aspect Ratio',
-    execute: (args) => {
-      const widget = outputTracker.currentWidget;
-      widget.lockAR = !widget.lockAR;
-    },
-    isToggled: (args) => outputTracker.currentWidget.lockAR,
   });
 
   commands.addCommand(CommandIDs.toggleFitContent, {

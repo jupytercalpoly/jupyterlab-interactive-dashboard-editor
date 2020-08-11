@@ -12,8 +12,6 @@ import { Widgetstore, WidgetSchema } from './widgetstore';
 
 import { WidgetTracker } from '@jupyterlab/apputils';
 
-import { getCellId, getNotebookId } from './utils';
-
 import { Dashboard } from './dashboard';
 
 const EDITABLE_CORNER_CLASS = 'pr-EditableBackground';
@@ -84,6 +82,9 @@ export class DashboardLayout extends Layout {
    * @param widget - The widget to attach to the parent.
    */
   protected attachWidget(widget: Widget): void {
+    // Set widget's parent.
+    widget.parent = this.parent;
+
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);
@@ -96,9 +97,6 @@ export class DashboardLayout extends Layout {
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.AfterAttach);
     }
-
-    // Set widget's parent.
-    widget.parent = this.parent;
 
     // Post a fit request for the parent widget.
     this.parent!.fit();
@@ -234,31 +232,6 @@ export class DashboardLayout extends Layout {
   }
 
   /**
-   * Gets information from a widget.
-   *
-   * @param widget - the widget to collect information from.
-   */
-  getWidgetInfo(widget: DashboardWidget): Widgetstore.WidgetInfo {
-    const notebookId =
-      widget.notebookId !== undefined
-        ? widget.notebookId
-        : getNotebookId(widget.notebook);
-    const cellId =
-      widget.cellId !== undefined ? widget.cellId : getCellId(widget.cell);
-    const info: Widgetstore.WidgetInfo = {
-      widgetId: widget.id,
-      notebookId: notebookId,
-      cellId: cellId,
-      left: parseInt(widget.node.style.left, 10),
-      top: parseInt(widget.node.style.top, 10),
-      width: parseInt(widget.node.style.width, 10),
-      height: parseInt(widget.node.style.height, 10),
-      removed: false,
-    };
-    return info;
-  }
-
-  /**
    * Mark a widget as deleted in the widgetstore.
    *
    * @param widget - the widget to mark as deleted.
@@ -273,8 +246,7 @@ export class DashboardLayout extends Layout {
    * @param widget - the widget to update from.
    */
   updateInfoFromWidget(widget: DashboardWidget): void {
-    const info = this.getWidgetInfo(widget);
-    this.updateWidgetInfo(info);
+    this.updateWidgetInfo(widget.info);
   }
 
   /**

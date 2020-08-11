@@ -38,7 +38,7 @@ export async function writeFile(
     path,
     type: 'file',
     mimetype: 'text/plain',
-    content: JSON.stringify(content),
+    content: JSON.stringify(content, undefined, 2),
     format: 'text',
   };
   return contents.save(path, DASHBOARD);
