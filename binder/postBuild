@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# install extension
+jupyter labextension install @jupyter-widgets/jupyterlab-manager
+jupyter labextension install jupyterlab-interactive-dashboard-editor
+
+# remove unnecessary directories when using the binder
+rm -rf src
+rm -rf style
+rm -rf Design
+rm -rf .github
+rm -rf binder
+rm package.json
+rm tsconfig.json
+rm yarn.lock
+rm MANIFEST.in
+
+jupyter lab clean
