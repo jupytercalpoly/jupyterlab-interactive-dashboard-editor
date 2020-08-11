@@ -1,6 +1,7 @@
 # jupyterlab-interactive-dashboard-editor
 
 ![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/workflows/Build/badge.svg)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-interactive-dashboard-editor/master?urlpath=lab) ![Github Actions Status]
 
 Interactively create and customize dashboards in JupyterLab
 
