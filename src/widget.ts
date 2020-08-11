@@ -186,22 +186,24 @@ export class DashboardWidget extends Panel {
     let cell;
     let sessionContext;
 
+    const bumpDistance = (event.altKey) ? 1 : DashboardWidget.BUMP_DISTANCE
+
     switch (event.keyCode) {
       // Left arrow key
       case 37:
-        pos.left -= DashboardWidget.BUMP_DISTANCE;
+        pos.left -= bumpDistance;
         break;
       // Up arrow key
       case 38:
-        pos.top -= DashboardWidget.BUMP_DISTANCE;
+        pos.top -= bumpDistance;
         break;
       // Right arrow key
       case 39:
-        pos.left += DashboardWidget.BUMP_DISTANCE;
+        pos.left += bumpDistance;
         break;
       // Down arrow key
       case 40:
-        pos.top += DashboardWidget.BUMP_DISTANCE;
+        pos.top += bumpDistance;
         break;
       // Spacebar
       case 32:
@@ -326,7 +328,7 @@ export class DashboardWidget extends Panel {
     const element = this.widgets[0].node;
     // Pixels are added to prevent weird wrapping issues. Kind of a hack.
     this.node.style.width = `${element.clientWidth + 3}px`;
-    this.node.style.height = `${element.clientHeight + 2}px`;
+    this.node.style.height = `${element.clientHeight}px`;
   }
 
   /**
