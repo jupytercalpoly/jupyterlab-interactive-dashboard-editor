@@ -6,6 +6,46 @@ Interactively create and customize dashboards in JupyterLab
 
 ![presto-overview](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/overview.gif)
 
+## Additional Gifs
+<details>
+  <summary>Click to expand</summary>
+  Add and rearrange outputs on dashboards right from your notebook.
+
+  ![add-move-resize](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/add_move_resize.gif)
+
+  Add outputs from multiple notebooks.
+
+  ![add-multiple](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/multiple_notebooks.gif)
+
+  See changes immediately.
+
+  ![see-changes](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/update_cells.gif)
+
+  Preview your dashboard and interact with widgets in present mode.
+
+  ![present-mode](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/present_edit.gif)
+
+  Undo and redo.
+
+  ![undo-redo](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/undo_redo.gif)
+
+  Add markdown too.
+
+  ![markdown-too](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/markdown_too.gif)
+
+  Save dashboards to file,
+
+  ![save-dashboard](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/save.gif)
+
+  Load them up,
+
+  ![load-dashboard](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/load.gif)
+
+  And edit them again!
+
+  ![edit-again](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/edit_again.gif)
+</details>
+
 ## Requirements
 
 * JupyterLab >= 2.0
