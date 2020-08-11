@@ -4,7 +4,7 @@
 
 Interactively create and customize dashboards in JupyterLab
 
-![presto-overview](https://i.imgur.com/hyLHn3t.gif)
+![presto-overview](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/blob/master/Design/gifs/overview.gif)
 
 ## Requirements
 
