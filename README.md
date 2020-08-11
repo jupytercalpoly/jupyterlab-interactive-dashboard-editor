@@ -4,42 +4,6 @@
 
 Interactively create and customize dashboards in JupyterLab, right next to your notebooks.
 
-Add and rearrange outputs on dashboards right from your notebook.
-
-![add-move-resize](https://gfycat.com/babyishpartialflatfish.gif)
-
-Add outputs from multiple notebooks.
-
-![add-multiple](https://gfycat.com/negligibleobviousgrunion.gif)
-
-See changes immediately.
-
-![see-changes](https://gfycat.com/metallicyellowfirebelliedtoad.gif)
-
-Preview your dashboard and interact with widgets in present mode.
-
-![present-mode](https://gfycat.com/incompleteorganicbonobo.gif)
-
-Undo and redo.
-
-![undo-redo](https://gfycat.com/hopefulidolizedelver.gif)
-
-Add markdown too.
-
-![markdown-too](https://gfycat.com/animatedbothblackwidowspider.gif)
-
-Save dashboards to file,
-
-![save-dashboard](https://gfycat.com/blackandwhiteperfectekaltadeta.gif)
-
-Load them up,
-
-![load-dashboard](https://gfycat.com/insecuretalkativebanteng.gif)
-
-And edit them again!
-
-![edit-again](https://gfycat.com/marvelousfemininehyrax.gif)
-
 
 ## Requirements
 
