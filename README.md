@@ -1,13 +1,8 @@
-# jupyterlab-interactive-dashboard-editor
+# Presto - Jupyterlab Interactive Dashboard Editor
 
 ![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/workflows/Build/badge.svg)
 
-Interactively create and customize dashboards in JupyterLab
-
-
-This extension is composed of a Python package named `jupyterlab_interactive_dashboard_editor`
-for the server extension and a NPM package named `jupyterlab-interactive-dashboard-editor`
-for the frontend extension.
+Interactively create and customize dashboards in JupyterLab, right next to your notebooks.
 
 
 ## Requirements
