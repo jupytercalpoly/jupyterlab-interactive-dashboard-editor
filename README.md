@@ -1,9 +1,10 @@
-# Presto - Jupyterlab Interactive Dashboard Editor
+# jupyterlab-interactive-dashboard-editor
 
 ![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/workflows/Build/badge.svg)
 
-Interactively create and customize dashboards in JupyterLab, right next to your notebooks.
+Interactively create and customize dashboards in JupyterLab
 
+![presto-overview](https://i.imgur.com/hyLHn3t.gif)
 
 ## Requirements
 
