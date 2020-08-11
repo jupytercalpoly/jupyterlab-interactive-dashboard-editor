@@ -186,7 +186,7 @@ export class DashboardWidget extends Panel {
     let cell;
     let sessionContext;
 
-    const bumpDistance = (event.altKey) ? 1 : DashboardWidget.BUMP_DISTANCE
+    const bumpDistance = event.altKey ? 1 : DashboardWidget.BUMP_DISTANCE;
 
     switch (event.keyCode) {
       // Left arrow key
