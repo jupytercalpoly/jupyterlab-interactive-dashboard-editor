@@ -25,7 +25,7 @@ export function addNotebookId(notebook: NotebookPanel): string {
 }
 
 export function getNotebookId(notebook: NotebookPanel): string | undefined {
-  const metadata: any | undefined = notebook.model.metadata.get('presto');
+  const metadata: any | undefined = notebook?.model.metadata.get('presto');
   if (metadata === undefined || metadata.id === undefined) {
     return undefined;
   }
@@ -58,7 +58,7 @@ export function addCellId(cell: Cell): string {
 }
 
 export function getCellId(cell: Cell): string | undefined {
-  const metadata: any | undefined = cell.model.metadata.get('presto');
+  const metadata: any | undefined = cell?.model.metadata.get('presto');
   if (metadata === undefined || metadata.id === undefined) {
     return undefined;
   }

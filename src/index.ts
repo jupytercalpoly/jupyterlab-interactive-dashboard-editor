@@ -235,7 +235,6 @@ function addCommands(
     label: 'Delete Output',
     execute: (args) => {
       const widget = outputTracker.currentWidget;
-      dashboardTracker.currentWidget.deleteWidgetInfo(widget);
       dashboardTracker.currentWidget.deleteWidget(widget);
     },
   });

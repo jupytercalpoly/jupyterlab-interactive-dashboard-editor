@@ -250,16 +250,18 @@ function pasteWidget(dashboard: Dashboard, widget: DashboardWidget): void {
   const info: Widgetstore.WidgetInfo = {
     widgetId: DashboardWidget.createDashboardWidgetId(),
     notebookId: widget.notebookId,
+    pos: {
+      left: 0,
+      top: 0,
+      width: parseInt(widget.node.style.width, 10),
+      height: parseInt(widget.node.style.height, 10),
+    },
     cellId: widget.cellId,
-    left: 0,
-    top: 0,
-    width: parseInt(widget.node.style.width, 10),
-    height: parseInt(widget.node.style.height, 10),
     removed: false,
   };
 
   const newWidget = dashboard.store.createWidget(info);
-  dashboard.addWidget(newWidget, info as Widgetstore.WidgetPosition);
+  dashboard.addWidget(newWidget, info.pos);
   dashboard.updateWidgetInfo(info);
 }
 

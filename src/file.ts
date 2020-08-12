@@ -44,23 +44,25 @@ export type WidgetInfo = {
    */
   cellId: string;
 
-  /**
-   * The top edge position of the widget.
-   */
-  top: number;
+  pos: {
+    /**
+     * The top edge position of the widget.
+     */
+    top: number;
 
-  /**
-   * The left edge position of the widget.
-   */
-  left: number;
+    /**
+     * The left edge position of the widget.
+     */
+    left: number;
 
-  /**
-   * The width of the widget.
-   */
-  width: number;
+    /**
+     * The width of the widget.
+     */
+    width: number;
 
-  /**
-   * The height of the widget.
-   */
-  height: number;
+    /**
+     * The height of the widget.
+     */
+    height: number;
+  };
 };

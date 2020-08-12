@@ -1,4 +1,4 @@
-import { NotebookPanel } from '@jupyterlab/notebook';
+import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
 import { CodeCell, MarkdownCell } from '@jupyterlab/cells';
 
@@ -16,7 +16,12 @@ import { shouldStartDrag } from './widgetdragutils';
 
 import { DashboardArea } from './dashboard';
 
-import { getNotebookId, getCellId } from './utils';
+import {
+  getNotebookId,
+  getCellId,
+  getNotebookById,
+  getCellById,
+} from './utils';
 
 import { Signal, ISignal } from '@lumino/signaling';
 
@@ -44,33 +49,58 @@ const IN_DRAG_CLASS = 'pr-InDrag';
 export class DashboardWidget extends Panel {
   constructor(options: DashboardWidget.IOptions) {
     super();
-    this._notebook = options.notebook;
-    this._index = options.index !== undefined ? options.index : -1;
-    this._cell = options.cell || null;
+
+    const { notebook, cell, cellId, notebookId, fit } = options;
+
+    this._notebook = notebook || null;
+    this._cell = cell || null;
     this.id = DashboardWidget.createDashboardWidgetId();
 
-    // Makes widget focusable for WidgetTracker
+    // Makes widget focusable.
     this.node.setAttribute('tabindex', '-1');
 
-    // If widget is a placeholder, make it red and without content.
-    if (options.placeholder) {
+    const _cellId = getCellId(cell);
+    const _notebookId = getNotebookId(notebook);
+
+    if (_notebookId === undefined) {
       this.node.style.background = 'red';
-      if (options.cellId === undefined) {
+      if (notebookId === undefined) {
+        console.warn('DashboardWidget has no notebook or notebookId');
+      }
+      this._notebookId = notebookId;
+    } else if (_cellId === undefined) {
+      this.node.style.background = 'yellow';
+      if (cellId === undefined) {
         console.warn('DashboardWidget has no cell or cellId');
       }
-      this._cellId = options.cellId;
+      this._cellId = cellId;
     } else {
-      // Wait for the notebook to be loaded before cloning the output area.
+      if (notebookId && _notebookId !== notebookId) {
+        console.warn(`DashboardWidget notebookId ('${notebookId}') and id of
+                      notebook ('${_notebookId}') don't match. 
+                      Using ${_notebookId}.`);
+      }
+      if (cellId && _cellId !== cellId) {
+        console.warn(`DashboardWidget cellId ('${cellId}') and id of cell
+                      ('${_cellId}') don't match. Using ${_cellId}.`);
+      }
+
+      this._cellId = _cellId;
+      this._notebookId = _notebookId;
+
       void this._notebook.context.ready.then(() => {
         let clone: Widget;
-        if (!this._cell) {
-          this._cell = this._notebook.content.widgets[this._index] as CodeCell;
-        }
-        if (this._cell.model.type === 'markdown') {
-          const markdown = this._cell as MarkdownCell;
-          clone = markdown.clone().editorWidget.parent;
-        } else {
-          clone = (this._cell as CodeCell).cloneOutputArea() as Widget;
+        const cellType = cell.model.type;
+
+        switch (cellType) {
+          case 'markdown':
+            clone = (cell as MarkdownCell).clone().editorWidget.parent;
+            break;
+          case 'code':
+            clone = (cell as CodeCell).cloneOutputArea();
+            break;
+          default:
+            throw new Error('Cell is not a code or markdown cell.');
         }
 
         clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
@@ -81,7 +111,7 @@ export class DashboardWidget extends Panel {
         this.addWidget(clone);
 
         const done = (): void => {
-          if (options.fit) {
+          if (fit) {
             this.fitContent();
           }
           // Make widget visible again.
@@ -94,17 +124,7 @@ export class DashboardWidget extends Panel {
         // and for their width/height to adjust before fitting.
         setTimeout(done.bind(this), 2);
       });
-
-      // Might have weird interactions where options.cellId !== actual cellId
-      this._cellId =
-        options.cellId !== undefined ? options.cellId : getCellId(options.cell);
     }
-
-    // Might have weird interactions where options.notebookId !== actual notebookId
-    this._notebookId =
-      options.notebookId !== undefined
-        ? options.notebookId
-        : getNotebookId(options.notebook);
 
     const resizer = DashboardWidget.createResizer();
     this.node.appendChild(resizer);
@@ -124,7 +144,6 @@ export class DashboardWidget extends Panel {
     this.node.addEventListener('mousedown', this);
     this.node.addEventListener('dblclick', this);
     this.node.addEventListener('keydown', this);
-    this._dbArea = this.parent as DashboardArea;
   }
 
   /**
@@ -181,8 +200,7 @@ export class DashboardWidget extends Panel {
     event.preventDefault();
     event.stopPropagation();
 
-    const info = this.info;
-    const pos = this.info as WidgetPosition;
+    const pos = this.info.pos;
     let cell;
     let sessionContext;
 
@@ -213,8 +231,7 @@ export class DashboardWidget extends Panel {
         break;
     }
 
-    this._dbArea.updateWidget(this, pos);
-    this._dbArea.updateWidgetInfo({ ...info, ...pos });
+    (this.parent as DashboardArea).updateWidget(this, pos);
   }
 
   /**
@@ -328,7 +345,7 @@ export class DashboardWidget extends Panel {
     const element = this.widgets[0].node;
     // Pixels are added to prevent weird wrapping issues. Kind of a hack.
     this.node.style.width = `${element.clientWidth + 3}px`;
-    this.node.style.height = `${element.clientHeight}px`;
+    this.node.style.height = `${element.clientHeight + 2}px`;
   }
 
   /**
@@ -376,10 +393,9 @@ export class DashboardWidget extends Panel {
     event.stopPropagation();
     event.preventDefault();
 
-    if (this._mouseMode === 'resize' && this._dbArea !== undefined) {
+    if (this._mouseMode === 'resize' && this.parent !== undefined) {
       const pos = this.pos;
-      this._dbArea.updateWidget(this, pos);
-      this._dbArea.updateInfoFromWidget(this);
+      (this.parent as DashboardArea).updateWidget(this, pos);
     }
 
     this._mouseMode = 'none';
@@ -398,6 +414,14 @@ export class DashboardWidget extends Panel {
       height: parseInt(this.node.style.height, 10),
     };
   }
+  set pos(newPos: WidgetPosition) {
+    const style = this.node.style;
+    for (const [key, value] of Object.entries(newPos)) {
+      if (value !== undefined) {
+        style.setProperty(key, `${value}px`);
+      }
+    }
+  }
 
   /**
    * Information sufficient to reconstruct the widget.
@@ -405,7 +429,7 @@ export class DashboardWidget extends Panel {
   get info(): Widgetstore.WidgetInfo {
     const pos = this.pos;
     return {
-      ...pos,
+      pos,
       widgetId: this.id,
       cellId: this.cellId,
       notebookId: this.notebookId,
@@ -497,7 +521,6 @@ export class DashboardWidget extends Panel {
   private _index: number;
   private _cell: CodeCell | MarkdownCell | null = null;
   private _cellId: string;
-  private _dbArea: DashboardArea;
   private _ready = new Signal<this, void>(this);
   private _fitToContent = true;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
@@ -537,11 +560,6 @@ export namespace DashboardWidget {
     index?: number;
 
     /**
-     * Whether the widget is a placeholder for a missing cell.
-     */
-    placeholder?: boolean;
-
-    /**
      * An optional cell id used for placeholder widgets.
      */
     cellId?: string;
@@ -572,6 +590,42 @@ export namespace DashboardWidget {
     });
 
     return resizer;
+  }
+
+  export function createWidget(
+    options: Widgetstore.WidgetInfo,
+    notebookTracker: INotebookTracker,
+    fit = false
+  ): DashboardWidget {
+    const { notebookId, cellId, pos, widgetId } = options;
+
+    const notebook = getNotebookById(notebookId, notebookTracker);
+
+    let cell: CodeCell | MarkdownCell | undefined;
+    const _cell = getCellById(cellId, notebookTracker);
+
+    if (_cell === undefined) {
+      cell = undefined;
+    } else if (_cell.model.type === 'code') {
+      cell = _cell as CodeCell;
+    } else if (_cell.model.type === 'markdown') {
+      cell = _cell as MarkdownCell;
+    } else {
+      throw new Error('cell is not a code or markdown cell');
+    }
+
+    const widget = new DashboardWidget({
+      notebookId,
+      cellId,
+      notebook,
+      cell,
+      fit,
+    });
+
+    widget.pos = pos;
+    widget.id = widgetId;
+
+    return widget;
   }
 
   export type MouseMode = 'drag' | 'resize' | 'none';
