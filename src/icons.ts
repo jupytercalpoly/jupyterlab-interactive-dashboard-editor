@@ -15,7 +15,7 @@ import viewSvgstr from '../style/icons/view.svg';
 /**
  * Dashboard icons
  */
-export namespace Icons {
+export namespace DashboardIcons {
   export const whiteDashboard = new LabIcon({
     name: 'pr-icons:white-dashboard',
     svgstr: whiteDashboardSvgstr,
@@ -32,7 +32,7 @@ export namespace Icons {
   });
 
   export const whiteDashboardOutline = new LabIcon({
-    name: 'pr-icons:white-dashboard-icon',
+    name: 'pr-icons:white-dashboard-outline',
     svgstr: whiteDashboardOutlineSvgstr,
   });
 
@@ -41,18 +41,18 @@ export namespace Icons {
     svgstr: greyDashboardOutlineSvgstr,
   });
 
-  export const redoToolbarIcon = new LabIcon({
-    name: 'pr-icons:redo-icon',
+  export const redo = new LabIcon({
+    name: 'pr-icons:redo',
     svgstr: redoIcon,
   });
 
-  export const fullscreenToolbarIcon = new LabIcon({
-    name: 'pr-icons:fullscreen-icon',
+  export const fullscreen= new LabIcon({
+    name: 'pr-icons:fullscreen',
     svgstr: fullscreenIcon,
   });
 
-  export const statusToolbarIcon = new LabIcon({
-    name: 'pr-icons:status-icon',
+  export const status = new LabIcon({
+    name: 'pr-icons:status',
     svgstr: statusIcon,
   });
 
@@ -72,4 +72,4 @@ export namespace Icons {
   });
 }
 
-export default Icons;
+export default DashboardIcons;

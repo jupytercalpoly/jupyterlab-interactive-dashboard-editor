@@ -9,13 +9,13 @@ import { Dashboard } from './dashboard';
  * @return file created
  */
 export async function newfile(dashboard: Dashboard): Promise<Contents.IModel> {
-  const file = await dashboard.contentsManager.newUntitled({
+  const file = await dashboard.model.contentsManager.newUntitled({
     path: '/',
     type: 'file',
     ext: 'dashboard',
   });
 
-  dashboard.path = file.path;
+  dashboard.model.path = file.path;
 
   return file;
 }
@@ -56,9 +56,9 @@ export async function renameDashboardFile(
   dashboard: Dashboard
 ): Promise<Contents.IModel> {
   const newPath = '/' + name;
-  return dashboard.contentsManager.rename(dashboard.path, newPath).then(
+  return dashboard.model.contentsManager.rename(dashboard.model.path, newPath).then(
     (f: Contents.IModel): Contents.IModel => {
-      dashboard.path = newPath;
+      dashboard.model.path = newPath;
       return f;
     }
   );
@@ -71,7 +71,7 @@ export async function renameDashboardFile(
  * @param dashboard - dashboard with its path to be deleted
  */
 export function deleteDashboardFile(dashboard: Dashboard): void {
-  dashboard.contentsManager.delete(dashboard.path);
+  dashboard.model.contentsManager.delete(dashboard.model.path);
 }
 
 /**
@@ -81,6 +81,6 @@ export function deleteDashboardFile(dashboard: Dashboard): void {
  * @return content of .dashboard file
  */
 export async function readDashboardFile(dashboard: Dashboard): Promise<string> {
-  const content = await dashboard.contentsManager.get(dashboard.path);
+  const content = await dashboard.model.contentsManager.get(dashboard.model.path);
   return content.content as string;
 }

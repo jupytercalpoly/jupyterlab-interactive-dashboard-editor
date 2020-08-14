@@ -14,7 +14,7 @@ import { Drag } from './drag';
 
 import { shouldStartDrag } from './widgetdragutils';
 
-import { DashboardArea } from './dashboard';
+import { Dashboard } from './dashboard';
 
 import {
   getNotebookId,
@@ -25,7 +25,7 @@ import {
 
 import { Signal, ISignal } from '@lumino/signaling';
 
-import { Icons } from './icons';
+import { DashboardIcons } from './icons';
 
 import { Widgetstore, WidgetPosition } from './widgetstore';
 
@@ -201,8 +201,7 @@ export class DashboardWidget extends Panel {
     event.stopPropagation();
 
     const pos = this.info.pos;
-    let cell;
-    let sessionContext;
+    const oldPos = pos;
 
     const bumpDistance = event.altKey ? 1 : DashboardWidget.BUMP_DISTANCE;
 
@@ -223,15 +222,11 @@ export class DashboardWidget extends Panel {
       case 40:
         pos.top += bumpDistance;
         break;
-      // Spacebar
-      case 32:
-        cell = this.cell as CodeCell;
-        sessionContext = this.notebook.sessionContext;
-        CodeCell.execute(cell, sessionContext);
-        break;
     }
 
-    (this.parent as DashboardArea).updateWidget(this, pos);
+    if (pos !== oldPos) {
+      (this.parent as Dashboard).updateWidget(this, pos);
+    }
   }
 
   /**
@@ -395,7 +390,7 @@ export class DashboardWidget extends Panel {
 
     if (this._mouseMode === 'resize' && this.parent !== undefined) {
       const pos = this.pos;
-      (this.parent as DashboardArea).updateWidget(this, pos);
+      (this.parent as Dashboard).updateWidget(this, pos);
     }
 
     this._mouseMode = 'none';
@@ -582,7 +577,7 @@ export namespace DashboardWidget {
   export function createResizer(): HTMLElement {
     const resizer = document.createElement('div');
     resizer.classList.add('pr-Resizer');
-    Icons.resizer.element({
+    DashboardIcons.resizer.element({
       container: resizer,
       width: '15px',
       height: '15px',

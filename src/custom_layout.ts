@@ -16,26 +16,52 @@ import { Dashboard } from './dashboard';
 
 import { Signal } from '@lumino/signaling';
 
+import { DocumentRegistry } from '@jupyterlab/docregistry';
+
+import { IChangedArgs } from '@jupyterlab/coreutils';
+
 const EDITABLE_CORNER_CLASS = 'pr-EditableBackground';
 
 export class DashboardLayout extends Layout {
   constructor(options: DashboardLayout.IOptions) {
     super(options);
 
-    this._items = new Map<string, LayoutItem>();
-    this._store = options.store;
-    this._outputTracker = options.outputTracker;
+    const { store, outputTracker, width, height, mode, model } = options;
 
-    this._width = options.width || 0;
-    this._height = options.height || 0;
+    this._items = new Map<string, LayoutItem>();
+    this._store = store;
+    this._outputTracker = outputTracker;
+
+    this._width = width || 0;
+    this._height = height || 0;
 
     this._corner = DashboardLayout.makeCorner(this._width, this._height);
 
-    if (options.mode === 'edit') {
+    if (mode === 'edit') {
       this._corner.addClass(EDITABLE_CORNER_CLASS);
     }
 
-    this._mode = options.mode;
+    this._mode = mode;
+
+    model.stateChanged.connect(this._handleModelChange, this);
+  }
+
+  private _handleModelChange(_sender: DocumentRegistry.IModel, change: IChangedArgs<any>) {
+    console.log('\tnew change recieved', change);
+    const { name, newValue } = change;
+    switch (name) {
+      case 'width':
+        this.width = newValue;
+        break;
+      case 'height':
+        this.height = newValue;
+        break;
+      case 'mode':
+        this.mode = newValue;
+        break;
+      default:
+        break;
+    }
   }
 
   get corner(): Widget {
@@ -64,7 +90,7 @@ export class DashboardLayout extends Layout {
 
   onAfterAttach(msg: Message): void {
     super.onAfterAttach(msg);
-    this._dashboard = this.parent.parent as Dashboard;
+    this._dashboard = this.parent as Dashboard;
   }
 
   /**
@@ -149,7 +175,6 @@ export class DashboardLayout extends Layout {
   addWidget(
     widget: DashboardWidget,
     _pos: Widgetstore.WidgetPosition,
-    fit = false
   ): void {
     // Add the widget to the layout.
     const item = new LayoutItem(widget);
@@ -159,7 +184,7 @@ export class DashboardLayout extends Layout {
     // Attach the widget to the parent.
     if (this.parent) {
       if (this._dashboard !== undefined) {
-        widget.mode = this._dashboard.mode;
+        widget.mode = this._dashboard.model.mode;
       } else {
         widget.mode = 'present';
       }
@@ -356,7 +381,10 @@ export class DashboardLayout extends Layout {
     console.log('history', this._store.getHistory());
     this._signalChanges = false;
     const records = this._store.getWidgets();
-    each(records, (record) => this._updateLayoutFromRecord(record));
+    each(records, (record) => {
+      console.log('record', record);
+      this._updateLayoutFromRecord(record)
+    });
     this._signalChanges = true;
   }
 
@@ -408,7 +436,11 @@ export class DashboardLayout extends Layout {
       const widget = _widget as DashboardWidget;
       widget.mode = newMode;
     });
-    this._corner.toggleClass(EDITABLE_CORNER_CLASS);
+    if (newMode === 'edit') {
+      this._corner.addClass(EDITABLE_CORNER_CLASS);
+    } else {
+      this._corner.removeClass(EDITABLE_CORNER_CLASS);
+    }
   }
 
   startBatch(): void {
@@ -503,6 +535,11 @@ export namespace DashboardLayout {
      * The layout mode (either interactive or edit).
      */
     mode: Dashboard.Mode;
+
+    /**
+     * The dashboard model (used for updating metadata).
+     */
+    model: DocumentRegistry.IModel;
   }
 
   /**
