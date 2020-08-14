@@ -40,7 +40,6 @@ import { openfullscreen } from './fullscreen';
 
 import { DBUtils } from './dbUtils';
 
-
 export function buildToolbar(
   notebookTracker: INotebookTracker,
   dashboard: DashboardDocument,
@@ -124,7 +123,9 @@ export function createModeSwitchButton(dashboard: DashboardDocument): Widget {
 /**
  * Create full screen toolbar item.
  */
-export function createFullScreenButton(dashboard: DashboardDocument): ToolbarButton {
+export function createFullScreenButton(
+  dashboard: DashboardDocument
+): ToolbarButton {
   const button = new ToolbarButton({
     icon: DashboardIcons.fullscreen,
     onClick: (): void => {
@@ -305,7 +306,9 @@ export function createStopButton(
  * Create restart button toolbar item.
  */
 
-export function createRestartButton(dashboard: DashboardDocument): ToolbarButton {
+export function createRestartButton(
+  dashboard: DashboardDocument
+): ToolbarButton {
   const button = new ToolbarButton({
     icon: refreshIcon,
     onClick: (): void => {

@@ -1,8 +1,17 @@
 import { DocumentRegistry, DocumentModel } from '@jupyterlab/docregistry';
 
-import { IModelDB, IObservableJSON, ObservableJSON } from '@jupyterlab/observables';
+import {
+  IModelDB,
+  IObservableJSON,
+  ObservableJSON,
+} from '@jupyterlab/observables';
 
-import { IDashboardContent, IDashboardMetadata, DASHBOARD_VERSION, IOutputInfo } from './dbformat';
+import {
+  IDashboardContent,
+  IDashboardMetadata,
+  DASHBOARD_VERSION,
+  IOutputInfo,
+} from './dbformat';
 
 import { DashboardWidget } from './widget';
 
@@ -27,7 +36,7 @@ export interface IDashboardModel extends DocumentRegistry.IModel {
   readonly widgetstore: Widgetstore;
 
   /**
-   * The notebook tracker for the dashboard. 
+   * The notebook tracker for the dashboard.
    */
   readonly notebookTracker: INotebookTracker;
 
@@ -36,21 +45,20 @@ export interface IDashboardModel extends DocumentRegistry.IModel {
    */
   readonly contentsManager: ContentsManager;
 
-  metadata: IObservableJSON
-  
+  metadata: IObservableJSON;
+
   loaded: Signal<this, void>;
 
   mode: Dashboard.Mode;
 
   path: string;
 
-  name: string
-  
+  name: string;
+
   width: number;
 
   height: number;
 }
-
 
 export class DashboardModel extends DocumentModel implements IDashboardModel {
   constructor(options: DashboardModel.IOptions) {
@@ -61,26 +69,24 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this.widgetstore =
       options.widgetstore || new Widgetstore({ id: 0, notebookTracker });
 
-    this.contentsManager =
-      options.contentsManager || new ContentsManager();
-}
+    this.contentsManager = options.contentsManager || new ContentsManager();
+  }
 
   async fromJSON(value: IDashboardContent): Promise<void> {
     console.log('updating from json');
     const outputs: Widgetstore.WidgetInfo[] = [];
 
     for (const [path, notebookId] of Object.entries(value.paths)) {
-      await this.contentsManager.get(path)
-      .catch((error) => {
+      await this.contentsManager.get(path).catch((error) => {
         throw new Error(`Error reading notebook ${notebookId} at ${path}`);
       });
     }
-    
+
     console.log('finished loading notebooks');
 
     for (const [notebookId, notebookOutputs] of Object.entries(value.outputs)) {
       for (const outputInfo of notebookOutputs) {
-        let info: Widgetstore.WidgetInfo = {
+        const info: Widgetstore.WidgetInfo = {
           ...outputInfo,
           notebookId,
           widgetId: DashboardWidget.createDashboardWidgetId(),
@@ -95,7 +101,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this._metadata.clear();
     const metadata = value.metadata;
     for (const [key, value] of Object.entries(metadata)) {
-      this._setMetadataProperty(key, value)
+      this._setMetadataProperty(key, value);
     }
 
     console.log('finished updating metadata');
@@ -103,7 +109,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this.widgetstore.startBatch();
     this.widgetstore.clear();
     outputs.forEach((output) => {
-      this.widgetstore.addWidget(output)
+      this.widgetstore.addWidget(output);
     });
     this.widgetstore.endBatch();
 
@@ -125,14 +131,14 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     const metadata: IDashboardMetadata = {
       name: this.metadata.get('name') as string,
       dashboardHeight: +this.metadata.get('dashboardHeight'),
-      dashboardWidth: +this.metadata.get('dashboardWidth')
-    }
+      dashboardWidth: +this.metadata.get('dashboardWidth'),
+    };
 
     const file: IDashboardContent = {
       metadata,
       version: DASHBOARD_VERSION,
       outputs: {},
-      paths: {}
+      paths: {},
     };
 
     each(records, (record) => {
@@ -226,13 +232,12 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
       return;
     }
     this.metadata.set(key, newValue);
-    this.triggerStateChange({ name: key, oldValue, newValue});
+    this.triggerStateChange({ name: key, oldValue, newValue });
   }
 
   get loaded(): Signal<this, void> {
     return this._loaded;
   }
-
 
   /**
    * The widget store for the dashboard.
@@ -240,7 +245,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   readonly widgetstore: Widgetstore;
 
   /**
-   * The notebook tracker for the dashboard. 
+   * The notebook tracker for the dashboard.
    */
   readonly notebookTracker: INotebookTracker;
 
@@ -259,7 +264,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
  * The namespace for the dashboard model.
  */
 export namespace DashboardModel {
-
   export interface IOptions {
     notebookTracker: INotebookTracker;
 
@@ -273,8 +277,8 @@ export namespace DashboardModel {
   }
 }
 
-
-export class DashboardModelFactory implements DocumentRegistry.IModelFactory<IDashboardModel> {
+export class DashboardModelFactory
+  implements DocumentRegistry.IModelFactory<IDashboardModel> {
   constructor(options: DashboardModelFactory.IOptions) {
     this._notebookTracker = options.notebookTracker;
     console.log('model factory', this);
@@ -304,7 +308,7 @@ export class DashboardModelFactory implements DocumentRegistry.IModelFactory<IDa
     return '';
   }
 
-  createNew(languagePreference?: string, modelDB?: IModelDB) {
+  createNew(languagePreference?: string, modelDB?: IModelDB): DashboardModel {
     const notebookTracker = this._notebookTracker;
     const contentsManager = new ContentsManager();
 
@@ -320,7 +324,7 @@ export class DashboardModelFactory implements DocumentRegistry.IModelFactory<IDa
     return model;
   }
 
-  private _disposed: boolean = false;
+  private _disposed = false;
   private _notebookTracker: INotebookTracker;
 }
 

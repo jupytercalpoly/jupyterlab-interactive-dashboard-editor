@@ -46,7 +46,10 @@ export class DashboardLayout extends Layout {
     model.stateChanged.connect(this._handleModelChange, this);
   }
 
-  private _handleModelChange(_sender: DocumentRegistry.IModel, change: IChangedArgs<any>) {
+  private _handleModelChange(
+    _sender: DocumentRegistry.IModel,
+    change: IChangedArgs<any>
+  ): void {
     console.log('\tnew change recieved', change);
     const { name, newValue } = change;
     switch (name) {
@@ -172,10 +175,7 @@ export class DashboardLayout extends Layout {
    *
    * @param widget - the widget to add.
    */
-  addWidget(
-    widget: DashboardWidget,
-    _pos: Widgetstore.WidgetPosition,
-  ): void {
+  addWidget(widget: DashboardWidget, _pos: Widgetstore.WidgetPosition): void {
     // Add the widget to the layout.
     const item = new LayoutItem(widget);
     this._items.set(widget.id, item);
@@ -383,7 +383,7 @@ export class DashboardLayout extends Layout {
     const records = this._store.getWidgets();
     each(records, (record) => {
       console.log('record', record);
-      this._updateLayoutFromRecord(record)
+      this._updateLayoutFromRecord(record);
     });
     this._signalChanges = true;
   }

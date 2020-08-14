@@ -46,7 +46,7 @@ export namespace DashboardIcons {
     svgstr: redoIcon,
   });
 
-  export const fullscreen= new LabIcon({
+  export const fullscreen = new LabIcon({
     name: 'pr-icons:fullscreen',
     svgstr: fullscreenIcon,
   });

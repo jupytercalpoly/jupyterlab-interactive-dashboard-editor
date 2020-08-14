@@ -1,6 +1,5 @@
 import { PartialJSONObject } from '@lumino/coreutils';
 
-
 export const DASHBOARD_VERSION = 1;
 
 /**
@@ -25,9 +24,8 @@ export interface IDashboardContent extends PartialJSONObject {
   /**
    * A map from notebook IDs to an array of widgets used from that notebook.
    */
-  outputs: { [notebookId: string]: IOutputInfo[] }
-};
-
+  outputs: { [notebookId: string]: IOutputInfo[] };
+}
 
 /**
  * An interface to hold dashboard metadata.
@@ -37,7 +35,6 @@ export interface IDashboardMetadata extends PartialJSONObject {
   dashboardWidth: number;
   dashboardHeight: number;
 }
-
 
 /**
  * An interface to hold information to recreate a dashboard widget.
@@ -54,4 +51,4 @@ export interface IOutputInfo extends PartialJSONObject {
     width: number;
     height: number;
   };
-};
+}

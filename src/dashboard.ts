@@ -20,19 +20,22 @@ import { Widgetstore } from './widgetstore';
 
 import { addCellId, addNotebookId } from './utils';
 
-import { DocumentWidget, DocumentRegistry, ABCWidgetFactory, IDocumentWidget } from '@jupyterlab/docregistry';
+import {
+  DocumentWidget,
+  DocumentRegistry,
+  ABCWidgetFactory,
+  IDocumentWidget,
+} from '@jupyterlab/docregistry';
 
 import { IDashboardModel, DashboardModel } from './model';
 
-import { CommandIDs } from './commands'; 
-
+import { CommandIDs } from './commands';
 
 // HTML element classes
 
 const DASHBOARD_CLASS = 'pr-JupyterDashboard';
 
 const DROP_TARGET_CLASS = 'pr-DropTarget';
-
 
 /**
  * Main content widget for the Dashboard widget.
@@ -52,7 +55,7 @@ export class Dashboard extends Widget {
       model,
       width: options.dashboardWidth || Dashboard.DEFAULT_WIDTH,
       height: options.dashboardHeight || Dashboard.DEFAULT_HEIGHT,
-      mode: 'edit'
+      mode: 'edit',
     });
 
     store.connectDashboard(this);
@@ -60,7 +63,7 @@ export class Dashboard extends Widget {
     this._context.ready.then(() => {
       this._model.loaded.connect(this.updateLayoutFromWidgetstore, this);
     });
-    
+
     this.addClass(DASHBOARD_CLASS);
   }
 
@@ -303,7 +306,6 @@ export class Dashboard extends Widget {
  * Namespace for DashboardArea options.
  */
 export namespace Dashboard {
-
   export type Mode = 'edit' | 'present';
 
   export const DEFAULT_WIDTH = 1270;
@@ -335,7 +337,7 @@ export namespace Dashboard {
 
 export namespace DashboardDocument {
   export interface IOptions extends DocumentWidget.IOptionsOptionalContent {
-     /**
+    /**
      * Tracker for child widgets.
      */
     outputTracker: WidgetTracker<DashboardWidget>;
@@ -349,7 +351,6 @@ export namespace DashboardDocument {
      * Dashboard name.
      */
     name?: string;
-
 
     /**
      * Dashboard canvas width (default is 1280).
@@ -370,15 +371,15 @@ export namespace DashboardDocument {
 
 export class DashboardDocument extends DocumentWidget<Dashboard> {
   constructor(options: DashboardDocument.IOptions) {
-    let { content, reveal, commandRegistry } = options;
-    const { context } = options;
+    let { content, reveal } = options;
+    const { context, commandRegistry } = options;
     const model = context.model as DashboardModel;
-    content = content || new Dashboard({...options, model, context });
+    content = content || new Dashboard({ ...options, model, context });
     reveal = Promise.all([reveal, context.ready]);
     super({
-       ...options,
-       content: content as Dashboard,
-       reveal
+      ...options,
+      content: content as Dashboard,
+      reveal,
     });
 
     // Build the toolbar
@@ -393,7 +394,7 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
       paste,
       runOutput,
       startFullscreen,
-      toggleMode
+      toggleMode,
     } = CommandIDs;
 
     this.toolbar.addItem(
@@ -435,7 +436,9 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
   }
 }
 
-export class DashboardDocumentFactory extends ABCWidgetFactory<DashboardDocument> {
+export class DashboardDocumentFactory extends ABCWidgetFactory<
+  DashboardDocument
+> {
   constructor(options: DashboardDocumentFactory.IOptions) {
     super(options);
     this._commandRegistry = options.commandRegistry;
@@ -446,17 +449,17 @@ export class DashboardDocumentFactory extends ABCWidgetFactory<DashboardDocument
     return new DashboardDocument({
       context,
       commandRegistry: this._commandRegistry,
-      outputTracker: this._outputTracker
+      outputTracker: this._outputTracker,
     });
   }
 
-  
   private _commandRegistry: CommandRegistry;
   private _outputTracker: WidgetTracker<DashboardWidget>;
 }
 
 export namespace DashboardDocumentFactory {
-  export interface IOptions extends DocumentRegistry.IWidgetFactoryOptions<IDocumentWidget> {
+  export interface IOptions
+    extends DocumentRegistry.IWidgetFactoryOptions<IDocumentWidget> {
     commandRegistry: CommandRegistry;
     outputTracker: WidgetTracker<DashboardWidget>;
   }

@@ -6,11 +6,7 @@ import {
 
 import { INotebookTracker } from '@jupyterlab/notebook';
 
-import {
-  WidgetTracker,
-  showDialog,
-  Dialog,
-} from '@jupyterlab/apputils';
+import { WidgetTracker, showDialog, Dialog } from '@jupyterlab/apputils';
 
 import { CodeCell } from '@jupyterlab/cells';
 
@@ -32,10 +28,16 @@ import { DashboardIcons } from './icons';
 
 import { DashboardModelFactory } from './model';
 
-import { undoIcon, redoIcon, copyIcon, cutIcon, pasteIcon, runIcon } from '@jupyterlab/ui-components';
+import {
+  undoIcon,
+  redoIcon,
+  copyIcon,
+  cutIcon,
+  pasteIcon,
+  runIcon,
+} from '@jupyterlab/ui-components';
 
 import { CommandIDs } from './commands';
-
 
 const extension: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-interactive-dashboard-editor',
@@ -70,7 +72,7 @@ const extension: JupyterFrontEndPlugin<void> = {
       fileFormat: 'text',
       icon: DashboardIcons.blueDashboard,
       iconLabel: 'Dashboard',
-      mimeTypes: ['application/json']
+      mimeTypes: ['application/json'],
     };
     // Add dashboard file type to the doc registry.
     app.docRegistry.addFileType(dashboardFiletype);
@@ -79,7 +81,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     // Create a new model factory.
     const modelFactory = new DashboardModelFactory({
-      notebookTracker: tracker
+      notebookTracker: tracker,
     });
 
     // Create a new widget factory.
@@ -175,14 +177,14 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.undo,
       args: {},
       keys: ['Z'],
-      selector: '.pr-JupyterDashboard'
+      selector: '.pr-JupyterDashboard',
     });
 
     app.commands.addKeyBinding({
       command: CommandIDs.redo,
       args: {},
       keys: ['Shift Z'],
-      selector: '.pr-JupyterDashboard'
+      selector: '.pr-JupyterDashboard',
     });
 
     app.commands.addKeyBinding({
@@ -196,21 +198,21 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.cut,
       args: {},
       keys: ['Accel X'],
-      selector: '.pr-JupyterDashboard'
+      selector: '.pr-JupyterDashboard',
     });
 
     app.commands.addKeyBinding({
       command: CommandIDs.copy,
       args: {},
       keys: ['Accel C'],
-      selector: '.pr-JupyterDashboard'
+      selector: '.pr-JupyterDashboard',
     });
 
     app.commands.addKeyBinding({
       command: CommandIDs.paste,
       args: {},
       keys: ['Accel V'],
-      selector: '.pr-JupyterDashboard'
+      selector: '.pr-JupyterDashboard',
     });
 
     app.commands.addKeyBinding({
@@ -229,11 +231,7 @@ const extension: JupyterFrontEndPlugin<void> = {
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new DashboardButton(
-        app,
-        tracker,
-        labShell
-      )
+      new DashboardButton(app, tracker, labShell)
     );
   },
 };
@@ -348,8 +346,8 @@ function addCommands(
       const cell = widget.cell as CodeCell;
       const sessionContext = widget.notebook.sessionContext;
       CodeCell.execute(cell, sessionContext);
-    }
-  })
+    },
+  });
 
   commands.addCommand(CommandIDs.setDimensions, {
     label: 'Set Dashboard Dimensions',
@@ -379,7 +377,7 @@ function addCommands(
       clipboard.clear();
       clipboard.add(info);
     },
-    isEnabled: hasOutput
+    isEnabled: hasOutput,
   });
 
   commands.addCommand(CommandIDs.cut, {
@@ -394,7 +392,7 @@ function addCommands(
       clipboard.add(info);
       dashboard.deleteWidget(widget);
     },
-    isEnabled: hasOutput
+    isEnabled: hasOutput,
   });
 
   commands.addCommand(CommandIDs.paste, {
@@ -409,13 +407,13 @@ function addCommands(
         const pos = info.pos;
         pos.left = Math.max(pos.left - 10, 0);
         pos.top = Math.max(pos.top - 10, 0);
-  
+
         const newWidget = widgetstore.createWidget({ ...info, widgetId, pos });
         dashboard.addWidget(newWidget, pos);
-      })
+      });
     },
-    isEnabled: () => hasOutput() && utils.clipboard.size !== 0
-  })
+    isEnabled: () => hasOutput() && utils.clipboard.size !== 0,
+  });
 }
 
 namespace Private {

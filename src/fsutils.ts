@@ -56,12 +56,14 @@ export async function renameDashboardFile(
   dashboard: Dashboard
 ): Promise<Contents.IModel> {
   const newPath = '/' + name;
-  return dashboard.model.contentsManager.rename(dashboard.model.path, newPath).then(
-    (f: Contents.IModel): Contents.IModel => {
-      dashboard.model.path = newPath;
-      return f;
-    }
-  );
+  return dashboard.model.contentsManager
+    .rename(dashboard.model.path, newPath)
+    .then(
+      (f: Contents.IModel): Contents.IModel => {
+        dashboard.model.path = newPath;
+        return f;
+      }
+    );
 }
 
 /**
@@ -81,6 +83,8 @@ export function deleteDashboardFile(dashboard: Dashboard): void {
  * @return content of .dashboard file
  */
 export async function readDashboardFile(dashboard: Dashboard): Promise<string> {
-  const content = await dashboard.model.contentsManager.get(dashboard.model.path);
+  const content = await dashboard.model.contentsManager.get(
+    dashboard.model.path
+  );
   return content.content as string;
 }
