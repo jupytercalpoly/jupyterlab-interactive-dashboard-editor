@@ -9,10 +9,14 @@
 
 .pr-EditableWidget.pr-DashboardWidget:focus {
     border: var(--jp-border-width) solid var(--jp-brand-color1);
+    border-width: 2px;
+    border-radius: 3px;
 }
 
 .pr-EditableWidget.pr-DashboardWidget:hover {
     border: var(--jp-border-width) solid var(--jp-brand-color1);
+    border-width: 2px;
+    border-radius: 3px;
 }
 
 .pr-DashboardArea {
