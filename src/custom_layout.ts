@@ -14,26 +14,57 @@ import { WidgetTracker } from '@jupyterlab/apputils';
 
 import { Dashboard } from './dashboard';
 
+import { Signal } from '@lumino/signaling';
+
+import { DocumentRegistry } from '@jupyterlab/docregistry';
+
+import { IChangedArgs } from '@jupyterlab/coreutils';
+
 const EDITABLE_CORNER_CLASS = 'pr-EditableBackground';
 
 export class DashboardLayout extends Layout {
   constructor(options: DashboardLayout.IOptions) {
     super(options);
 
-    this._items = new Map<string, LayoutItem>();
-    this._store = options.store;
-    this._outputTracker = options.outputTracker;
+    const { widgetstore, outputTracker, width, height, mode, model } = options;
 
-    this._width = options.width || 0;
-    this._height = options.height || 0;
+    this._items = new Map<string, LayoutItem>();
+    this._widgetstore = widgetstore;
+    this._outputTracker = outputTracker;
+
+    this._width = width || 0;
+    this._height = height || 0;
 
     this._corner = DashboardLayout.makeCorner(this._width, this._height);
 
-    if (options.mode === 'edit') {
+    if (mode === 'edit') {
       this._corner.addClass(EDITABLE_CORNER_CLASS);
     }
 
-    this._mode = options.mode;
+    this._mode = mode;
+
+    model.stateChanged.connect(this._handleModelChange, this);
+  }
+
+  private _handleModelChange(
+    _sender: DocumentRegistry.IModel,
+    change: IChangedArgs<any>
+  ): void {
+    console.log('\tnew change recieved', change);
+    const { name, newValue } = change;
+    switch (name) {
+      case 'width':
+        this.width = newValue;
+        break;
+      case 'height':
+        this.height = newValue;
+        break;
+      case 'mode':
+        this.mode = newValue;
+        break;
+      default:
+        break;
+    }
   }
 
   get corner(): Widget {
@@ -56,13 +87,13 @@ export class DashboardLayout extends Layout {
     this._items.forEach((item) => item.dispose());
     this._corner.dispose();
     this._outputTracker = null;
-    this._store = null;
+    this._widgetstore = null;
     super.dispose();
   }
 
   onAfterAttach(msg: Message): void {
     super.onAfterAttach(msg);
-    this._dashboard = this.parent.parent as Dashboard;
+    this._dashboard = this.parent as Dashboard;
   }
 
   /**
@@ -74,6 +105,18 @@ export class DashboardLayout extends Layout {
     // Is there a lazy way to iterate through the map?
     const arr = Array.from(this._items.values());
     return map(arr, (item) => item.widget);
+  }
+
+  signalChange(change: IDashboardChange): void {
+    if (!this._signalChanges) {
+      console.log('not signaling changes');
+      return;
+    }
+    this._changes.push(change);
+    if (!this.inBatch) {
+      this._changed.emit(this._changes);
+      this._changes = [];
+    }
   }
 
   /**
@@ -132,25 +175,58 @@ export class DashboardLayout extends Layout {
    *
    * @param widget - the widget to add.
    */
-  addWidget(widget: DashboardWidget, pos: Widgetstore.WidgetPosition): void {
+  addWidget(widget: DashboardWidget, _pos: Widgetstore.WidgetPosition): void {
     // Add the widget to the layout.
     const item = new LayoutItem(widget);
     this._items.set(widget.id, item);
+    console.log('item map update - add', this._items);
 
     // Attach the widget to the parent.
     if (this.parent) {
       if (this._dashboard !== undefined) {
-        widget.mode = this._dashboard.mode;
+        widget.mode = this._dashboard.model.mode;
       } else {
         widget.mode = 'present';
       }
       this.attachWidget(widget);
-      this.updateWidget(widget, pos);
+      this._updateWidget(widget, _pos);
       this._outputTracker.add(widget);
+
+      const { id, notebookId, cellId } = widget;
+
+      const ignore = !this._signalChanges;
+
+      widget.ready.connect(() => {
+        const change: IDashboardChange = {
+          type: 'add',
+          pos: widget.pos,
+          widgetId: id,
+          notebookId,
+          cellId,
+          ignore,
+        };
+        this.signalChange(change);
+      });
     }
   }
 
   updateWidget(
+    widget: DashboardWidget,
+    pos: Widgetstore.WidgetPosition
+  ): boolean {
+    const success = this._updateWidget(widget, pos);
+    if (success) {
+      const change: IDashboardChange = {
+        type: 'move',
+        widgetId: widget.id,
+        pos: widget.pos,
+      };
+      this.signalChange(change);
+    }
+    return success;
+  }
+
+  private _updateWidget(
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition
   ): boolean {
@@ -173,8 +249,6 @@ export class DashboardLayout extends Layout {
       top = this._height - height;
     }
 
-    // Update the widget's position.
-    console.log('updating', left, top, width, height);
     item.update(left, top, width, height);
 
     return true;
@@ -202,11 +276,17 @@ export class DashboardLayout extends Layout {
   deleteWidget(widget: DashboardWidget): boolean {
     // Look up the widget in the _items map.
     const item = this._items.get(widget.id);
+    console.log('item map update - remove', this._items);
 
     // Bail if it's not there.
     if (item === undefined) {
       return false;
     }
+
+    const change: IDashboardChange = {
+      type: 'remove',
+      widgetId: widget.id,
+    };
 
     // Remove the item from the map.
     this._items.delete(widget.id);
@@ -219,6 +299,8 @@ export class DashboardLayout extends Layout {
     // Dispose the layout item.
     item.dispose();
 
+    this.signalChange(change);
+
     return true;
   }
 
@@ -228,7 +310,7 @@ export class DashboardLayout extends Layout {
    * @param info - the information to add to the widgetstore.
    */
   updateWidgetInfo(info: Widgetstore.WidgetInfo): void {
-    this._store.addWidget(info);
+    this._widgetstore.addWidget(info);
   }
 
   /**
@@ -237,7 +319,7 @@ export class DashboardLayout extends Layout {
    * @param widget - the widget to mark as deleted.
    */
   deleteWidgetInfo(widget: DashboardWidget): void {
-    this._store.deleteWidget(widget);
+    this._widgetstore.deleteWidget(widget.id);
   }
 
   /**
@@ -255,8 +337,12 @@ export class DashboardLayout extends Layout {
    * @param record - the record to update from.
    */
   private _updateLayoutFromRecord(record: Record<WidgetSchema>): void {
+    console.log('record id', record.$id);
     const item = this._items.get(record.$id);
-    const pos = record as Widgetstore.WidgetPosition;
+    const pos = record.pos;
+
+    console.log('record to update from', record);
+    console.log('\titem', item);
 
     if (record.widgetId === '') {
       // Widget has already been removed; ignore.
@@ -270,17 +356,9 @@ export class DashboardLayout extends Layout {
       // Widget has already been removed; ignore.
       if (record.removed) {
         return;
-      }
-
-      // Output is missing; add placeholder.
-      if (record.missing) {
-        const placeholderWidget = this._store.createPlaceholderWidget(
-          record as Widgetstore.WidgetInfo
-        );
-        this.addWidget(placeholderWidget, pos);
       } else {
         // Widget is newly added or undeleted; add.
-        const newWidget = this._store.createWidget(
+        const newWidget = this._widgetstore.createWidget(
           record as Widgetstore.WidgetInfo
         );
         this.addWidget(newWidget, pos);
@@ -300,15 +378,22 @@ export class DashboardLayout extends Layout {
    * Updates the layout based on the state of the datastore.
    */
   updateLayoutFromWidgetstore(): void {
-    const records = this._store.getWidgets();
-    each(records, (record) => this._updateLayoutFromRecord(record));
+    console.log('history', this._widgetstore.getHistory());
+    this._signalChanges = false;
+    const records = this._widgetstore.getWidgets();
+    each(records, (record) => {
+      console.log('record', record);
+      this._updateLayoutFromRecord(record);
+    });
+    this._signalChanges = true;
   }
 
   /**
    * Undo the last change to the layout.
    */
   undo(): void {
-    this._store.undo();
+    console.log('history before undo', this._widgetstore.getHistory());
+    this._widgetstore.undo();
     this.updateLayoutFromWidgetstore();
   }
 
@@ -316,7 +401,7 @@ export class DashboardLayout extends Layout {
    * Redo the last change to the layout.
    */
   redo(): void {
-    this._store.redo();
+    this._widgetstore.redo();
     this.updateLayoutFromWidgetstore();
   }
 
@@ -351,7 +436,23 @@ export class DashboardLayout extends Layout {
       const widget = _widget as DashboardWidget;
       widget.mode = newMode;
     });
-    this._corner.toggleClass(EDITABLE_CORNER_CLASS);
+    if (newMode === 'edit') {
+      this._corner.addClass(EDITABLE_CORNER_CLASS);
+    } else {
+      this._corner.removeClass(EDITABLE_CORNER_CLASS);
+    }
+  }
+
+  startBatch(): void {
+    this._inBatch = true;
+  }
+
+  endBatch(): void {
+    this._inBatch = false;
+  }
+
+  get inBatch(): boolean {
+    return this._inBatch;
   }
 
   /**
@@ -367,13 +468,17 @@ export class DashboardLayout extends Layout {
    * widgetinfo object.
    */
   createWidget(info: Widgetstore.WidgetInfo, fit?: boolean): DashboardWidget {
-    return this._store.createWidget(info, fit);
+    return this._widgetstore.createWidget(info, fit);
+  }
+
+  get changed(): Signal<this, IDashboardChange[]> {
+    return this._changed;
   }
 
   // Map from widget ids to LayoutItems
   private _items: Map<string, LayoutItem>;
   // Datastore widgets are rendered from / saved to.
-  private _store: Widgetstore;
+  private _widgetstore: Widgetstore | undefined;
   // Output tracker to add new widgets to.
   private _outputTracker: WidgetTracker<DashboardWidget>;
   // Dummy corner widget to set dimensions of dashboard.
@@ -386,6 +491,15 @@ export class DashboardLayout extends Layout {
   private _mode: Dashboard.Mode;
   // Parent dashboard.
   private _dashboard: Dashboard;
+
+  // Changed signal
+  private _changed = new Signal<this, IDashboardChange[]>(this);
+
+  private _changes: IDashboardChange[] = [];
+
+  private _inBatch = false;
+
+  private _signalChanges = true;
 }
 
 /**
@@ -405,7 +519,7 @@ export namespace DashboardLayout {
     /**
      * The widgetstore to update from.
      */
-    store: Widgetstore;
+    widgetstore: Widgetstore;
 
     /**
      * The static width of the dashboard area.
@@ -421,6 +535,11 @@ export namespace DashboardLayout {
      * The layout mode (either interactive or edit).
      */
     mode: Dashboard.Mode;
+
+    /**
+     * The dashboard model (used for updating metadata).
+     */
+    model: DocumentRegistry.IModel;
   }
 
   /**
@@ -439,4 +558,25 @@ export namespace DashboardLayout {
     corner.node.style.position = 'absolute';
     return corner;
   }
+}
+
+export type DashboardChangeType = 'add' | 'remove' | 'move';
+
+export interface IDashboardChange {
+  type: DashboardChangeType;
+
+  widgetId: string;
+
+  pos?: {
+    left?: number;
+    top?: number;
+    width?: number;
+    height?: number;
+  };
+
+  notebookId?: string;
+
+  cellId?: string;
+
+  ignore?: boolean;
 }

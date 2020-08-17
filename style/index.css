@@ -1,3 +1,7 @@
+.pr-JupyterDashboard {
+    overflow: auto;
+}
+
 .pr-DashboardWidget {
     border: var(--jp-border-width) solid var(--jp-layout-color0);
     display: inline-block;
@@ -29,7 +33,7 @@
     height: 15px;
     right: 0;
     bottom: 0;
-    cursor: se-resize;
+    cursor: nwse-resize;
     position: absolute;
 }
 

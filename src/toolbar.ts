@@ -28,15 +28,13 @@ import {
   LabIcon,
 } from '@jupyterlab/ui-components';
 
-import { Dashboard } from './dashboard';
+import { DashboardDocument } from './dashboard';
 
 import { DashboardWidget } from './widget';
 
 import { saveDialog } from './dialog';
 
-import { Icons } from './icons';
-
-import { Widgetstore } from './widgetstore';
+import { DashboardIcons } from './icons';
 
 import { openfullscreen } from './fullscreen';
 
@@ -44,7 +42,7 @@ import { DBUtils } from './dbUtils';
 
 export function buildToolbar(
   notebookTracker: INotebookTracker,
-  dashboard: Dashboard,
+  dashboard: DashboardDocument,
   tracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils
 ): void {
@@ -69,7 +67,7 @@ export function buildToolbar(
 /**
  * Create a dashboard mode switching toolbar item.
  */
-export function createModeSwitchButton(dashboard: Dashboard): Widget {
+export function createModeSwitchButton(dashboard: DashboardDocument): Widget {
   const button = new Widget();
   const buttonElementClasses = [
     'bp3-button',
@@ -85,11 +83,11 @@ export function createModeSwitchButton(dashboard: Dashboard): Widget {
   button.node.appendChild(buttonElement);
   button.node.classList.add('jp-Toolbar-item', 'jp-ToolbarButton');
 
-  if (dashboard.mode === 'edit') {
-    Icons.view.element({ container: buttonElement });
+  if (dashboard.content.model.mode === 'edit') {
+    DashboardIcons.view.element({ container: buttonElement });
     buttonElement.title = 'Switch To Presentation Mode';
   } else {
-    Icons.edit.element({ container: buttonElement });
+    DashboardIcons.edit.element({ container: buttonElement });
     buttonElement.title = 'Switch To Edit Mode';
   }
 
@@ -102,13 +100,13 @@ export function createModeSwitchButton(dashboard: Dashboard): Widget {
 
     LabIcon.remove(buttonElement);
     buttonElement.classList.add(...buttonElementClasses);
-    if (dashboard.mode === 'edit') {
-      dashboard.mode = 'present';
-      Icons.edit.element({ container: buttonElement });
+    if (dashboard.content.model.mode === 'edit') {
+      dashboard.content.model.mode = 'present';
+      DashboardIcons.edit.element({ container: buttonElement });
       buttonElement.title = 'Switch To Edit Mode';
     } else {
-      dashboard.mode = 'edit';
-      Icons.view.element({ container: buttonElement });
+      dashboard.content.model.mode = 'edit';
+      DashboardIcons.view.element({ container: buttonElement });
       buttonElement.title = 'Switch To Presentation Mode';
     }
   };
@@ -125,11 +123,13 @@ export function createModeSwitchButton(dashboard: Dashboard): Widget {
 /**
  * Create full screen toolbar item.
  */
-export function createFullScreenButton(dashboard: Dashboard): ToolbarButton {
+export function createFullScreenButton(
+  dashboard: DashboardDocument
+): ToolbarButton {
   const button = new ToolbarButton({
-    icon: Icons.fullscreenToolbarIcon,
+    icon: DashboardIcons.fullscreen,
     onClick: (): void => {
-      openfullscreen(dashboard.area.node);
+      openfullscreen(dashboard.content.node);
     },
     tooltip: 'View in full screen',
   });
@@ -141,13 +141,13 @@ export function createFullScreenButton(dashboard: Dashboard): ToolbarButton {
  */
 
 export function createSaveButton(
-  dashboard: Dashboard,
+  dashboard: DashboardDocument,
   notebookTracker: INotebookTracker
 ): Widget {
   const button = new ToolbarButton({
     icon: saveIcon,
     onClick: (): void => {
-      let name = dashboard.getName();
+      let name = dashboard.content.model.name;
       if (name === null) {
         name = 'null';
       } else {
@@ -157,13 +157,13 @@ export function createSaveButton(
       InputDialog.getText({ title: 'Save as', text: filename }).then(
         (value) => {
           if (value.button.accept) {
-            dashboard.dirty = false;
+            dashboard.content.model.dirty = false;
             const dialog = saveDialog(value.value);
             dialog.launch().then((result) => {
               dialog.dispose();
             });
           }
-          dashboard.save(notebookTracker, value.value);
+          dashboard.context.save();
         }
       );
     },
@@ -176,11 +176,11 @@ export function createSaveButton(
  * Create undo button toolbar item.
  */
 
-export function createUndoButton(dashboard: Dashboard): Widget {
+export function createUndoButton(dashboard: DashboardDocument): Widget {
   const button = new ToolbarButton({
     icon: undoIcon,
     onClick: (): void => {
-      dashboard.undo();
+      dashboard.content.undo();
     },
     tooltip: 'Undo',
   });
@@ -191,11 +191,11 @@ export function createUndoButton(dashboard: Dashboard): Widget {
  * Create redo button toolbar item.
  */
 
-export function createRedoButton(dashboard: Dashboard): Widget {
+export function createRedoButton(dashboard: DashboardDocument): Widget {
   const button = new ToolbarButton({
-    icon: Icons.redoToolbarIcon,
+    icon: DashboardIcons.redo,
     onClick: (): void => {
-      dashboard.redo();
+      dashboard.content.redo();
     },
     tooltip: 'Redo',
   });
@@ -207,7 +207,7 @@ export function createRedoButton(dashboard: Dashboard): Widget {
  */
 
 export function createCutButton(
-  dashboard: Dashboard,
+  dashboard: DashboardDocument,
   outputTracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils
 ): Widget {
@@ -216,9 +216,8 @@ export function createCutButton(
     onClick: (): void => {
       utils.clipboard.clear();
       const widget = outputTracker.currentWidget;
-      utils.clipboard.add(widget);
-      dashboard.deleteWidgetInfo(widget);
-      dashboard.deleteWidget(widget);
+      utils.clipboard.add(widget.info);
+      dashboard.content.deleteWidget(widget);
     },
     tooltip: 'Cut the selected outputs',
   });
@@ -230,7 +229,7 @@ export function createCutButton(
  */
 
 export function createCopyButton(
-  dashboard: Dashboard,
+  dashboard: DashboardDocument,
   outputTracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils
 ): Widget {
@@ -239,28 +238,11 @@ export function createCopyButton(
     onClick: (): void => {
       utils.clipboard.clear();
       const widget = outputTracker.currentWidget;
-      utils.clipboard.add(widget);
+      utils.clipboard.add(widget.info);
     },
     tooltip: 'Copy the selected outputs',
   });
   return button;
-}
-
-function pasteWidget(dashboard: Dashboard, widget: DashboardWidget): void {
-  const info: Widgetstore.WidgetInfo = {
-    widgetId: DashboardWidget.createDashboardWidgetId(),
-    notebookId: widget.notebookId,
-    cellId: widget.cellId,
-    left: 0,
-    top: 0,
-    width: parseInt(widget.node.style.width, 10),
-    height: parseInt(widget.node.style.height, 10),
-    removed: false,
-  };
-
-  const newWidget = dashboard.store.createWidget(info);
-  dashboard.addWidget(newWidget, info as Widgetstore.WidgetPosition);
-  dashboard.updateWidgetInfo(info);
 }
 
 /**
@@ -268,13 +250,13 @@ function pasteWidget(dashboard: Dashboard, widget: DashboardWidget): void {
  */
 
 export function createPasteButton(
-  dashboard: Dashboard,
+  dashboard: DashboardDocument,
   utils: DBUtils
 ): Widget {
   const button = new ToolbarButton({
     icon: pasteIcon,
     onClick: (): void => {
-      utils.clipboard.forEach((widget) => pasteWidget(dashboard, widget));
+      console.log('boop');
     },
     tooltip: 'Paste outputs from the clipboard',
   });
@@ -286,7 +268,7 @@ export function createPasteButton(
  */
 
 export function createRunButton(
-  dashboard: Dashboard,
+  dashboard: DashboardDocument,
   tracker: WidgetTracker<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
@@ -306,7 +288,7 @@ export function createRunButton(
  */
 
 export function createStopButton(
-  dashboard: Dashboard,
+  dashboard: DashboardDocument,
   tracker: WidgetTracker<DashboardWidget>
 ): Widget {
   const button = new ToolbarButton({
@@ -324,7 +306,9 @@ export function createStopButton(
  * Create restart button toolbar item.
  */
 
-export function createRestartButton(dashboard: Dashboard): ToolbarButton {
+export function createRestartButton(
+  dashboard: DashboardDocument
+): ToolbarButton {
   const button = new ToolbarButton({
     icon: refreshIcon,
     onClick: (): void => {
@@ -348,7 +332,7 @@ export function createRestartButton(dashboard: Dashboard): ToolbarButton {
  * Create run all button toolbar item.
  */
 
-export function createRunAllButton(dashboard: Dashboard): Widget {
+export function createRunAllButton(dashboard: DashboardDocument): Widget {
   const button = new ToolbarButton({
     icon: fastForwardIcon,
     onClick: (): void => {

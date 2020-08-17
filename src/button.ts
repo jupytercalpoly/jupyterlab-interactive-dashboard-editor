@@ -12,15 +12,7 @@ import { ToolbarButton } from '@jupyterlab/apputils';
 
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 
-import { WidgetTracker } from '@jupyterlab/apputils';
-
-import { Icons } from './icons';
-
-import { DashboardWidget } from './widget';
-
-import { Dashboard } from './dashboard';
-
-import { DBUtils } from './dbUtils';
+import { DashboardIcons } from './icons';
 
 /**
  * Adds a button to the main toolbar.
@@ -29,17 +21,11 @@ export class DashboardButton
   implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
   constructor(
     app: JupyterFrontEnd,
-    outputTracker: WidgetTracker<DashboardWidget>,
-    dashboardTracker: WidgetTracker<Dashboard>,
     tracker: INotebookTracker,
-    utils: DBUtils,
     shell: ILabShell
   ) {
     this._app = app;
-    this._outputTracker = outputTracker;
-    this._dashboardTracker = dashboardTracker;
     this._tracker = tracker;
-    this._utils = utils;
     this._shell = shell;
   }
 
@@ -48,12 +34,9 @@ export class DashboardButton
     context: DocumentRegistry.IContext<INotebookModel>
   ): IDisposable {
     const callback = (): void => {
-      const outputTracker = this._outputTracker;
-      const dashboard = new Dashboard({
-        notebookTracker: this._tracker,
-        outputTracker,
-        utils: this._utils,
-      });
+      const widgetFactory = this._app.docRegistry.getWidgetFactory('dashboard');
+      const dashboard = widgetFactory.createNew(context);
+      console.log('new dashboard doc', dashboard);
 
       const currentNotebook = this._tracker.currentWidget;
 
@@ -66,13 +49,11 @@ export class DashboardButton
         ref: currentNotebook.id,
         mode: 'split-left',
       });
-
-      void this._dashboardTracker.add(dashboard);
     };
 
     const button = new ToolbarButton({
       className: 'dashboardButton',
-      icon: Icons.blueDashboard,
+      icon: DashboardIcons.blueDashboard,
       iconClass: 'dashboard',
       onClick: callback,
       tooltip: 'Create Dashboard',
@@ -84,9 +65,6 @@ export class DashboardButton
   }
 
   private _app: JupyterFrontEnd;
-  private _outputTracker: WidgetTracker<DashboardWidget>;
-  private _dashboardTracker: WidgetTracker<Dashboard>;
   private _tracker: INotebookTracker;
-  private _utils: DBUtils;
   private _shell: ILabShell;
 }
