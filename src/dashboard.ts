@@ -30,7 +30,7 @@ import { getPathFromNotebookId } from './utils';
 
 import { newfile, renameDashboardFile, writeFile } from './fsutils';
 
-import { addCellId, addNotebookId, getCellById } from './utils';
+import { addCellId, addNotebookId } from './utils';
 
 import { DASHBOARD_VERSION, WidgetInfo, DashboardSpec } from './file';
 
@@ -143,24 +143,23 @@ export class DashboardArea extends Widget {
           height: widget.node.offsetHeight,
         };
         this._dbLayout.updateWidget(widget, pos);
-        this._dbLayout.updateInfoFromWidget(widget);
       } else {
         // dragging between dashboards
         const info: Widgetstore.WidgetInfo = {
           widgetId: DashboardWidget.createDashboardWidgetId(),
           notebookId: widget.notebookId,
           cellId: widget.cellId,
-          left: x,
-          top: y,
-          width: widget.node.offsetWidth,
-          height: widget.node.offsetHeight,
+          pos: {
+            left: x,
+            top: y,
+            width: widget.node.offsetWidth,
+            height: widget.node.offsetHeight,
+          },
           removed: false,
         };
 
         const newWidget = this._dbLayout.createWidget(info);
-        this._dbLayout.addWidget(newWidget, info);
-        this._dbLayout.updateWidgetInfo(info);
-        oldArea.deleteWidgetInfo(widget);
+        this._dbLayout.addWidget(newWidget, info.pos);
         oldArea.deleteWidget(widget);
       }
 
@@ -178,17 +177,17 @@ export class DashboardArea extends Widget {
         widgetId: DashboardWidget.createDashboardWidgetId(),
         notebookId: addNotebookId(notebook),
         cellId: addCellId(cell),
-        left: x,
-        top: y,
-        width: DashboardWidget.DEFAULT_WIDTH,
-        height: DashboardWidget.DEFAULT_HEIGHT,
+        pos: {
+          left: x,
+          top: y,
+          width: DashboardWidget.DEFAULT_WIDTH,
+          height: DashboardWidget.DEFAULT_HEIGHT,
+        },
         removed: false,
       };
 
       const widget = this._dbLayout.createWidget(info, true);
-      this._dbLayout.addWidget(widget, info);
-      // Wait until the widget is fit to content then add it to the widgetstore.
-      widget.ready.connect(() => this.updateWidgetInfo(widget.info), this);
+      this._dbLayout.addWidget(widget, info.pos);
     } else {
       return;
     }
@@ -329,6 +328,8 @@ export class Dashboard extends MainAreaWidget<Widget> {
     });
 
     super({ ...options, content: content || dashboardArea });
+
+    store.connectDashboard(this);
 
     this._store = store;
     this.setName(options.name || 'Unnamed Dashboard');
@@ -563,12 +564,11 @@ export class Dashboard extends MainAreaWidget<Widget> {
         file.outputs[notebookId] = [];
       }
 
+      const { pos } = record;
+
       file.outputs[notebookId].push({
         cellId: record.cellId,
-        top: record.top,
-        left: record.left,
-        width: record.width,
-        height: record.height,
+        pos,
       });
     });
 
@@ -750,26 +750,12 @@ export namespace Dashboard {
 
         // Validate output information
         Dashboard.validateOutput(notebookId, output);
-        let info: Widgetstore.WidgetInfo;
-
-        const cell = getCellById(output.cellId, notebookTracker);
-        // Check if cell id exists in the given notebook.
-        if (cell === undefined) {
-          // If cell id doesn't exist, create a red "placeholder" widget in its spot.
-          info = {
-            ...output,
-            notebookId,
-            widgetId: DashboardWidget.createDashboardWidgetId(),
-            missing: true,
-          };
-        } else {
-          // Create widget based on position, notebookId, and cellId.
-          info = {
-            ...output,
-            notebookId,
-            widgetId: DashboardWidget.createDashboardWidgetId(),
-          };
-        }
+        // Create widget based on position, notebookId, and cellId.
+        const info: Widgetstore.WidgetInfo = {
+          ...output,
+          notebookId,
+          widgetId: DashboardWidget.createDashboardWidgetId(),
+        };
         // Add the widget to the widgetstore.
         store.addWidget(info);
       }
@@ -814,34 +800,42 @@ export namespace Dashboard {
    * @throws - an error if the entry is not well-formated.
    */
   export function validateOutput(notebookId: string, output: any): void {
-    if (output.left === undefined) {
+    const pos = output.pos;
+
+    if (pos === undefined) {
+      throw new Error(
+        `Output of notebook ${notebookId} is missing the 'pos' field`
+      );
+    }
+
+    if (pos.left === undefined) {
       throw new Error(
         `Output of notebook ${notebookId} is missing the 'left' field`
       );
-    } else if (isNaN(+output.left)) {
+    } else if (isNaN(+pos.left)) {
       throw new Error(`'left' field of notebook ${notebookId} is not a number`);
     }
-    if (output.top === undefined) {
+    if (pos.top === undefined) {
       throw new Error(
         `Output of notebook ${notebookId} is missing the 'top' field`
       );
-    } else if (isNaN(+output.top)) {
+    } else if (isNaN(+pos.top)) {
       throw new Error(`'top' field of notebook ${notebookId} is not a number`);
     }
-    if (output.width === undefined) {
+    if (pos.width === undefined) {
       throw new Error(
         `Output of notebook ${notebookId} is missing the 'width' field`
       );
-    } else if (isNaN(+output.width)) {
+    } else if (isNaN(+pos.width)) {
       throw new Error(
         `'width' field of notebook ${notebookId} is not a number`
       );
     }
-    if (output.height === undefined) {
+    if (pos.height === undefined) {
       throw new Error(
         `Output of notebook ${notebookId} is missing the 'height' field`
       );
-    } else if (isNaN(+output.height)) {
+    } else if (isNaN(+pos.height)) {
       throw new Error(
         `'height' field of notebook ${notebookId} is not a number`
       );
