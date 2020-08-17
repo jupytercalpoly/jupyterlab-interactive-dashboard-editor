@@ -47,18 +47,18 @@ export class Dashboard extends Widget {
     const { outputTracker, model, context } = options;
     this._model = model;
     this._context = context;
-    const store = model.widgetstore;
+    const { widgetstore, mode } = model;
 
     this.layout = new DashboardLayout({
-      store,
+      widgetstore,
       outputTracker,
       model,
+      mode,
       width: options.dashboardWidth || Dashboard.DEFAULT_WIDTH,
       height: options.dashboardHeight || Dashboard.DEFAULT_HEIGHT,
-      mode: 'edit',
     });
 
-    store.connectDashboard(this);
+    widgetstore.connectDashboard(this);
 
     this._context.ready.then(() => {
       this._model.loaded.connect(this.updateLayoutFromWidgetstore, this);
@@ -397,42 +397,53 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
       toggleMode,
     } = CommandIDs;
 
+    const args = { toolbar: true };
+
     this.toolbar.addItem(
       'save',
-      new CommandToolbarButton({ commands, id: save })
+      new CommandToolbarButton({ args, commands, id: save })
     );
     this.toolbar.addItem(
       'undo',
-      new CommandToolbarButton({ commands, id: undo })
+      new CommandToolbarButton({ args, commands, id: undo })
     );
     this.toolbar.addItem(
       'redo',
-      new CommandToolbarButton({ commands, id: redo })
+      new CommandToolbarButton({ args, commands, id: redo })
     );
     this.toolbar.addItem(
       'cut',
-      new CommandToolbarButton({ commands, id: cut })
+      new CommandToolbarButton({ args, commands, id: cut })
     );
     this.toolbar.addItem(
       'copy',
-      new CommandToolbarButton({ commands, id: copy })
+      new CommandToolbarButton({ args, commands, id: copy })
     );
     this.toolbar.addItem(
       'paste',
-      new CommandToolbarButton({ commands, id: paste })
+      new CommandToolbarButton({ args, commands, id: paste })
     );
     this.toolbar.addItem(
       'runOutput',
-      new CommandToolbarButton({ commands, id: runOutput })
+      new CommandToolbarButton({ args, commands, id: runOutput })
     );
     this.toolbar.addItem(
       'startFullscreen',
-      new CommandToolbarButton({ commands, id: startFullscreen })
+      new CommandToolbarButton({ args, commands, id: startFullscreen })
     );
     this.toolbar.addItem(
       'toggleMode',
-      new CommandToolbarButton({ commands, id: toggleMode })
+      new CommandToolbarButton({ args, commands, id: toggleMode })
     );
+
+    // Listen to toggle the icon on the mode switch button.
+    context.ready.then(() => {
+      model.stateChanged.connect((_sender, change) => {
+        if (change.name === 'mode') {
+          commandRegistry.notifyCommandChanged(toggleMode);
+        }
+      }, this);
+    });
   }
 }
 

@@ -116,7 +116,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     console.log('finished updating widgetstore');
 
     this._loaded.emit(void 0);
-    this.mode = 'present';
+    // this.mode = 'present';
   }
 
   toJSON(): IDashboardContent {

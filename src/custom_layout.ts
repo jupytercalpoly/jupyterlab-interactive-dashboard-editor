@@ -26,10 +26,10 @@ export class DashboardLayout extends Layout {
   constructor(options: DashboardLayout.IOptions) {
     super(options);
 
-    const { store, outputTracker, width, height, mode, model } = options;
+    const { widgetstore, outputTracker, width, height, mode, model } = options;
 
     this._items = new Map<string, LayoutItem>();
-    this._store = store;
+    this._widgetstore = widgetstore;
     this._outputTracker = outputTracker;
 
     this._width = width || 0;
@@ -87,7 +87,7 @@ export class DashboardLayout extends Layout {
     this._items.forEach((item) => item.dispose());
     this._corner.dispose();
     this._outputTracker = null;
-    this._store = null;
+    this._widgetstore = null;
     super.dispose();
   }
 
@@ -310,7 +310,7 @@ export class DashboardLayout extends Layout {
    * @param info - the information to add to the widgetstore.
    */
   updateWidgetInfo(info: Widgetstore.WidgetInfo): void {
-    this._store.addWidget(info);
+    this._widgetstore.addWidget(info);
   }
 
   /**
@@ -319,7 +319,7 @@ export class DashboardLayout extends Layout {
    * @param widget - the widget to mark as deleted.
    */
   deleteWidgetInfo(widget: DashboardWidget): void {
-    this._store.deleteWidget(widget.id);
+    this._widgetstore.deleteWidget(widget.id);
   }
 
   /**
@@ -358,7 +358,7 @@ export class DashboardLayout extends Layout {
         return;
       } else {
         // Widget is newly added or undeleted; add.
-        const newWidget = this._store.createWidget(
+        const newWidget = this._widgetstore.createWidget(
           record as Widgetstore.WidgetInfo
         );
         this.addWidget(newWidget, pos);
@@ -378,9 +378,9 @@ export class DashboardLayout extends Layout {
    * Updates the layout based on the state of the datastore.
    */
   updateLayoutFromWidgetstore(): void {
-    console.log('history', this._store.getHistory());
+    console.log('history', this._widgetstore.getHistory());
     this._signalChanges = false;
-    const records = this._store.getWidgets();
+    const records = this._widgetstore.getWidgets();
     each(records, (record) => {
       console.log('record', record);
       this._updateLayoutFromRecord(record);
@@ -392,8 +392,8 @@ export class DashboardLayout extends Layout {
    * Undo the last change to the layout.
    */
   undo(): void {
-    console.log('history before undo', this._store.getHistory());
-    this._store.undo();
+    console.log('history before undo', this._widgetstore.getHistory());
+    this._widgetstore.undo();
     this.updateLayoutFromWidgetstore();
   }
 
@@ -401,7 +401,7 @@ export class DashboardLayout extends Layout {
    * Redo the last change to the layout.
    */
   redo(): void {
-    this._store.redo();
+    this._widgetstore.redo();
     this.updateLayoutFromWidgetstore();
   }
 
@@ -468,7 +468,7 @@ export class DashboardLayout extends Layout {
    * widgetinfo object.
    */
   createWidget(info: Widgetstore.WidgetInfo, fit?: boolean): DashboardWidget {
-    return this._store.createWidget(info, fit);
+    return this._widgetstore.createWidget(info, fit);
   }
 
   get changed(): Signal<this, IDashboardChange[]> {
@@ -478,7 +478,7 @@ export class DashboardLayout extends Layout {
   // Map from widget ids to LayoutItems
   private _items: Map<string, LayoutItem>;
   // Datastore widgets are rendered from / saved to.
-  private _store: Widgetstore | undefined;
+  private _widgetstore: Widgetstore | undefined;
   // Output tracker to add new widgets to.
   private _outputTracker: WidgetTracker<DashboardWidget>;
   // Dummy corner widget to set dimensions of dashboard.
@@ -519,7 +519,7 @@ export namespace DashboardLayout {
     /**
      * The widgetstore to update from.
      */
-    store: Widgetstore;
+    widgetstore: Widgetstore;
 
     /**
      * The static width of the dashboard area.

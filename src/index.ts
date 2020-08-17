@@ -14,7 +14,7 @@ import { Dashboard, DashboardDocumentFactory } from './dashboard';
 
 import { DashboardWidget } from './widget';
 
-import { DashboardButton } from './button';
+import { IDocumentManager } from '@jupyterlab/docmanager';
 
 import { DBUtils } from './dbUtils';
 
@@ -35,19 +35,25 @@ import {
   cutIcon,
   pasteIcon,
   runIcon,
+  saveIcon,
 } from '@jupyterlab/ui-components';
 
 import { CommandIDs } from './commands';
 
+import { ReadonlyJSONObject } from '@lumino/coreutils';
+
+const DEFAULT_NAME = 'untitled.dash';
+
 const extension: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell, IMainMenu],
+  requires: [INotebookTracker, ILabShell, IMainMenu, IDocumentManager],
   activate: (
     app: JupyterFrontEnd,
-    tracker: INotebookTracker,
+    notebookTracker: INotebookTracker,
     labShell: ILabShell,
-    mainMenu: IMainMenu
+    mainMenu: IMainMenu,
+    docManager: IDocumentManager
   ): void => {
     console.log('JupyterLab extension presto is activated!');
 
@@ -77,12 +83,10 @@ const extension: JupyterFrontEndPlugin<void> = {
     // Add dashboard file type to the doc registry.
     app.docRegistry.addFileType(dashboardFiletype);
 
-    addCommands(app, dashboardTracker, outputTracker, utils);
+    addCommands(app, dashboardTracker, outputTracker, utils, docManager);
 
     // Create a new model factory.
-    const modelFactory = new DashboardModelFactory({
-      notebookTracker: tracker,
-    });
+    const modelFactory = new DashboardModelFactory({ notebookTracker });
 
     // Create a new widget factory.
     const widgetFactory = new DashboardDocumentFactory({
@@ -229,10 +233,11 @@ const extension: JupyterFrontEndPlugin<void> = {
       },
     ]);
 
-    app.docRegistry.addWidgetExtension(
-      'Notebook',
-      new DashboardButton(app, tracker, labShell)
-    );
+    mainMenu.fileMenu.newMenu.addGroup([
+      {
+        command: CommandIDs.createNew,
+      },
+    ]);
   },
 };
 
@@ -240,7 +245,8 @@ function addCommands(
   app: JupyterFrontEnd,
   dashboardTracker: WidgetTracker<Dashboard>,
   outputTracker: WidgetTracker<DashboardWidget>,
-  utils: DBUtils
+  utils: DBUtils,
+  docManager: IDocumentManager
 ): void {
   const { commands } = app;
 
@@ -256,6 +262,10 @@ function addCommands(
    */
   function hasOutput(): boolean {
     return outputTracker.currentWidget !== null;
+  }
+
+  function inToolbar(args: ReadonlyJSONObject): boolean {
+    return args.toolbar as boolean;
   }
 
   /**
@@ -274,32 +284,34 @@ function addCommands(
    * Undo the last change to a dashboard.
    */
   commands.addCommand(CommandIDs.undo, {
-    label: 'Undo',
+    label: (args) => (inToolbar(args) ? '' : 'Undo'),
     icon: undoIcon,
     execute: (args) => {
       dashboardTracker.currentWidget.undo();
     },
-    isEnabled: () =>
-      dashboardTracker.currentWidget &&
-      dashboardTracker.currentWidget.model.widgetstore.hasUndo(),
+    isEnabled: (args) =>
+      inToolbar(args) ||
+      (dashboardTracker.currentWidget &&
+        dashboardTracker.currentWidget.model.widgetstore.hasUndo()),
   });
 
   /**
    * Redo the last undo to a dashboard.
    */
   commands.addCommand(CommandIDs.redo, {
-    label: 'Redo',
+    label: (args) => (inToolbar(args) ? '' : 'Redo'),
     icon: redoIcon,
     execute: (args) => {
       dashboardTracker.currentWidget.redo();
     },
-    isEnabled: () =>
-      dashboardTracker.currentWidget &&
-      dashboardTracker.currentWidget.model.widgetstore.hasRedo(),
+    isEnabled: (args) =>
+      inToolbar(args) ||
+      (dashboardTracker.currentWidget &&
+        dashboardTracker.currentWidget.model.widgetstore.hasRedo()),
   });
 
   commands.addCommand(CommandIDs.toggleFitContent, {
-    label: 'Fit To Content',
+    label: (args) => 'Fit To Content',
     execute: (args) => {
       const widget = outputTracker.currentWidget;
       widget.fitToContent = !widget.fitToContent;
@@ -313,7 +325,6 @@ function addCommands(
   commands.addCommand(CommandIDs.toggleMode, {
     icon: (args) => {
       const mode = dashboardTracker.currentWidget?.model.mode || 'present';
-
       if (mode === 'edit') {
         return DashboardIcons.view;
       } else {
@@ -321,6 +332,9 @@ function addCommands(
       }
     },
     label: (args) => {
+      if (inToolbar(args)) {
+        return '';
+      }
       const mode = dashboardTracker.currentWidget?.model.mode || 'present';
       if (mode === 'edit') {
         return 'Switch To Presentation Mode';
@@ -339,7 +353,7 @@ function addCommands(
   });
 
   commands.addCommand(CommandIDs.runOutput, {
-    label: 'Run Output',
+    label: (args) => (inToolbar(args) ? '' : 'Run Output'),
     icon: runIcon,
     execute: (args) => {
       const widget = outputTracker.currentWidget;
@@ -369,7 +383,7 @@ function addCommands(
   });
 
   commands.addCommand(CommandIDs.copy, {
-    label: 'Copy',
+    label: (args) => (inToolbar(args) ? '' : 'Copy'),
     icon: copyIcon,
     execute: (args) => {
       const clipboard = utils.clipboard;
@@ -377,11 +391,11 @@ function addCommands(
       clipboard.clear();
       clipboard.add(info);
     },
-    isEnabled: hasOutput,
+    isEnabled: (args) => inToolbar(args) || hasOutput(),
   });
 
   commands.addCommand(CommandIDs.cut, {
-    label: 'Cut',
+    label: (args) => (inToolbar(args) ? '' : 'Cut'),
     icon: cutIcon,
     execute: (args) => {
       const clipboard = utils.clipboard;
@@ -392,11 +406,11 @@ function addCommands(
       clipboard.add(info);
       dashboard.deleteWidget(widget);
     },
-    isEnabled: hasOutput,
+    isEnabled: (args) => inToolbar(args) || hasOutput(),
   });
 
   commands.addCommand(CommandIDs.paste, {
-    label: 'Paste',
+    label: (args) => (inToolbar(args) ? '' : 'Paste'),
     icon: pasteIcon,
     execute: (args) => {
       const clipboard = utils.clipboard;
@@ -412,7 +426,27 @@ function addCommands(
         dashboard.addWidget(newWidget, pos);
       });
     },
-    isEnabled: () => hasOutput() && utils.clipboard.size !== 0,
+    isEnabled: (args) =>
+      inToolbar(args) || (hasOutput() && utils.clipboard.size !== 0),
+  });
+
+  commands.addCommand(CommandIDs.createNew, {
+    label: 'Dashboard',
+    icon: DashboardIcons.blueDashboard,
+    execute: (args) => {
+      docManager.createNew(DEFAULT_NAME);
+    },
+  });
+
+  // TODO: Make this optionally saveAs (based on filename?)
+  commands.addCommand(CommandIDs.save, {
+    label: (args) => (inToolbar(args) ? '' : 'Save'),
+    icon: saveIcon,
+    execute: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      dashboard.context.save();
+    },
+    isEnabled: (args) => inToolbar(args) || hasDashboard(),
   });
 }
 
