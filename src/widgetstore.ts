@@ -13,6 +13,7 @@ import { getNotebookById, getCellById } from './utils';
 import { IDashboardChange, DashboardLayout } from './custom_layout';
 
 import { Dashboard } from './dashboard';
+
 import DashboardWidget from './widget';
 
 /**
@@ -55,7 +56,7 @@ export class Widgetstore extends Litestore {
 
    */
   connectDashboard(dashboard: Dashboard): void {
-    const layout = dashboard.content.layout as DashboardLayout;
+    const layout = dashboard.layout as DashboardLayout;
     layout.changed.connect((_layout, changes) => this._handleChanges(changes));
   }
 
@@ -63,7 +64,7 @@ export class Widgetstore extends Litestore {
    * Stop listening for changes to a dashboard.
    */
   disconnectDashboard(dashboard: Dashboard): void {
-    const layout = dashboard.content.layout as DashboardLayout;
+    const layout = dashboard.layout as DashboardLayout;
     layout.changed.disconnect((_layout, changes) =>
       this._handleChanges(changes)
     );
@@ -265,6 +266,13 @@ export class Widgetstore extends Litestore {
     }
     this._inBatch = false;
     this.endTransaction();
+  }
+
+  /**
+   * Remove all widget entries from the store.
+   */
+  clear(): void {
+    this.updateTable({ schema: Widgetstore.WIDGET_SCHEMA }, {});
   }
 
   createWidget(
