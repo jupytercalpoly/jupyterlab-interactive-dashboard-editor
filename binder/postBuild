@@ -10,6 +10,7 @@ rm -rf style
 rm -rf Design
 rm -rf .github
 rm -rf binder
+rm -rf demo
 rm package.json
 rm tsconfig.json
 rm yarn.lock
