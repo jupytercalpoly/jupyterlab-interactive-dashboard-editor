@@ -1,8 +1,1 @@
 jupyterlab>=2.0
-datashader
-dask
-numpy
-pandas
-functools
-colorcet
-IPython
