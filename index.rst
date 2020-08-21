@@ -15,12 +15,7 @@ Interactively create and customize dashboards in JupyterLab. `Try it on Binder <
    :maxdepth: 1
    :caption: Getting Started
 
-   doc/getting_started/overview
-   doc/getting_started/installation
-
 .. toctree::
    :maxdepth: 1
    :caption: User Guide
-
-   doc/user/interface
 
