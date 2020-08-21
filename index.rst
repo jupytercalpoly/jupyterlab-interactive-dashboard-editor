@@ -3,18 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Jupyterlab Interactive Dashboard Editor documentation!
+JupyterLab Interactive Dashboard Editor Documentation
 ===================================================================
 
+Interactively create and customize dashboards in JupyterLab. `Try it on Binder <https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-interactive-dashboard-editor/master?urlpath=lab>`__.
+
+.. image:: ./Design/gifs/overview.gif
+   :align: center
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Getting Started
 
+   doc/getting_started/overview
+   doc/getting_started/installation
 
+.. toctree::
+   :maxdepth: 1
+   :caption: User Guide
 
-Indices and tables
-==================
+   doc/user/interface
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
