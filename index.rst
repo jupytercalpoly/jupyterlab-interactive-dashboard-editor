@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 JupyterLab Interactive Dashboard Editor Documentation
-===================================================================
+======================================================
 
 Interactively create and customize dashboards in JupyterLab. `Try it on Binder <https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-interactive-dashboard-editor/master?urlpath=lab>`__.
 
