@@ -8,18 +8,18 @@ JupyterLab Interactive Dashboard Editor Documentation
 
 Interactively create and customize dashboards in JupyterLab. `Try it on Binder <https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-interactive-dashboard-editor/master?urlpath=lab>`__.
 
-.. image:: ./Design/gifs/overview.gif
+.. image:: ../Design/gifs/overview.gif
    :align: center
 
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
 
-   pages/getting_started/overview
-   pages/getting_started/installation
+   getting_started/overview
+   getting_started/installation
 
 .. toctree::
    :maxdepth: 1
    :caption: User Guide
    
-   pages/user/interface
+   user/interface
