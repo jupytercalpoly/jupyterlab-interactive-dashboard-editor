@@ -253,6 +253,7 @@ export class Widgetstore extends Litestore {
     if (this._inBatch) {
       return;
     }
+    console.log('starting batch in widgetstore');
     this._inBatch = true;
     this.beginTransaction();
   }
@@ -264,6 +265,7 @@ export class Widgetstore extends Litestore {
     if (!this._inBatch) {
       return;
     }
+    console.log('ending batch in widgetstore');
     this._inBatch = false;
     this.endTransaction();
   }

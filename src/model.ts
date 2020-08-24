@@ -15,6 +15,8 @@ import {
 
 import { DashboardWidget } from './widget';
 
+import { IDocumentManager } from '@jupyterlab/docmanager';
+
 import { INotebookTracker } from '@jupyterlab/notebook';
 
 import { getPathFromNotebookId } from './utils';
@@ -28,6 +30,8 @@ import { filter, each } from '@lumino/algorithm';
 import { Signal } from '@lumino/signaling';
 
 import { Dashboard } from './dashboard';
+
+import { getNotebookById } from './utils';
 
 export interface IDashboardModel extends DocumentRegistry.IModel {
   /**
@@ -73,16 +77,22 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   }
 
   async fromJSON(value: IDashboardContent): Promise<void> {
-    console.log('updating from json');
     const outputs: Widgetstore.WidgetInfo[] = [];
 
-    for (const [path, notebookId] of Object.entries(value.paths)) {
-      await this.contentsManager.get(path).catch((error) => {
-        throw new Error(`Error reading notebook ${notebookId} at ${path}`);
-      });
-    }
+    console.log(this._docManager);
 
-    console.log('finished loading notebooks');
+    for (const [path, notebookId] of Object.entries(value.paths)) {
+      if (!getNotebookById(notebookId, this.notebookTracker)) {
+        await this.contentsManager
+          .get(path)
+          .then(async (model) => {
+            // no-op for now. Open notebook in future.
+          })
+          .catch((error) => {
+            throw new Error(`Error reading notebook ${notebookId} at ${path}`);
+          });
+      }
+    }
 
     for (const [notebookId, notebookOutputs] of Object.entries(value.outputs)) {
       for (const outputInfo of notebookOutputs) {
@@ -91,20 +101,17 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
           notebookId,
           widgetId: DashboardWidget.createDashboardWidgetId(),
         };
-        console.log('pushing info', info);
+        console.log('info', info);
         outputs.push(info);
       }
     }
 
-    console.log('finished adding outputs');
-
     this._metadata.clear();
     const metadata = value.metadata;
     for (const [key, value] of Object.entries(metadata)) {
+      console.log('key, value', key, value);
       this._setMetadataProperty(key, value);
     }
-
-    console.log('finished updating metadata');
 
     this.widgetstore.startBatch();
     this.widgetstore.clear();
@@ -113,10 +120,9 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     });
     this.widgetstore.endBatch();
 
-    console.log('finished updating widgetstore');
-
     this._loaded.emit(void 0);
     // this.mode = 'present';
+    console.log('loaded from json');
   }
 
   toJSON(): IDashboardContent {
@@ -129,9 +135,9 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     );
 
     const metadata: IDashboardMetadata = {
-      name: this.metadata.get('name') as string,
-      dashboardHeight: +this.metadata.get('dashboardHeight'),
-      dashboardWidth: +this.metadata.get('dashboardWidth'),
+      name: this.name,
+      dashboardHeight: this.height,
+      dashboardWidth: this.width,
     };
 
     const file: IDashboardContent = {
@@ -161,7 +167,12 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
         file.outputs[notebookId] = [];
       }
 
-      file.outputs[notebookId].push(record as IOutputInfo);
+      const outputInfo: IOutputInfo = {
+        cellId: record.cellId,
+        pos: record.pos,
+      };
+
+      file.outputs[notebookId].push(outputInfo);
     });
 
     return file;
@@ -172,9 +183,12 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   }
 
   async fromString(value: string): Promise<void> {
-    console.log('fromString called');
+    if (!value) {
+      console.log('empty file');
+      this._loaded.emit(void 0);
+      return;
+    }
     const json = JSON.parse(value);
-    console.log('new json', json);
     return this.fromJSON(json);
   }
 
@@ -216,14 +230,14 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     return +this.metadata.get('dashboardWidth');
   }
   set width(newValue: number) {
-    this._setMetadataProperty('width', newValue);
+    this._setMetadataProperty('dashboardWidth', newValue);
   }
 
   get height(): number {
     return +this.metadata.get('dashboardHeight');
   }
   set height(newValue: number) {
-    this._setMetadataProperty('height', newValue);
+    this._setMetadataProperty('dashboardHeight', newValue);
   }
 
   private _setMetadataProperty(key: string, newValue: any): void {
@@ -258,6 +272,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   private _loaded = new Signal<this, void>(this);
   private _path: string;
   private _mode: Dashboard.Mode = 'edit';
+  private _docManager: IDocumentManager;
 }
 
 /**
@@ -274,6 +289,8 @@ export namespace DashboardModel {
     widgetstore?: Widgetstore;
 
     contentsManager?: ContentsManager;
+
+    docManager: IDocumentManager;
   }
 }
 
@@ -281,7 +298,6 @@ export class DashboardModelFactory
   implements DocumentRegistry.IModelFactory<IDashboardModel> {
   constructor(options: DashboardModelFactory.IOptions) {
     this._notebookTracker = options.notebookTracker;
-    console.log('model factory', this);
   }
 
   get isDisposed(): boolean {
@@ -311,25 +327,27 @@ export class DashboardModelFactory
   createNew(languagePreference?: string, modelDB?: IModelDB): DashboardModel {
     const notebookTracker = this._notebookTracker;
     const contentsManager = new ContentsManager();
+    const docManager = this._docManager;
 
     const model = new DashboardModel({
       notebookTracker,
       languagePreference,
       modelDB,
       contentsManager,
+      docManager,
     });
-
-    console.log('new model', model);
 
     return model;
   }
 
   private _disposed = false;
   private _notebookTracker: INotebookTracker;
+  private _docManager: IDocumentManager;
 }
 
 export namespace DashboardModelFactory {
   export interface IOptions {
     notebookTracker: INotebookTracker;
+    docManager: IDocumentManager;
   }
 }

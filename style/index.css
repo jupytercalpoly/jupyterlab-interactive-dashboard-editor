@@ -3,10 +3,19 @@
 }
 
 .pr-DashboardWidget {
-    border: var(--jp-border-width) solid var(--jp-layout-color0);
     border-width: 2px;
     border-radius: 3px;
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pr-EditableWidget {
+    border: var(--jp-border-width) solid var(--jp-inverse-layout-color4);
+}
+
+.pr-BrandColorElement {
+    color: var(--jp-brand-color1);
 }
 
 .pr-EditableWidget.pr-DashboardWidget {
@@ -33,19 +42,54 @@
     bottom: 0;
     cursor: nwse-resize;
     position: absolute;
+    z-index: 3;
 }
 
 .pr-DashboardWidgetChild {
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: scale-down;
 }
 
 .pr-EditableWidget.pr-DashboardWidget:hover .pr-Resizer {
     display: block;
 }
 
-.pr-EditableBackground {
+.pr-Canvas {
+    pointer-events: none;
+    padding-bottom: 80px;
+    padding-right: 80px;
+}
+
+.pr-Canvas.pr-FreeLayout {
     background-image: linear-gradient(45deg, rgba(160,160,160,.15) 25%, transparent 25%), linear-gradient(-45deg, rgba(160,160,160,.15) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(160,160,160,.15) 75%), linear-gradient(-45deg, transparent 75%, rgba(160,160,160,.15) 70%);
     background-size: 20px 20px;
     background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-    pointer-events: none;
+}
+
+.pr-Canvas.pr-TiledLayout {
+    background-image: linear-gradient(45deg, rgba(160,160,160,.15) 25%, transparent 25%), linear-gradient(-45deg, rgba(160,160,160,.15) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(160,160,160,.15) 75%), linear-gradient(-45deg, transparent 75%, rgba(160,160,160,.15) 70%);
+    background-size: 200px 200px;
+    background-position: 0 0, 0 100px, 100px -100px, -100px 0px;
+}
+
+.pr-WidgetOverlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #BDBDBD61;
+    z-index: 2;
+}
+
+.pr-OnboardingGif {
+    position: absolute;
+    visibility: hidden;
+    object-fit: contain;
+    left: 0;
+    top: 0;
 }

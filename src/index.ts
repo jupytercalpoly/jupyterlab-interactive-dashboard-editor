@@ -1,5 +1,4 @@
 import {
-  ILabShell,
   JupyterFrontEnd,
   JupyterFrontEndPlugin,
 } from '@jupyterlab/application';
@@ -10,7 +9,12 @@ import { WidgetTracker, showDialog, Dialog } from '@jupyterlab/apputils';
 
 import { CodeCell } from '@jupyterlab/cells';
 
-import { Dashboard, DashboardDocumentFactory } from './dashboard';
+import {
+  Dashboard,
+  DashboardDocumentFactory,
+  DashboardTracker,
+  IDashboardTracker,
+} from './dashboard';
 
 import { DashboardWidget } from './widget';
 
@@ -23,6 +27,8 @@ import { IMainMenu } from '@jupyterlab/mainmenu';
 import { Widget } from '@lumino/widgets';
 
 import { DocumentRegistry } from '@jupyterlab/docregistry';
+
+import { ILauncher } from '@jupyterlab/launcher';
 
 import { DashboardIcons } from './icons';
 
@@ -42,25 +48,22 @@ import { CommandIDs } from './commands';
 
 import { ReadonlyJSONObject } from '@lumino/coreutils';
 
-const DEFAULT_NAME = 'untitled.dash';
-
-const extension: JupyterFrontEndPlugin<void> = {
+const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell, IMainMenu, IDocumentManager],
+  requires: [INotebookTracker, IMainMenu, IDocumentManager, ILauncher],
+  provides: IDashboardTracker,
   activate: (
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
-    labShell: ILabShell,
     mainMenu: IMainMenu,
-    docManager: IDocumentManager
-  ): void => {
+    docManager: IDocumentManager,
+    launcher: ILauncher
+  ): IDashboardTracker => {
     console.log('JupyterLab extension presto is activated!');
 
     // Tracker for Dashboard
-    const dashboardTracker = new WidgetTracker<Dashboard>({
-      namespace: 'dashboards',
-    });
+    const dashboardTracker = new DashboardTracker({ namespace: 'dashboards' });
 
     //Tracker for DashboardWidgets
     const outputTracker = new WidgetTracker<DashboardWidget>({
@@ -83,10 +86,20 @@ const extension: JupyterFrontEndPlugin<void> = {
     // Add dashboard file type to the doc registry.
     app.docRegistry.addFileType(dashboardFiletype);
 
-    addCommands(app, dashboardTracker, outputTracker, utils, docManager);
+    addCommands(
+      app,
+      dashboardTracker,
+      outputTracker,
+      utils,
+      docManager,
+      notebookTracker
+    );
 
     // Create a new model factory.
-    const modelFactory = new DashboardModelFactory({ notebookTracker });
+    const modelFactory = new DashboardModelFactory({
+      notebookTracker,
+      docManager,
+    });
 
     // Create a new widget factory.
     const widgetFactory = new DashboardDocumentFactory({
@@ -106,6 +119,13 @@ const extension: JupyterFrontEndPlugin<void> = {
       widget.title.icon = dashboardFiletype.icon;
       widget.title.iconClass = dashboardFiletype.iconClass || '';
       widget.title.iconLabel = dashboardFiletype.iconLabel || '';
+
+      const model = widget.content.model;
+      model.loaded.connect(() => {
+        if (!model.width && !model.height) {
+          app.commands.execute(CommandIDs.setDimensions);
+        }
+      });
     });
 
     // Add commands to context menus.
@@ -149,6 +169,12 @@ const extension: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.paste,
       selector: '.pr-JupyterDashboard',
       rank: 6,
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.enableGrid,
+      selector: '.pr-JupyterDashboard',
+      rank: 7,
     });
 
     app.contextMenu.addItem({
@@ -238,6 +264,14 @@ const extension: JupyterFrontEndPlugin<void> = {
         command: CommandIDs.createNew,
       },
     ]);
+
+    launcher.add({
+      command: CommandIDs.createNew,
+      category: 'Other',
+      rank: 1,
+    });
+
+    return dashboardTracker;
   },
 };
 
@@ -246,7 +280,8 @@ function addCommands(
   dashboardTracker: WidgetTracker<Dashboard>,
   outputTracker: WidgetTracker<DashboardWidget>,
   utils: DBUtils,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  notebookTracker: INotebookTracker
 ): void {
   const { commands } = app;
 
@@ -325,10 +360,10 @@ function addCommands(
   commands.addCommand(CommandIDs.toggleMode, {
     icon: (args) => {
       const mode = dashboardTracker.currentWidget?.model.mode || 'present';
-      if (mode === 'edit') {
-        return DashboardIcons.view;
-      } else {
+      if (mode === 'present') {
         return DashboardIcons.edit;
+      } else {
+        return DashboardIcons.view;
       }
     },
     label: (args) => {
@@ -336,19 +371,27 @@ function addCommands(
         return '';
       }
       const mode = dashboardTracker.currentWidget?.model.mode || 'present';
-      if (mode === 'edit') {
-        return 'Switch To Presentation Mode';
-      } else {
+      if (mode === 'present') {
         return 'Switch To Edit Mode';
+      } else {
+        return 'Switch To Presentation Mode';
       }
     },
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
-      if (dashboard.model.mode === 'edit') {
-        dashboard.model.mode = 'present';
-      } else {
+      if (dashboard.model.mode === 'present') {
         dashboard.model.mode = 'edit';
+      } else {
+        dashboard.model.mode = 'present';
       }
+    },
+  });
+
+  commands.addCommand(CommandIDs.enableGrid, {
+    label: 'Enable Tiled Layout (EXPERIMENTAL)',
+    execute: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      dashboard.model.mode = 'grid';
     },
   });
 
@@ -366,17 +409,37 @@ function addCommands(
   commands.addCommand(CommandIDs.setDimensions, {
     label: 'Set Dashboard Dimensions',
     execute: async (args) => {
-      const dashboard = dashboardTracker.currentWidget;
-      const width = dashboard.model.width;
-      const height = dashboard.model.height;
+      const model = dashboardTracker.currentWidget.model;
+      const width = model.width ? model.width : Dashboard.DEFAULT_WIDTH;
+      const height = model.height ? model.height : Dashboard.DEFAULT_HEIGHT;
       await showDialog({
         title: 'Enter Dimensions',
         body: new Private.ResizeHandler(width, height),
         focusNodeSelector: 'input',
         buttons: [Dialog.cancelButton(), Dialog.okButton()],
       }).then((result) => {
-        dashboard.model.width = result.value[0];
-        dashboard.model.height = result.value[1];
+        const value = result.value;
+        let newWidth = value[0];
+        let newHeight = value[1];
+        if (value === null && model.width && model.height) {
+          return;
+        }
+        if (!newWidth) {
+          if (!model.width) {
+            newWidth = Dashboard.DEFAULT_WIDTH;
+          } else {
+            newWidth = model.width;
+          }
+        }
+        if (!newHeight) {
+          if (!model.height) {
+            newHeight = Dashboard.DEFAULT_HEIGHT;
+          } else {
+            newHeight = model.height;
+          }
+        }
+        model.width = newWidth;
+        model.height = newHeight;
       });
     },
     isEnabled: hasDashboard,
@@ -414,7 +477,13 @@ function addCommands(
     icon: pasteIcon,
     execute: (args) => {
       const clipboard = utils.clipboard;
-      const dashboard = dashboardTracker.currentWidget;
+      const id = args.dashboardId;
+      let dashboard: Dashboard;
+      if (id) {
+        dashboard = dashboardTracker.find((widget) => widget.id === id);
+      } else {
+        dashboard = dashboardTracker.currentWidget;
+      }
       const widgetstore = dashboard.model.widgetstore;
       clipboard.forEach((info) => {
         const widgetId = DashboardWidget.createDashboardWidgetId();
@@ -433,8 +502,26 @@ function addCommands(
   commands.addCommand(CommandIDs.createNew, {
     label: 'Dashboard',
     icon: DashboardIcons.blueDashboard,
-    execute: (args) => {
-      docManager.createNew(DEFAULT_NAME);
+    execute: async (args) => {
+      // A new file is created and opened separately to override the default
+      // opening behavior when there's a notebook and open the dashboard in a
+      // split pane instead of a tab.
+
+      const notebook = notebookTracker.currentWidget;
+      const newModel = await docManager.newUntitled({
+        ext: 'dash',
+        path: '/',
+        type: 'file',
+      });
+      const path = newModel.path;
+      if (notebook) {
+        docManager.openOrReveal(`/${path}`, undefined, undefined, {
+          mode: 'split-left',
+          ref: notebook.id,
+        });
+      } else {
+        docManager.openOrReveal(`/${path}`);
+      }
     },
   });
 
@@ -444,6 +531,7 @@ function addCommands(
     icon: saveIcon,
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
+      dashboard.model.path;
       dashboard.context.save();
     },
     isEnabled: (args) => inToolbar(args) || hasDashboard(),
@@ -469,6 +557,8 @@ namespace Private {
       height.required = true;
       width.placeholder = `Width (${oldWidth})`;
       height.placeholder = `Height (${oldHeight})`;
+      // width.value = oldWidth.toString();
+      // height.value = oldHeight.toString();
 
       node.appendChild(name);
       node.appendChild(width);

@@ -15,4 +15,5 @@ export namespace CommandIDs {
   export const runAllAboveOutput = 'dashboard:run-all-above-output';
   export const startFullscreen = 'dashboard:start-fullscreen';
   export const createNew = 'dashboard:create-new';
+  export const enableGrid = 'dashboard:enable-grid';
 }
