@@ -31,6 +31,5 @@ Interactively create and customize dashboards in JupyterLab. `Try it on Binder <
    :maxdepth: 1
    :caption: Contributor Guide
    
-   user/features
    contributor/codebase
    contributor/contribute
