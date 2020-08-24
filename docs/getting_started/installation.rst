@@ -35,6 +35,7 @@ Note: You will need NodeJS to install the extension.
 You can watch the source directory and run JupyterLab in watch mode to watch for changes in the extension's source and automatically rebuild the extension and application.
 
 .. code:: bash
+
     # Watch the source directory in another terminal tab
     jlpm watch
     # Run jupyterlab in watch mode in one terminal tab
