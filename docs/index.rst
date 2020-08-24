@@ -24,7 +24,7 @@ Interactively create and customize dashboards in JupyterLab. `Try it on Binder <
    :maxdepth: 1
    :caption: User Guide
    
-   user/interface
+   user/ux
    user/features
 
 .. toctree::
