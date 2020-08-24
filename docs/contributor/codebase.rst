@@ -1,0 +1,4 @@
+.. _codebase:
+
+Codebase Orientation
+--------------------
