@@ -2,7 +2,7 @@
 
 ![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor/workflows/Build/badge.svg)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-interactive-dashboard-editor/master?urlpath=lab)
-[![Latest npm version](https://img.shields.io/npm/v/jupyterlab-interactive-dashboard?logo=npm)](https://www.npmjs.com/package/jupyterlab-interactive-dashboard-editor)
+[[![npm version](https://badge.fury.io/js/jupyterlab-interactive-dashboard-editor.svg)](https://badge.fury.io/js/jupyterlab-interactive-dashboard-editor)](https://www.npmjs.com/package/jupyterlab-interactive-dashboard-editor)
 [![Documentation Status](https://readthedocs.org/projects/jupyterlab-interactive-dashboard-editor/badge/?version=latest)](https://jupyterlab-interactive-dashboard-editor.readthedocs.io/en/latest/?badge=latest)
 
 Interactively create and customize dashboards in JupyterLab
