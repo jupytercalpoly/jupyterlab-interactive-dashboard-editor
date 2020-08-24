@@ -76,11 +76,6 @@ export class Widgetstore extends Litestore {
   private _handleChanges(changes: IDashboardChange[]): void {
     this.startBatch();
 
-    console.log(
-      'changes to apply',
-      changes.filter((change) => !change.ignore)
-    );
-
     for (const change of changes) {
       const { widgetId, pos, ignore } = change;
 
@@ -253,7 +248,6 @@ export class Widgetstore extends Litestore {
     if (this._inBatch) {
       return;
     }
-    console.log('starting batch in widgetstore');
     this._inBatch = true;
     this.beginTransaction();
   }
@@ -265,7 +259,6 @@ export class Widgetstore extends Litestore {
     if (!this._inBatch) {
       return;
     }
-    console.log('ending batch in widgetstore');
     this._inBatch = false;
     this.endTransaction();
   }
