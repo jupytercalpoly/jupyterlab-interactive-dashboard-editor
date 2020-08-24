@@ -203,17 +203,20 @@ export class DashboardLayout extends Layout {
         widget.mode = 'present';
       }
       this.attachWidget(widget);
-      this._moveWidget(widget, _pos);
-      this._outputTracker.add(widget);
+      // if (widget.mode !== 'grid') {
+      //   this._moveWidget(widget, _pos, false);
+      //   this._outputTracker.add(widget);
+      // }
 
       const { id, notebookId, cellId } = widget;
 
       const ignore = !this._signalChanges;
 
       widget.ready.connect(() => {
-        if (widget.mode === 'grid') {
-          this._moveWidget(widget, widget.pos);
-        }
+        this._moveWidget(widget, widget.pos, false);
+        this.fixOverlaps(widget);
+        this._outputTracker.add(widget);
+
         const change: IDashboardChange = {
           type: 'add',
           pos: widget.pos,
@@ -240,9 +243,10 @@ export class DashboardLayout extends Layout {
 
   private _updateWidget(
     widget: DashboardWidget,
-    pos: Widgetstore.WidgetPosition
+    pos: Widgetstore.WidgetPosition,
+    fixOverlaps = true
   ): boolean {
-    const success = this._moveWidget(widget, pos);
+    const success = this._moveWidget(widget, pos, fixOverlaps);
     if (success) {
       const change: IDashboardChange = {
         type: 'move',
@@ -256,7 +260,8 @@ export class DashboardLayout extends Layout {
 
   private _moveWidget(
     widget: DashboardWidget,
-    pos: Widgetstore.WidgetPosition
+    pos: Widgetstore.WidgetPosition,
+    fixOverlaps = true
   ): boolean {
     // Get the item from the map.
     const item = this._items.get(widget.id);
@@ -290,25 +295,13 @@ export class DashboardLayout extends Layout {
       item.update(0, 0, 0, 0);
     }
 
-    // const oldWidgets = this._widgetsInSelection({ left, top, width, height });
-
-    // console.log(
-    //   'old widgets',
-    //   toArray(filter(oldWidgets, (w) => w.widget.id !== widget.id))
-    // );
-
-    const newPos: Widgetstore.WidgetPosition = { left, top, width, height };
+    this.clearCanvas();
 
     item.update(left, top, width, height);
 
-    const overlaps = filter(
-      this._widgetsInSelection(newPos),
-      (overlap) => overlap.widget !== widget
-    );
-
-    widget.locked = true;
-    this.handleOverlaps(overlaps, newPos);
-    widget.locked = false;
+    if (fixOverlaps) {
+      this.fixOverlaps(widget);
+    }
 
     return true;
   }
@@ -353,6 +346,8 @@ export class DashboardLayout extends Layout {
     if (this.parent) {
       this.detachWidget(-1, widget);
     }
+
+    this.clearCanvas();
 
     // Dispose the layout item.
     item.dispose();
@@ -515,6 +510,16 @@ export class DashboardLayout extends Layout {
       newPos.top = 0;
       this._expandCanvas(type, adjust);
     }
+    const heightDiff = newPos.top + newPos.height - this.height;
+    if (heightDiff > 0) {
+      adjust = heightDiff;
+      this._expandCanvas(type, adjust);
+    }
+    const widthDiff = newPos.left + newPos.width - this.width;
+    if (widthDiff > 0) {
+      adjust = widthDiff;
+      this._expandCanvas(type, adjust);
+    }
 
     this._moveWidget(widget, newPos);
   }
@@ -524,6 +529,17 @@ export class DashboardLayout extends Layout {
     pos: Widgetstore.WidgetPosition
   ): void {
     each(overlaps, (overlap) => void this._handleOverlap(pos, overlap));
+  }
+
+  fixOverlaps(widget: DashboardWidget) {
+    const overlaps = filter(
+      this._widgetsInSelection(widget.pos),
+      (overlap) => overlap.widget !== widget
+    );
+
+    widget.locked = true;
+    this.handleOverlaps(overlaps, widget.pos);
+    widget.locked = false;
   }
 
   private _expandCanvas(

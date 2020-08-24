@@ -5,7 +5,7 @@
 .pr-DashboardWidget {
     border-width: 2px;
     border-radius: 3px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 }
@@ -46,9 +46,7 @@
 }
 
 .pr-DashboardWidgetChild {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-flex;
     object-fit: scale-down;
 }
 
@@ -58,8 +56,6 @@
 
 .pr-Canvas {
     pointer-events: none;
-    padding-bottom: 80px;
-    padding-right: 80px;
 }
 
 .pr-Canvas.pr-FreeLayout {
