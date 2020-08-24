@@ -106,3 +106,7 @@ export function toHex(str: string): string {
     .map((c) => c.charCodeAt(0).toString(16))
     .join('');
 }
+
+export function mround(num: number, roundTo: number): number {
+  return roundTo * Math.round(num / roundTo);
+}

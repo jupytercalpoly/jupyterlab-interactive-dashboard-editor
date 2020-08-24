@@ -2,9 +2,15 @@ import { NotebookPanel } from '@jupyterlab/notebook';
 
 import { CodeCell, MarkdownCell, Cell } from '@jupyterlab/cells';
 
-import { WidgetTracker, CommandToolbarButton } from '@jupyterlab/apputils';
+import {
+  WidgetTracker,
+  CommandToolbarButton,
+  IWidgetTracker,
+} from '@jupyterlab/apputils';
 
 import { CommandRegistry } from '@lumino/commands';
+
+import { Token } from '@lumino/coreutils';
 
 import { Widget } from '@lumino/widgets';
 
@@ -37,6 +43,14 @@ const DASHBOARD_CLASS = 'pr-JupyterDashboard';
 
 const DROP_TARGET_CLASS = 'pr-DropTarget';
 
+export const IDashboardTracker = new Token<IDashboardTracker>(
+  'jupyterlab-interactive-dashboard-editor'
+);
+
+export type IDashboardTracker = IWidgetTracker<Dashboard>;
+
+export class DashboardTracker extends WidgetTracker<Dashboard> {}
+
 /**
  * Main content widget for the Dashboard widget.
  */
@@ -60,9 +74,7 @@ export class Dashboard extends Widget {
 
     widgetstore.connectDashboard(this);
 
-    this._context.ready.then(() => {
-      this._model.loaded.connect(this.updateLayoutFromWidgetstore, this);
-    });
+    this._model.loaded.connect(this.updateLayoutFromWidgetstore, this);
 
     this.addClass(DASHBOARD_CLASS);
   }
@@ -72,10 +84,11 @@ export class Dashboard extends Widget {
    */
   onAfterAttach(msg: Message): void {
     super.onAfterAttach(msg);
-    this.node.addEventListener('lm-dragenter', this);
-    this.node.addEventListener('lm-dragleave', this);
-    this.node.addEventListener('lm-dragover', this);
-    this.node.addEventListener('lm-drop', this);
+    this.node.addEventListener('lm-dragenter', this, true);
+    this.node.addEventListener('lm-dragleave', this, true);
+    this.node.addEventListener('lm-dragover', this, true);
+    this.node.addEventListener('lm-drop', this, true);
+    this.node.addEventListener('lm-dragend', this, true);
   }
 
   /**
@@ -83,10 +96,10 @@ export class Dashboard extends Widget {
    */
   onBeforeDetach(msg: Message): void {
     super.onBeforeDetach(msg);
-    this.node.removeEventListener('lm-dragenter', this);
-    this.node.removeEventListener('lm-dragleave', this);
-    this.node.removeEventListener('lm-dragover', this);
-    this.node.removeEventListener('lm-drop', this);
+    this.node.removeEventListener('lm-dragenter', this, true);
+    this.node.removeEventListener('lm-dragleave', this, true);
+    this.node.removeEventListener('lm-dragover', this, true);
+    this.node.removeEventListener('lm-drop', this, true);
   }
 
   /**
@@ -112,6 +125,13 @@ export class Dashboard extends Widget {
   private _evtDragOver(event: IDragEvent): void {
     this.addClass(DROP_TARGET_CLASS);
     event.dropAction = 'copy';
+    const source = event.source as DashboardWidget;
+    const pos = source?.pos;
+    if (pos) {
+      pos.left = event.offsetX + this.node.scrollLeft;
+      pos.top = event.offsetY + this.node.scrollTop;
+      (this.layout as DashboardLayout).drawDropZone(pos);
+    }
     event.preventDefault();
     event.stopPropagation();
   }
@@ -120,6 +140,8 @@ export class Dashboard extends Widget {
    * Handle the `'lm-drop'` event for the widget.
    */
   private _evtDrop(event: IDragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
     const left = event.offsetX + this.node.scrollLeft;
     const top = event.offsetY + this.node.scrollTop;
 
@@ -131,7 +153,7 @@ export class Dashboard extends Widget {
       const pos = { left, top, width, height };
 
       if (oldDashboard === this) {
-        // dragging in same dashboard.
+        // dragging in same dashboard.ono
         this.updateWidget(widget, pos);
       } else {
         // dragging between dashboards
@@ -178,8 +200,6 @@ export class Dashboard extends Widget {
     }
 
     this.removeClass(DROP_TARGET_CLASS);
-    event.preventDefault();
-    event.stopPropagation();
   }
 
   handleEvent(event: Event): void {
@@ -306,7 +326,7 @@ export class Dashboard extends Widget {
  * Namespace for DashboardArea options.
  */
 export namespace Dashboard {
-  export type Mode = 'edit' | 'present';
+  export type Mode = 'edit' | 'present' | 'grid';
 
   export const DEFAULT_WIDTH = 1270;
 
@@ -397,7 +417,7 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
       toggleMode,
     } = CommandIDs;
 
-    const args = { toolbar: true };
+    const args = { toolbar: true, dashboardId: content.id };
 
     this.toolbar.addItem(
       'save',

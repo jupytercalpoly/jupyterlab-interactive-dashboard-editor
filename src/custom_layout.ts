@@ -2,13 +2,13 @@ import { Widget, Layout, LayoutItem } from '@lumino/widgets';
 
 import { Record } from '@lumino/datastore';
 
-import { IIterator, map, each } from '@lumino/algorithm';
+import { IIterator, map, each, filter, toArray } from '@lumino/algorithm';
 
 import { MessageLoop, Message } from '@lumino/messaging';
 
 import { DashboardWidget } from './widget';
 
-import { Widgetstore, WidgetSchema } from './widgetstore';
+import { Widgetstore, WidgetSchema, WidgetPosition } from './widgetstore';
 
 import { WidgetTracker } from '@jupyterlab/apputils';
 
@@ -20,7 +20,13 @@ import { DocumentRegistry } from '@jupyterlab/docregistry';
 
 import { IChangedArgs } from '@jupyterlab/coreutils';
 
-const EDITABLE_CORNER_CLASS = 'pr-EditableBackground';
+import { mround } from './utils';
+
+const CANVAS_CLASS = 'pr-Canvas';
+
+const TILED_LAYOUT_CLASS = 'pr-TiledLayout';
+
+const FREE_LAYOUT_CLASS = 'pr-FreeLayout';
 
 export class DashboardLayout extends Layout {
   constructor(options: DashboardLayout.IOptions) {
@@ -35,10 +41,10 @@ export class DashboardLayout extends Layout {
     this._width = width || 0;
     this._height = height || 0;
 
-    this._corner = DashboardLayout.makeCorner(this._width, this._height);
+    this._canvas = DashboardLayout.makeCanvas(this._width, this._height);
 
     if (mode === 'edit') {
-      this._corner.addClass(EDITABLE_CORNER_CLASS);
+      this._canvas.classList.add(FREE_LAYOUT_CLASS);
     }
 
     this._mode = mode;
@@ -50,13 +56,12 @@ export class DashboardLayout extends Layout {
     _sender: DocumentRegistry.IModel,
     change: IChangedArgs<any>
   ): void {
-    console.log('\tnew change recieved', change);
     const { name, newValue } = change;
     switch (name) {
-      case 'width':
+      case 'dashboardWidth':
         this.width = newValue;
         break;
-      case 'height':
+      case 'dashboardHeight':
         this.height = newValue;
         break;
       case 'mode':
@@ -67,8 +72,8 @@ export class DashboardLayout extends Layout {
     }
   }
 
-  get corner(): Widget {
-    return this._corner;
+  get canvas(): HTMLCanvasElement {
+    return this._canvas;
   }
 
   /**
@@ -77,7 +82,12 @@ export class DashboardLayout extends Layout {
   init(): void {
     super.init();
     each(this, (widget) => this.attachWidget(widget));
-    this.attachWidget(this._corner);
+    this.parent.node.appendChild(this._canvas);
+
+    // const gif = document.createElement('img');
+    // gif.src = 'https://s7.gifyu.com/images/onboardinga9323c302cba1cb3.gif';
+    // gif.classList.add('pr-OnboardingGif');
+    // this.parent.node.appendChild(gif);
   }
 
   /**
@@ -85,7 +95,6 @@ export class DashboardLayout extends Layout {
    */
   dispose(): void {
     this._items.forEach((item) => item.dispose());
-    this._corner.dispose();
     this._outputTracker = null;
     this._widgetstore = null;
     super.dispose();
@@ -107,12 +116,13 @@ export class DashboardLayout extends Layout {
     return map(arr, (item) => item.widget);
   }
 
-  signalChange(change: IDashboardChange): void {
+  signalChange(change?: IDashboardChange): void {
     if (!this._signalChanges) {
-      console.log('not signaling changes');
       return;
     }
-    this._changes.push(change);
+    if (change) {
+      this._changes.push(change);
+    }
     if (!this.inBatch) {
       this._changed.emit(this._changes);
       this._changes = [];
@@ -170,16 +180,20 @@ export class DashboardLayout extends Layout {
     this.parent!.fit();
   }
 
+  addWidget(widget: DashboardWidget, _pos: Widgetstore.WidgetPosition): void {
+    this.startBatch();
+    this._addWidget(widget, _pos);
+  }
+
   /**
    * Add a widget to the layout.
    *
    * @param widget - the widget to add.
    */
-  addWidget(widget: DashboardWidget, _pos: Widgetstore.WidgetPosition): void {
+  _addWidget(widget: DashboardWidget, _pos: Widgetstore.WidgetPosition): void {
     // Add the widget to the layout.
     const item = new LayoutItem(widget);
     this._items.set(widget.id, item);
-    console.log('item map update - add', this._items);
 
     // Attach the widget to the parent.
     if (this.parent) {
@@ -189,7 +203,7 @@ export class DashboardLayout extends Layout {
         widget.mode = 'present';
       }
       this.attachWidget(widget);
-      this._updateWidget(widget, _pos);
+      this._moveWidget(widget, _pos);
       this._outputTracker.add(widget);
 
       const { id, notebookId, cellId } = widget;
@@ -197,6 +211,9 @@ export class DashboardLayout extends Layout {
       const ignore = !this._signalChanges;
 
       widget.ready.connect(() => {
+        if (widget.mode === 'grid') {
+          this._moveWidget(widget, widget.pos);
+        }
         const change: IDashboardChange = {
           type: 'add',
           pos: widget.pos,
@@ -206,6 +223,7 @@ export class DashboardLayout extends Layout {
           ignore,
         };
         this.signalChange(change);
+        this.endBatch();
       });
     }
   }
@@ -214,7 +232,17 @@ export class DashboardLayout extends Layout {
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition
   ): boolean {
+    this.startBatch();
     const success = this._updateWidget(widget, pos);
+    this.endBatch();
+    return success;
+  }
+
+  private _updateWidget(
+    widget: DashboardWidget,
+    pos: Widgetstore.WidgetPosition
+  ): boolean {
+    const success = this._moveWidget(widget, pos);
     if (success) {
       const change: IDashboardChange = {
         type: 'move',
@@ -226,7 +254,7 @@ export class DashboardLayout extends Layout {
     return success;
   }
 
-  private _updateWidget(
+  private _moveWidget(
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition
   ): boolean {
@@ -238,8 +266,7 @@ export class DashboardLayout extends Layout {
       return false;
     }
 
-    let { left, top } = pos;
-    const { width, height } = pos;
+    let { left, top, width, height } = pos;
 
     // Constrain the widget to the dashboard dimensions.
     if (this._width !== 0 && left + width > this._width) {
@@ -249,7 +276,39 @@ export class DashboardLayout extends Layout {
       top = this._height - height;
     }
 
+    // Prevent clipping on the top or left edge.
+    left = Math.max(left, 0);
+    top = Math.max(top, 0);
+
+    // Snap to grid if in grid mode.
+    if (this._mode === 'grid') {
+      left = mround(left, this._gridWidth);
+      top = mround(top, this._gridHeight);
+      width = Math.max(mround(width, this._gridWidth), this._gridWidth);
+      height = Math.max(mround(height, this._gridHeight), this._gridHeight);
+      // Change width/height now to force grid changes if they're small.
+      item.update(0, 0, 0, 0);
+    }
+
+    // const oldWidgets = this._widgetsInSelection({ left, top, width, height });
+
+    // console.log(
+    //   'old widgets',
+    //   toArray(filter(oldWidgets, (w) => w.widget.id !== widget.id))
+    // );
+
+    const newPos: Widgetstore.WidgetPosition = { left, top, width, height };
+
     item.update(left, top, width, height);
+
+    const overlaps = filter(
+      this._widgetsInSelection(newPos),
+      (overlap) => overlap.widget !== widget
+    );
+
+    widget.locked = true;
+    this.handleOverlaps(overlaps, newPos);
+    widget.locked = false;
 
     return true;
   }
@@ -276,7 +335,6 @@ export class DashboardLayout extends Layout {
   deleteWidget(widget: DashboardWidget): boolean {
     // Look up the widget in the _items map.
     const item = this._items.get(widget.id);
-    console.log('item map update - remove', this._items);
 
     // Bail if it's not there.
     if (item === undefined) {
@@ -337,12 +395,8 @@ export class DashboardLayout extends Layout {
    * @param record - the record to update from.
    */
   private _updateLayoutFromRecord(record: Record<WidgetSchema>): void {
-    console.log('record id', record.$id);
     const item = this._items.get(record.$id);
     const pos = record.pos;
-
-    console.log('record to update from', record);
-    console.log('\titem', item);
 
     if (record.widgetId === '') {
       // Widget has already been removed; ignore.
@@ -378,11 +432,9 @@ export class DashboardLayout extends Layout {
    * Updates the layout based on the state of the datastore.
    */
   updateLayoutFromWidgetstore(): void {
-    console.log('history', this._widgetstore.getHistory());
     this._signalChanges = false;
     const records = this._widgetstore.getWidgets();
     each(records, (record) => {
-      console.log('record', record);
       this._updateLayoutFromRecord(record);
     });
     this._signalChanges = true;
@@ -392,7 +444,6 @@ export class DashboardLayout extends Layout {
    * Undo the last change to the layout.
    */
   undo(): void {
-    console.log('history before undo', this._widgetstore.getHistory());
     this._widgetstore.undo();
     this.updateLayoutFromWidgetstore();
   }
@@ -405,6 +456,111 @@ export class DashboardLayout extends Layout {
     this.updateLayoutFromWidgetstore();
   }
 
+  widgetsAtPoint(x: number, y: number): IIterator<DashboardWidget.Overlap> {
+    const pos = {
+      left: x,
+      top: y,
+      width: 0,
+      height: 0,
+    };
+    return this._widgetsInSelection(pos);
+  }
+
+  private _widgetsInSelection(
+    pos: WidgetPosition
+  ): IIterator<DashboardWidget.Overlap> {
+    const relations = map(this, (_widget) => {
+      const widget = _widget as DashboardWidget;
+      return widget.overlaps(pos);
+    });
+    const overlaps = filter(
+      relations,
+      (relation) => relation.type !== 'none' && !relation.widget.locked
+    );
+    return overlaps;
+  }
+
+  private _handleOverlap(
+    pos: Widgetstore.WidgetPosition,
+    overlap: DashboardWidget.Overlap
+  ): void {
+    const { left, top, width, height } = pos;
+    const { widget, type } = overlap;
+
+    const newPos = widget.pos;
+    let adjust;
+
+    switch (type) {
+      case 'up':
+        newPos.top = top - newPos.height;
+        break;
+      case 'down':
+        newPos.top = top + height;
+        break;
+      case 'left':
+        newPos.left = left - newPos.width;
+        break;
+      case 'right':
+        newPos.left = left + width;
+        break;
+    }
+
+    if (newPos.left < 0) {
+      adjust = Math.abs(newPos.left);
+      newPos.left = 0;
+      this._expandCanvas(type, adjust);
+    }
+    if (newPos.top < 0) {
+      adjust = Math.abs(newPos.top);
+      newPos.top = 0;
+      this._expandCanvas(type, adjust);
+    }
+
+    this._moveWidget(widget, newPos);
+  }
+
+  handleOverlaps(
+    overlaps: IIterator<DashboardWidget.Overlap>,
+    pos: Widgetstore.WidgetPosition
+  ): void {
+    each(overlaps, (overlap) => void this._handleOverlap(pos, overlap));
+  }
+
+  private _expandCanvas(
+    direction: DashboardWidget.Direction,
+    amount: number
+  ): void {
+    const model = (this.parent as Dashboard).model;
+    const widgets = toArray(this);
+
+    switch (direction) {
+      case 'left':
+        model.height += amount;
+        each(widgets, (_widget) => {
+          const widget = _widget as DashboardWidget;
+          const pos = widget.pos;
+          pos.left += amount;
+          this._updateWidget(widget, pos);
+        });
+        break;
+      case 'right':
+        model.width += amount;
+        break;
+      case 'up':
+        model.height += amount;
+        each(widgets, (_widget) => {
+          const widget = _widget as DashboardWidget;
+          const pos = widget.pos;
+          pos.top += amount;
+          this._updateWidget(widget, pos);
+        });
+        break;
+      case 'down':
+        model.height += amount;
+        break;
+    }
+  }
+
   get width(): number {
     return this._width;
   }
@@ -413,7 +569,7 @@ export class DashboardLayout extends Layout {
       newWidth = 0;
     }
     this._width = newWidth;
-    this._corner.node.style.width = `${newWidth}px`;
+    this._canvas.width = newWidth;
   }
 
   get height(): number {
@@ -424,7 +580,7 @@ export class DashboardLayout extends Layout {
       newHeight = 0;
     }
     this._height = newHeight;
-    this._corner.node.style.height = `${newHeight}px`;
+    this._canvas.height = newHeight;
   }
 
   get mode(): Dashboard.Mode {
@@ -432,14 +588,24 @@ export class DashboardLayout extends Layout {
   }
   set mode(newMode: Dashboard.Mode) {
     this._mode = newMode;
+    this.clearCanvas();
     each(this, (_widget) => {
       const widget = _widget as DashboardWidget;
       widget.mode = newMode;
     });
-    if (newMode === 'edit') {
-      this._corner.addClass(EDITABLE_CORNER_CLASS);
-    } else {
-      this._corner.removeClass(EDITABLE_CORNER_CLASS);
+    switch (newMode) {
+      case 'present':
+        this._canvas.classList.remove(FREE_LAYOUT_CLASS);
+        this._canvas.classList.remove(TILED_LAYOUT_CLASS);
+        break;
+      case 'edit':
+        this._canvas.classList.remove(TILED_LAYOUT_CLASS);
+        this._canvas.classList.add(FREE_LAYOUT_CLASS);
+        break;
+      case 'grid':
+        this._canvas.classList.remove(FREE_LAYOUT_CLASS);
+        this.canvas.classList.add(TILED_LAYOUT_CLASS);
+        break;
     }
   }
 
@@ -448,7 +614,11 @@ export class DashboardLayout extends Layout {
   }
 
   endBatch(): void {
+    const wasInBatch = this.inBatch;
     this._inBatch = false;
+    if (wasInBatch) {
+      this.signalChange();
+    }
   }
 
   get inBatch(): boolean {
@@ -475,14 +645,41 @@ export class DashboardLayout extends Layout {
     return this._changed;
   }
 
+  clearCanvas(): CanvasRenderingContext2D {
+    const canvas = this.canvas;
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    return context;
+  }
+
+  drawDropZone(pos: Widgetstore.WidgetPosition): void {
+    const context = this.clearCanvas();
+
+    context.setLineDash([5]);
+    context.strokeStyle = '#2b98f0';
+    context.fillStyle = '#2b98f066';
+
+    let { left, top, width, height } = pos;
+
+    if (this.mode === 'grid') {
+      width = Math.max(mround(width, this._gridWidth), this._gridWidth);
+      height = Math.max(mround(height, this._gridHeight), this._gridWidth);
+      left = mround(left, this._gridWidth);
+      top = mround(top, this._gridHeight);
+    }
+
+    context.strokeRect(left, top, width, height);
+    context.fillRect(left, top, width, height);
+  }
+
   // Map from widget ids to LayoutItems
   private _items: Map<string, LayoutItem>;
   // Datastore widgets are rendered from / saved to.
   private _widgetstore: Widgetstore | undefined;
   // Output tracker to add new widgets to.
   private _outputTracker: WidgetTracker<DashboardWidget>;
-  // Dummy corner widget to set dimensions of dashboard.
-  private _corner: Widget;
+  // Dummy canvas element to set dimensions of dashboard.
+  private _canvas: HTMLCanvasElement;
   // Dashboard width (zero if unconstrained).
   private _width: number;
   // Dashboard height (zero if unconstrained).
@@ -491,6 +688,9 @@ export class DashboardLayout extends Layout {
   private _mode: Dashboard.Mode;
   // Parent dashboard.
   private _dashboard: Dashboard;
+
+  private _gridWidth = 100;
+  private _gridHeight = 100;
 
   // Changed signal
   private _changed = new Signal<this, IDashboardChange[]>(this);
@@ -543,20 +743,21 @@ export namespace DashboardLayout {
   }
 
   /**
-   * Create a widget to put in the corner of a layout to set the length/width.
+   * Create a widget to put in the canvas of a layout to set the length/width.
    *
    * @param x - width.
    *
    * @param y - height.
    */
-  export function makeCorner(x: number, y: number): Widget {
-    const corner = new Widget();
-    corner.node.style.width = `${x}px`;
-    corner.node.style.height = `${y}px`;
-    corner.node.style.left = '0';
-    corner.node.style.top = '0';
-    corner.node.style.position = 'absolute';
-    return corner;
+  export function makeCanvas(x: number, y: number): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    canvas.width = x;
+    canvas.height = y;
+    canvas.style.left = '0';
+    canvas.style.top = '0';
+    canvas.style.position = 'absolute';
+    canvas.classList.add(CANVAS_CLASS);
+    return canvas;
   }
 }
 

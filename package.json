@@ -1,6 +1,6 @@
 {
   "name": "jupyterlab-interactive-dashboard-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Interactively create and customize dashboards in JupyterLab",
   "keywords": [
     "jupyter",
@@ -43,6 +43,7 @@
     "@jupyterlab/apputils": "^2.1.1",
     "@jupyterlab/cells": "^2.1.2",
     "@jupyterlab/coreutils": "^4.0.0",
+    "@jupyterlab/launcher": "^2.2.3",
     "@jupyterlab/mainmenu": "^2.2.0",
     "@jupyterlab/notebook": "^2.1.2",
     "@jupyterlab/services": "^5.0.0",

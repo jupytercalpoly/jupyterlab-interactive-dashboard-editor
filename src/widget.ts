@@ -2,7 +2,7 @@ import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
 import { CodeCell, MarkdownCell } from '@jupyterlab/cells';
 
-import { Panel, Widget } from '@lumino/widgets';
+import { Widget } from '@lumino/widgets';
 
 import { UUID, MimeData } from '@lumino/coreutils';
 
@@ -28,6 +28,7 @@ import { Signal, ISignal } from '@lumino/signaling';
 import { DashboardIcons } from './icons';
 
 import { Widgetstore, WidgetPosition } from './widgetstore';
+import { DashboardLayout } from './custom_layout';
 
 // HTML element classes
 
@@ -41,12 +42,12 @@ const EDITABLE_WIDGET_CLASS = 'pr-EditableWidget';
 
 const IN_DRAG_CLASS = 'pr-InDrag';
 
-// const DRAG_IMAGE_CLASS = 'pr-DragImage';
+const WIDGET_OVERLAY_CLASS = 'pr-WidgetOverlay';
 
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
  */
-export class DashboardWidget extends Panel {
+export class DashboardWidget extends Widget {
   constructor(options: DashboardWidget.IOptions) {
     super();
 
@@ -103,12 +104,14 @@ export class DashboardWidget extends Panel {
             throw new Error('Cell is not a code or markdown cell.');
         }
 
-        clone.addClass(DASHBOARD_WIDGET_CHILD_CLASS);
-
         // Make widget invisible until it's properly loaded/sized.
         this.node.style.opacity = '0';
 
-        this.addWidget(clone);
+        const container = document.createElement('div');
+        container.classList.add(DASHBOARD_WIDGET_CHILD_CLASS);
+        container.appendChild(clone.node);
+        this.node.appendChild(container);
+        this._content = clone;
 
         const done = (): void => {
           if (fit) {
@@ -131,6 +134,9 @@ export class DashboardWidget extends Panel {
 
     this.addClass(DASHBOARD_WIDGET_CLASS);
     this.addClass(EDITABLE_WIDGET_CLASS);
+    this._overlay = document.createElement('div');
+    this._overlay.classList.add(WIDGET_OVERLAY_CLASS);
+    this.node.appendChild(this._overlay);
   }
 
   /**
@@ -140,7 +146,6 @@ export class DashboardWidget extends Panel {
     super.onAfterAttach(msg);
     this.node.addEventListener('click', this);
     this.node.addEventListener('contextmenu', this);
-    this.node.addEventListener('lm-drop', this);
     this.node.addEventListener('mousedown', this);
     this.node.addEventListener('dblclick', this);
     this.node.addEventListener('keydown', this);
@@ -153,7 +158,6 @@ export class DashboardWidget extends Panel {
     super.onBeforeDetach(msg);
     this.node.removeEventListener('click', this);
     this.node.removeEventListener('contextmenu', this);
-    this.node.removeEventListener('lm-drop', this);
     this.node.removeEventListener('mousedown', this);
     this.node.removeEventListener('dblclick', this);
     this.node.removeEventListener('keydown', this);
@@ -200,8 +204,8 @@ export class DashboardWidget extends Panel {
     event.preventDefault();
     event.stopPropagation();
 
-    const pos = this.info.pos;
-    const oldPos = pos;
+    const pos = this.pos;
+    const oldPos = { ...pos };
 
     const bumpDistance = event.altKey ? 1 : DashboardWidget.BUMP_DISTANCE;
 
@@ -268,6 +272,8 @@ export class DashboardWidget extends Panel {
     window.addEventListener('mouseup', this);
     window.addEventListener('mousemove', this);
 
+    this.node.style.opacity = '0.6';
+
     // Set mode to resize if the mousedown happened on a resizer.
     if ((target as HTMLElement).classList.contains('pr-Resizer')) {
       this._mouseMode = 'resize';
@@ -328,7 +334,10 @@ export class DashboardWidget extends Panel {
     this.node.style.width = `${width}px`;
     this.node.style.height = `${height}px`;
 
-    if (this._fitToContent && !event.altKey) {
+    if (this.mode === 'grid') {
+      (this.parent.layout as DashboardLayout).drawDropZone(this.pos);
+    }
+    if (this.mode !== 'grid' && this._fitToContent && !event.altKey) {
       this.fitContent();
     }
   }
@@ -337,10 +346,41 @@ export class DashboardWidget extends Panel {
    * Fit widget width/height to the width/height of the underlying content.
    */
   fitContent(): void {
-    const element = this.widgets[0].node;
+    const element = this._content.node;
     // Pixels are added to prevent weird wrapping issues. Kind of a hack.
     this.node.style.width = `${element.clientWidth + 3}px`;
     this.node.style.height = `${element.clientHeight + 2}px`;
+  }
+
+  containsPoint(left: number, top: number): boolean {
+    const pos = {
+      left,
+      top,
+      width: 0,
+      height: 0,
+    };
+    const overlaps = this.overlaps(pos);
+    return overlaps.type !== 'none';
+  }
+
+  overlaps(_pos: Widgetstore.WidgetPosition): DashboardWidget.Overlap {
+    const { left, top, width, height } = _pos;
+    const pos = this.pos;
+    const w = 0.5 * (width + pos.width);
+    const h = 0.5 * (height + pos.height);
+    const dx = left + 0.5 * width - (pos.left + 0.5 * pos.width);
+    const dy = top + 0.5 * height - (pos.top + 0.5 * pos.height);
+    let type: DashboardWidget.Direction = 'none';
+
+    if (Math.abs(dx) < w && Math.abs(dy) < h) {
+      if (top > pos.top + pos.height / 2) {
+        type = 'up';
+      } else {
+        type = 'down';
+      }
+    }
+
+    return { type, widget: this };
   }
 
   /**
@@ -351,6 +391,11 @@ export class DashboardWidget extends Panel {
     clientX: number,
     clientY: number
   ): Promise<void> {
+    // const elems = document.elementsFromPoint()
+    // each(elems, (elem) => {
+    //   (elem as HTMLElement).style.pointerEvents = 'none';
+    // });
+
     const dragImage = target;
     dragImage.style.opacity = '0.6';
 
@@ -388,12 +433,15 @@ export class DashboardWidget extends Panel {
     event.stopPropagation();
     event.preventDefault();
 
+    this.node.style.opacity = '1.0';
+
     if (this._mouseMode === 'resize' && this.parent !== undefined) {
       const pos = this.pos;
       (this.parent as Dashboard).updateWidget(this, pos);
     }
 
     this._mouseMode = 'none';
+    (this.parent.layout as DashboardLayout).clearCanvas();
     window.removeEventListener('mouseup', this);
     window.removeEventListener('mousemove', this);
   }
@@ -492,15 +540,22 @@ export class DashboardWidget extends Panel {
   /**
    * The widget's display mode.
    */
-  get mode(): DashboardWidget.Mode {
+  get mode(): Dashboard.Mode {
     return this._mode;
   }
-  set mode(newMode: DashboardWidget.Mode) {
+  set mode(newMode: Dashboard.Mode) {
     this._mode = newMode;
-    if (newMode === 'edit') {
-      this.addClass(EDITABLE_WIDGET_CLASS);
-    } else {
+    if (newMode === 'present') {
       this.removeClass(EDITABLE_WIDGET_CLASS);
+      this._overlay.classList.remove(WIDGET_OVERLAY_CLASS);
+    } else {
+      this.addClass(EDITABLE_WIDGET_CLASS);
+      this._overlay.classList.add(WIDGET_OVERLAY_CLASS);
+    }
+    if (newMode === 'grid') {
+      if (this.parent) {
+        (this.parent as Dashboard).updateWidget(this, this.pos);
+      }
     }
   }
 
@@ -511,6 +566,13 @@ export class DashboardWidget extends Panel {
     return this._ready;
   }
 
+  get locked(): boolean {
+    return this._locked;
+  }
+  set locked(newState: boolean) {
+    this._locked = newState;
+  }
+
   private _notebook: NotebookPanel;
   private _notebookId: string;
   private _index: number;
@@ -519,7 +581,7 @@ export class DashboardWidget extends Panel {
   private _ready = new Signal<this, void>(this);
   private _fitToContent = true;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
-  private _mode: DashboardWidget.Mode = 'edit';
+  private _mode: Dashboard.Mode = 'edit';
   private _drag: Drag | null = null;
   private _clickData: {
     pressX: number;
@@ -531,6 +593,9 @@ export class DashboardWidget extends Panel {
     widgetX: number;
     widgetY: number;
   } | null = null;
+  private _locked = false;
+  private _overlay: HTMLElement;
+  private _content: Widget;
 }
 
 /**
@@ -570,6 +635,13 @@ export namespace DashboardWidget {
     fit?: boolean;
   }
 
+  export type Direction = 'left' | 'right' | 'up' | 'down' | 'none';
+
+  export type Overlap = {
+    widget: DashboardWidget;
+    type: Direction;
+  };
+
   export function createDashboardWidgetId(): string {
     return `DashboardWidget-${UUID.uuid4()}`;
   }
@@ -577,7 +649,7 @@ export namespace DashboardWidget {
   export function createResizer(): HTMLElement {
     const resizer = document.createElement('div');
     resizer.classList.add('pr-Resizer');
-    DashboardIcons.resizer.element({
+    DashboardIcons.resizer2.element({
       container: resizer,
       width: '15px',
       height: '15px',
@@ -624,8 +696,6 @@ export namespace DashboardWidget {
   }
 
   export type MouseMode = 'drag' | 'resize' | 'none';
-
-  export type Mode = 'edit' | 'present';
 
   /**
    * Default width of added widgets.

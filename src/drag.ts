@@ -415,10 +415,18 @@ export class Drag implements IDisposable {
     const prevElem = this._currentElement;
 
     // Find the current indicated element at the given position.
-    const currElem = document.elementFromPoint(
+    const currElems = document.elementsFromPoint(
       event.clientX + this._deltaX,
       event.clientY + this._deltaY
     );
+
+    let currElem = currElems.find((elem) =>
+      elem.classList.contains('pr-JupyterDashboard')
+    );
+
+    if (!currElem) {
+      currElem = currElems[0];
+    }
 
     // Update the current element reference.
     this._currentElement = currElem;

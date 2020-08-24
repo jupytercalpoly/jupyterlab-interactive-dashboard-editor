@@ -11,6 +11,7 @@ import statusIcon from '../style/icons/dummy.svg';
 import resizerSvgstr from '../style/icons/mdi_drag_indicator.svg';
 import editSvgstr from '../style/icons/edit.svg';
 import viewSvgstr from '../style/icons/view.svg';
+import resizer2Svgstr from '../style/icons/drag indicator lines.svg';
 
 /**
  * Dashboard icons
@@ -69,6 +70,11 @@ export namespace DashboardIcons {
   export const edit = new LabIcon({
     name: 'pr-icons:edit',
     svgstr: editSvgstr,
+  });
+
+  export const resizer2 = new LabIcon({
+    name: 'pr-icons:resizer2',
+    svgstr: resizer2Svgstr,
   });
 }
 
