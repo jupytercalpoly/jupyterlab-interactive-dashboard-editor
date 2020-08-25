@@ -1,0 +1,158 @@
+{
+  "metadata": {
+    "dashboardHeight": 1270,
+    "dashboardWidth": 2000
+  },
+  "version": 1,
+  "outputs": {
+    "1c9191a6-2e25-4bb0-90f0-68fe8ecbe7f5": [
+      {
+        "cellId": "70d33a92-6fd7-48f2-a455-68494cc3f0df",
+        "pos": {
+          "left": 1084,
+          "top": 424,
+          "width": 500,
+          "height": 294
+        }
+      },
+      {
+        "cellId": "9491fc09-cc45-49eb-9be7-d0e1efa166ee",
+        "pos": {
+          "left": 19,
+          "top": 368,
+          "width": 500,
+          "height": 294
+        }
+      },
+      {
+        "cellId": "a6f74791-2204-46c8-aa19-48fb1d9088b2",
+        "pos": {
+          "left": 31,
+          "top": 674,
+          "width": 500,
+          "height": 236
+        }
+      },
+      {
+        "cellId": "9e2ebdd7-b08d-4fbe-80d7-3c998186b438",
+        "pos": {
+          "left": 1588,
+          "top": 160,
+          "width": 412,
+          "height": 144
+        }
+      },
+      {
+        "cellId": "4e26f4fd-8dd4-4a92-bd79-702d2d877cb0",
+        "pos": {
+          "left": 1628,
+          "top": 360,
+          "width": 358,
+          "height": 210
+        }
+      },
+      {
+        "cellId": "57bdcaf6-cd6e-465e-84a7-b2fa68ccf132",
+        "pos": {
+          "left": 549,
+          "top": 766,
+          "width": 500,
+          "height": 96
+        }
+      },
+      {
+        "cellId": "7533ae1c-2365-4682-9a84-88fd95620018",
+        "pos": {
+          "left": 31,
+          "top": 916,
+          "width": 499,
+          "height": 354
+        }
+      },
+      {
+        "cellId": "207b0abd-398f-453f-a586-95c6e33adba9",
+        "pos": {
+          "left": 549,
+          "top": 448,
+          "width": 500,
+          "height": 294
+        }
+      },
+      {
+        "cellId": "0b518286-836b-4c05-ad86-89524e7bbfa1",
+        "pos": {
+          "left": 9,
+          "top": 12,
+          "width": 315,
+          "height": 74
+        }
+      },
+      {
+        "cellId": "6a65ada9-0dd3-4968-b3d3-13978b684361",
+        "pos": {
+          "left": 13,
+          "top": 124,
+          "width": 500,
+          "height": 228
+        }
+      },
+      {
+        "cellId": "4edcc39e-aba5-45e9-8d2a-87ca661f021e",
+        "pos": {
+          "left": 1632,
+          "top": 638,
+          "width": 358,
+          "height": 262
+        }
+      },
+      {
+        "cellId": "5a634abd-35c9-40cc-8f2c-bccea9c08a92",
+        "pos": {
+          "left": 551,
+          "top": 880,
+          "width": 499,
+          "height": 294
+        }
+      },
+      {
+        "cellId": "5fe5caeb-c0f8-4d6e-8138-e4e825837121",
+        "pos": {
+          "left": 1071,
+          "top": 156,
+          "width": 499,
+          "height": 236
+        }
+      },
+      {
+        "cellId": "c06d229b-ff60-462f-9d5d-59a728b1b29e",
+        "pos": {
+          "left": 547,
+          "top": 154,
+          "width": 499,
+          "height": 310
+        }
+      },
+      {
+        "cellId": "ef171bbd-2746-4790-9288-992ebff6372f",
+        "pos": {
+          "left": 1073,
+          "top": 950,
+          "width": 500,
+          "height": 294
+        }
+      },
+      {
+        "cellId": "e4cb68c1-f613-4453-8ff0-e4da1e6ad937",
+        "pos": {
+          "left": 1083,
+          "top": 750,
+          "width": 500,
+          "height": 124
+        }
+      }
+    ]
+  },
+  "paths": {
+    "demo/census.ipynb": "1c9191a6-2e25-4bb0-90f0-68fe8ecbe7f5"
+  }
+}

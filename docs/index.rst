@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 JupyterLab Interactive Dashboard Editor Documentation
-=======================================================
+=====================================================
 
 Interactively create and customize dashboards in JupyterLab. `Try it on Binder <https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-interactive-dashboard-editor/master?urlpath=lab>`__.
 
@@ -17,9 +17,19 @@ Interactively create and customize dashboards in JupyterLab. `Try it on Binder <
 
    getting_started/overview
    getting_started/installation
+   getting_started/start
+   getting_started/changelog
 
 .. toctree::
    :maxdepth: 1
    :caption: User Guide
    
-   user/interface
+   user/ux
+   user/features
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Contributor Guide
+   
+   contributor/codebase
+   contributor/contribute
