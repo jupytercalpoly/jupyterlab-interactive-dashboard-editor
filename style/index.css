@@ -63,9 +63,14 @@
     display: inline-block;
 }
 
+.pr-DashboardWidgetChild.pr-MarkdownOutput {
+    flex-grow: 1;
+}
+
 .pr-EditableWidget:hover .pr-Resizer {
     display: block;
 }
+
 
 .pr-Canvas {
     pointer-events: none;
