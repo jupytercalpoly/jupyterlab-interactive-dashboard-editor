@@ -19,4 +19,4 @@ rm MANIFEST.in
 jupyter lab clean
 
 # Import workspace into JupyterLab
-jupyter lab workspaces import binder/workspace.json
+jupyter lab workspaces import ../workspace.json
