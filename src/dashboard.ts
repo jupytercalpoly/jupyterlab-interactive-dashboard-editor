@@ -89,6 +89,7 @@ export class Dashboard extends Widget {
     this.node.addEventListener('lm-dragover', this, true);
     this.node.addEventListener('lm-drop', this, true);
     this.node.addEventListener('lm-dragend', this, true);
+    this.node.addEventListener('scroll', this);
   }
 
   /**
@@ -100,6 +101,7 @@ export class Dashboard extends Widget {
     this.node.removeEventListener('lm-dragleave', this, true);
     this.node.removeEventListener('lm-dragover', this, true);
     this.node.removeEventListener('lm-drop', this, true);
+    this.node.removeEventListener('scroll', this);
   }
 
   /**
@@ -204,6 +206,9 @@ export class Dashboard extends Widget {
 
   handleEvent(event: Event): void {
     switch (event.type) {
+      case 'scroll':
+        this._evtScroll(event);
+        break;
       case 'lm-dragenter':
         this._evtDragEnter(event as IDragEvent);
         break;
@@ -217,6 +222,29 @@ export class Dashboard extends Widget {
         this._evtDrop(event as IDragEvent);
         break;
     }
+  }
+
+  private _evtScroll(_event: Event): void {
+    const model = this.model;
+
+    console.log('scrollMode', model.scrollMode);
+    if (model.scrollMode !== 'infinite') {
+      return;
+    }
+
+    const elem = this.node;
+    const rightEdge = elem.offsetWidth + elem.scrollLeft;
+    const bottomEdge = elem.offsetHeight + elem.scrollTop;
+
+    if (rightEdge >= model.width && rightEdge > this._oldRightEdge) {
+      model.width += 200;
+    }
+    if (bottomEdge >= model.height && bottomEdge > this._oldBottomEdge) {
+      model.height += 200;
+    }
+
+    this._oldBottomEdge = bottomEdge;
+    this._oldRightEdge = rightEdge;
   }
 
   /**
@@ -320,6 +348,8 @@ export class Dashboard extends Widget {
 
   private _model: IDashboardModel;
   private _context: DocumentRegistry.IContext<DocumentRegistry.IModel>;
+  private _oldRightEdge = 0;
+  private _oldBottomEdge = 0;
 }
 
 /**
@@ -328,9 +358,11 @@ export class Dashboard extends Widget {
 export namespace Dashboard {
   export type Mode = 'edit' | 'present' | 'grid';
 
-  export const DEFAULT_WIDTH = 1270;
+  export type ScrollMode = 'infinite' | 'constrained';
 
-  export const DEFAULT_HEIGHT = 720;
+  export const DEFAULT_WIDTH = 1920;
+
+  export const DEFAULT_HEIGHT = 1080;
 
   export interface IOptions extends Widget.IOptions {
     /**

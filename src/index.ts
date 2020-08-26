@@ -5,7 +5,12 @@ import {
 
 import { INotebookTracker } from '@jupyterlab/notebook';
 
-import { WidgetTracker, showDialog, Dialog } from '@jupyterlab/apputils';
+import {
+  WidgetTracker,
+  showDialog,
+  Dialog,
+  InputDialog,
+} from '@jupyterlab/apputils';
 
 import { CodeCell } from '@jupyterlab/cells';
 
@@ -47,6 +52,8 @@ import {
 import { CommandIDs } from './commands';
 
 import { ReadonlyJSONObject } from '@lumino/coreutils';
+
+import { DashboardLayout } from './custom_layout';
 
 const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
   id: 'jupyterlab-interactive-dashboard-editor',
@@ -113,7 +120,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
 
     app.docRegistry.addModelFactory(modelFactory);
     app.docRegistry.addWidgetFactory(widgetFactory);
-    widgetFactory.widgetCreated.connect((sender, widget) => {
+    widgetFactory.widgetCreated.connect((_sender, widget) => {
       void dashboardTracker.add(widget.content);
 
       widget.title.icon = dashboardFiletype.icon;
@@ -121,11 +128,9 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       widget.title.iconLabel = dashboardFiletype.iconLabel || '';
 
       const model = widget.content.model;
-      model.loaded.connect(() => {
-        if (!model.width && !model.height) {
-          app.commands.execute(CommandIDs.setDimensions);
-        }
-      });
+      model.scrollMode = 'infinite';
+      model.width = Dashboard.DEFAULT_WIDTH;
+      model.height = Dashboard.DEFAULT_HEIGHT;
     });
 
     // Add commands to context menus.
@@ -256,6 +261,9 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     mainMenu.editMenu.addGroup([
       {
         command: CommandIDs.setDimensions,
+      },
+      {
+        command: CommandIDs.setGridSize,
       },
     ]);
 
@@ -441,6 +449,20 @@ function addCommands(
         model.width = newWidth;
         model.height = newHeight;
       });
+    },
+    isEnabled: hasDashboard,
+  });
+
+  commands.addCommand(CommandIDs.setGridSize, {
+    label: 'Set Grid Dimensions',
+    execute: async (args) => {
+      const newSize = await InputDialog.getNumber({
+        title: 'Enter Grid Size',
+      });
+      if (newSize.value) {
+        const layout = dashboardTracker.currentWidget.layout as DashboardLayout;
+        layout.gridSize = newSize.value;
+      }
     },
     isEnabled: hasDashboard,
   });

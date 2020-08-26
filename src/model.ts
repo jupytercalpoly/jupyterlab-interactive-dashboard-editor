@@ -62,6 +62,8 @@ export interface IDashboardModel extends DocumentRegistry.IModel {
   width: number;
 
   height: number;
+
+  scrollMode: Dashboard.ScrollMode;
 }
 
 export class DashboardModel extends DocumentModel implements IDashboardModel {
@@ -253,6 +255,13 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     return this._loaded;
   }
 
+  get scrollMode(): Dashboard.ScrollMode {
+    return this._scrollMode;
+  }
+  set scrollMode(newValue: Dashboard.ScrollMode) {
+    this._scrollMode = newValue;
+  }
+
   /**
    * The widget store for the dashboard.
    */
@@ -273,6 +282,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   private _path: string;
   private _mode: Dashboard.Mode = 'edit';
   private _docManager: IDocumentManager;
+  private _scrollMode: Dashboard.ScrollMode = 'constrained';
 }
 
 /**
