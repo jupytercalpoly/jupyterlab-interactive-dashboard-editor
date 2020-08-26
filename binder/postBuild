@@ -11,9 +11,12 @@ rm -rf Design
 rm -rf .github
 rm -rf binder
 rm -rf docs
+rm -rf demo
 rm package.json
 rm tsconfig.json
 rm yarn.lock
 rm MANIFEST.in
+rm covid-19.ipynb
+rm sample.dash
 
 jupyter lab clean
