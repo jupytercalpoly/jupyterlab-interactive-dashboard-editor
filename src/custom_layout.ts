@@ -235,9 +235,16 @@ export class DashboardLayout extends Layout {
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition
   ): boolean {
-    this.startBatch();
+    const wasInBatch = this.inBatch;
+    if (!wasInBatch) {
+      this.startBatch();
+    }
+
     const success = this._updateWidget(widget, pos);
-    this.endBatch();
+
+    if (!wasInBatch) {
+      this.endBatch();
+    }
     return success;
   }
 
@@ -287,10 +294,10 @@ export class DashboardLayout extends Layout {
 
     // Snap to grid if in grid mode.
     if (this._mode === 'grid') {
-      left = mround(left, this._gridWidth);
-      top = mround(top, this._gridHeight);
-      width = Math.max(mround(width, this._gridWidth), this._gridWidth);
-      height = Math.max(mround(height, this._gridHeight), this._gridHeight);
+      left = mround(left, this._gridSize);
+      top = mround(top, this._gridSize);
+      width = Math.max(mround(width, this._gridSize), this._gridSize);
+      height = Math.max(mround(height, this._gridSize), this._gridSize);
       // Change width/height now to force grid changes if they're small.
       item.update(0, 0, 0, 0);
     }
@@ -531,7 +538,7 @@ export class DashboardLayout extends Layout {
     each(overlaps, (overlap) => void this._handleOverlap(pos, overlap));
   }
 
-  fixOverlaps(widget: DashboardWidget) {
+  fixOverlaps(widget: DashboardWidget): void {
     const overlaps = filter(
       this._widgetsInSelection(widget.pos),
       (overlap) => overlap.widget !== widget
@@ -678,14 +685,58 @@ export class DashboardLayout extends Layout {
     let { left, top, width, height } = pos;
 
     if (this.mode === 'grid') {
-      width = Math.max(mround(width, this._gridWidth), this._gridWidth);
-      height = Math.max(mround(height, this._gridHeight), this._gridWidth);
-      left = mround(left, this._gridWidth);
-      top = mround(top, this._gridHeight);
+      width = Math.max(mround(width, this._gridSize), this._gridSize);
+      height = Math.max(mround(height, this._gridSize), this._gridSize);
+      left = mround(left, this._gridSize);
+      top = mround(top, this._gridSize);
     }
 
     context.strokeRect(left, top, width, height);
     context.fillRect(left, top, width, height);
+  }
+
+  set gridSize(s: number) {
+    this._gridSize = s;
+    const backgroundPosition = `0 0, 0 ${s}px, ${s}px -${s}px, -${s}px 0px`;
+
+    this.canvas.style.backgroundPosition = backgroundPosition;
+    this.canvas.style.backgroundSize = `${2 * s}px ${2 * s}px`;
+    this.parent.update();
+
+    this.startBatch();
+    each(this, (_widget) => {
+      const widget = _widget as DashboardWidget;
+      this.updateWidget(widget, widget.pos);
+    });
+    this.endBatch();
+  }
+
+  get gridSize(): number {
+    return this._gridSize;
+  }
+
+  trimCanvas(): void {
+    const model = (this.parent as Dashboard).model;
+    let maxWidth = 0;
+    let maxHeight = 0;
+
+    each(this, (_widget) => {
+      const widget = _widget as DashboardWidget;
+      const { left, top, width, height } = widget.pos;
+      if (left + width > maxWidth) {
+        maxWidth = left + width;
+      }
+      if (top + height > maxHeight) {
+        maxHeight = top + height;
+      }
+    });
+
+    if (maxWidth) {
+      model.width = maxWidth;
+    }
+    if (maxHeight) {
+      model.height = maxHeight;
+    }
   }
 
   // Map from widget ids to LayoutItems
@@ -705,8 +756,7 @@ export class DashboardLayout extends Layout {
   // Parent dashboard.
   private _dashboard: Dashboard;
 
-  private _gridWidth = 100;
-  private _gridHeight = 100;
+  private _gridSize = 50;
 
   // Changed signal
   private _changed = new Signal<this, IDashboardChange[]>(this);

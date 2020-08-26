@@ -42,8 +42,6 @@ const EDITABLE_WIDGET_CLASS = 'pr-EditableWidget';
 
 const IN_DRAG_CLASS = 'pr-InDrag';
 
-const WIDGET_OVERLAY_CLASS = 'pr-WidgetOverlay';
-
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
  */
@@ -118,7 +116,7 @@ export class DashboardWidget extends Widget {
             this.fitContent();
           }
           // Make widget visible again.
-          this.node.style.opacity = '1.0';
+          this.node.style.opacity = null;
           // Emit the ready signal.
           this._ready.emit(undefined);
         };
@@ -134,9 +132,6 @@ export class DashboardWidget extends Widget {
 
     this.addClass(DASHBOARD_WIDGET_CLASS);
     this.addClass(EDITABLE_WIDGET_CLASS);
-    this._overlay = document.createElement('div');
-    this._overlay.classList.add(WIDGET_OVERLAY_CLASS);
-    this.node.appendChild(this._overlay);
   }
 
   /**
@@ -359,8 +354,8 @@ export class DashboardWidget extends Widget {
       width: 0,
       height: 0,
     };
-    const overlaps = this.overlaps(pos);
-    return overlaps.type !== 'none';
+    const overlap = this.overlaps(pos);
+    return overlap.type !== 'none';
   }
 
   overlaps(_pos: Widgetstore.WidgetPosition): DashboardWidget.Overlap {
@@ -421,7 +416,7 @@ export class DashboardWidget extends Widget {
       if (this.isDisposed) {
         return;
       }
-      this.node.style.opacity = '1.0';
+      this.node.style.opacity = null;
       this.node.style.pointerEvents = 'auto';
       this.removeClass(IN_DRAG_CLASS);
       this._drag = null;
@@ -433,7 +428,7 @@ export class DashboardWidget extends Widget {
     event.stopPropagation();
     event.preventDefault();
 
-    this.node.style.opacity = '1.0';
+    this.node.style.opacity = null;
 
     if (this._mouseMode === 'resize' && this.parent !== undefined) {
       const pos = this.pos;
@@ -547,10 +542,8 @@ export class DashboardWidget extends Widget {
     this._mode = newMode;
     if (newMode === 'present') {
       this.removeClass(EDITABLE_WIDGET_CLASS);
-      this._overlay.classList.remove(WIDGET_OVERLAY_CLASS);
     } else {
       this.addClass(EDITABLE_WIDGET_CLASS);
-      this._overlay.classList.add(WIDGET_OVERLAY_CLASS);
     }
     if (newMode === 'grid') {
       if (this.parent) {
@@ -594,7 +587,6 @@ export class DashboardWidget extends Widget {
     widgetY: number;
   } | null = null;
   private _locked = false;
-  private _overlay: HTMLElement;
   private _content: Widget;
 }
 
