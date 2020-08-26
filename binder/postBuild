@@ -10,10 +10,13 @@ rm -rf style
 rm -rf Design
 rm -rf .github
 rm -rf binder
-rm -rf demo
+rm -rf docs
 rm package.json
 rm tsconfig.json
 rm yarn.lock
 rm MANIFEST.in
 
 jupyter lab clean
+
+# Import workspace into JupyterLab
+jupyter lab workspaces import binder/workspace.json
