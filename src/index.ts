@@ -152,11 +152,11 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       rank: 2,
     });
 
-    app.contextMenu.addItem({
-      command: CommandIDs.toggleMode,
-      selector: '.pr-JupyterDashboard',
-      rank: 3,
-    });
+    // app.contextMenu.addItem({
+    //   command: CommandIDs.toggleMode,
+    //   selector: '.pr-JupyterDashboard',
+    //   rank: 3,
+    // });
 
     app.contextMenu.addItem({
       command: CommandIDs.cut,
@@ -176,11 +176,11 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       rank: 6,
     });
 
-    app.contextMenu.addItem({
-      command: CommandIDs.enableGrid,
-      selector: '.pr-JupyterDashboard',
-      rank: 7,
-    });
+    // app.contextMenu.addItem({
+    //   command: CommandIDs.enableGrid,
+    //   selector: '.pr-JupyterDashboard',
+    //   rank: 7,
+    // });
 
     app.contextMenu.addItem({
       command: CommandIDs.deleteOutput,
@@ -222,12 +222,12 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       selector: '.pr-JupyterDashboard',
     });
 
-    app.commands.addKeyBinding({
-      command: CommandIDs.toggleMode,
-      args: {},
-      keys: ['I'],
-      selector: '.pr-JupyterDashboard',
-    });
+    // app.commands.addKeyBinding({
+    //   command: CommandIDs.toggleMode,
+    //   args: {},
+    //   keys: ['I'],
+    //   selector: '.pr-JupyterDashboard',
+    // });
 
     app.commands.addKeyBinding({
       command: CommandIDs.cut,

@@ -2,10 +2,14 @@ import { NotebookPanel } from '@jupyterlab/notebook';
 
 import { CodeCell, MarkdownCell, Cell } from '@jupyterlab/cells';
 
+import * as React from 'react';
+
 import {
   WidgetTracker,
   CommandToolbarButton,
   IWidgetTracker,
+  Toolbar,
+  ReactWidget,
 } from '@jupyterlab/apputils';
 
 import { CommandRegistry } from '@lumino/commands';
@@ -37,11 +41,19 @@ import { IDashboardModel, DashboardModel } from './model';
 
 import { CommandIDs } from './commands';
 
+import { HTMLSelect } from '@jupyterlab/ui-components';
+
 // HTML element classes
 
 const DASHBOARD_CLASS = 'pr-JupyterDashboard';
 
 const DROP_TARGET_CLASS = 'pr-DropTarget';
+
+const TOOLBAR_MODE_SWITCHER_CLASS = 'pr-ToolbarModeSwitcher';
+
+const TOOLBAR_SELECT_CLASS = 'pr-ToolbarSelector';
+
+const TOOLBAR_CLASS = 'pr-DashboardToolbar';
 
 export const IDashboardTracker = new Token<IDashboardTracker>(
   'jupyterlab-interactive-dashboard-editor'
@@ -387,6 +399,63 @@ export namespace Dashboard {
   }
 }
 
+export class DashboardDocument extends DocumentWidget<Dashboard> {
+  constructor(options: DashboardDocument.IOptions) {
+    let { content, reveal } = options;
+    const { context, commandRegistry } = options;
+    const model = context.model as DashboardModel;
+    content = content || new Dashboard({ ...options, model, context });
+    reveal = Promise.all([reveal, context.ready]);
+    super({
+      ...options,
+      content: content as Dashboard,
+      reveal,
+    });
+
+    // Build the toolbar
+
+    this.toolbar.addClass(TOOLBAR_CLASS);
+
+    const commands = commandRegistry;
+    const { save, undo, redo, cut, copy, paste, runOutput } = CommandIDs;
+
+    const args = { toolbar: true, dashboardId: content.id };
+
+    const makeToolbarButton = (
+      id: string,
+      tooltip: string
+    ): CommandToolbarButton => {
+      const button = new CommandToolbarButton({ args, commands, id });
+      button.node.title = tooltip;
+      return button;
+    };
+
+    const saveButton = makeToolbarButton(save, 'Save');
+    const undoButton = makeToolbarButton(undo, 'Undo');
+    const redoButton = makeToolbarButton(redo, 'Redo');
+    const cutButton = makeToolbarButton(cut, 'Cut the selected outputs');
+    const copyButton = makeToolbarButton(copy, 'Copy the selected outputs');
+    const pasteButton = makeToolbarButton(
+      paste,
+      'Paste outputs from the clipboard'
+    );
+    const runButton = makeToolbarButton(runOutput, 'Run the selected outputs');
+
+    this.toolbar.addItem(save, saveButton);
+    this.toolbar.addItem(undo, undoButton);
+    this.toolbar.addItem(redo, redoButton);
+    this.toolbar.addItem(cut, cutButton);
+    this.toolbar.addItem(copy, copyButton);
+    this.toolbar.addItem(paste, pasteButton);
+    this.toolbar.addItem(runOutput, runButton);
+    this.toolbar.addItem('spacer', Toolbar.createSpacerItem());
+    this.toolbar.addItem(
+      'switchMode',
+      new DashboardDocument.DashboardModeSwitcher(content as Dashboard)
+    );
+  }
+}
+
 export namespace DashboardDocument {
   export interface IOptions extends DocumentWidget.IOptionsOptionalContent {
     /**
@@ -419,83 +488,53 @@ export namespace DashboardDocument {
      */
     dashboardHeight?: number;
   }
-}
 
-export class DashboardDocument extends DocumentWidget<Dashboard> {
-  constructor(options: DashboardDocument.IOptions) {
-    let { content, reveal } = options;
-    const { context, commandRegistry } = options;
-    const model = context.model as DashboardModel;
-    content = content || new Dashboard({ ...options, model, context });
-    reveal = Promise.all([reveal, context.ready]);
-    super({
-      ...options,
-      content: content as Dashboard,
-      reveal,
-    });
+  export class DashboardModeSwitcher extends ReactWidget {
+    constructor(dashboard: Dashboard) {
+      super();
+      this.addClass(TOOLBAR_MODE_SWITCHER_CLASS);
+      this._dashboard = dashboard;
 
-    // Build the toolbar
+      if (dashboard.model) {
+        this.update();
+      }
 
-    const commands = commandRegistry;
-    const {
-      save,
-      undo,
-      redo,
-      cut,
-      copy,
-      paste,
-      runOutput,
-      startFullscreen,
-      toggleMode,
-    } = CommandIDs;
-
-    const args = { toolbar: true, dashboardId: content.id };
-
-    this.toolbar.addItem(
-      'save',
-      new CommandToolbarButton({ args, commands, id: save })
-    );
-    this.toolbar.addItem(
-      'undo',
-      new CommandToolbarButton({ args, commands, id: undo })
-    );
-    this.toolbar.addItem(
-      'redo',
-      new CommandToolbarButton({ args, commands, id: redo })
-    );
-    this.toolbar.addItem(
-      'cut',
-      new CommandToolbarButton({ args, commands, id: cut })
-    );
-    this.toolbar.addItem(
-      'copy',
-      new CommandToolbarButton({ args, commands, id: copy })
-    );
-    this.toolbar.addItem(
-      'paste',
-      new CommandToolbarButton({ args, commands, id: paste })
-    );
-    this.toolbar.addItem(
-      'runOutput',
-      new CommandToolbarButton({ args, commands, id: runOutput })
-    );
-    this.toolbar.addItem(
-      'startFullscreen',
-      new CommandToolbarButton({ args, commands, id: startFullscreen })
-    );
-    this.toolbar.addItem(
-      'toggleMode',
-      new CommandToolbarButton({ args, commands, id: toggleMode })
-    );
-
-    // Listen to toggle the icon on the mode switch button.
-    context.ready.then(() => {
-      model.stateChanged.connect((_sender, change) => {
+      dashboard.model.stateChanged.connect((_sender, change) => {
         if (change.name === 'mode') {
-          commandRegistry.notifyCommandChanged(toggleMode);
+          this.update();
         }
       }, this);
-    });
+    }
+
+    private _handleChange(
+      that: DashboardModeSwitcher
+    ): (event: React.ChangeEvent<HTMLSelectElement>) => void {
+      return (event: React.ChangeEvent<HTMLSelectElement>): void => {
+        that.dashboard.model.mode = event.target.value as Dashboard.Mode;
+      };
+    }
+
+    render(): JSX.Element {
+      const value = this._dashboard.model.mode;
+      return (
+        <HTMLSelect
+          className={TOOLBAR_SELECT_CLASS}
+          onChange={this._handleChange(this)}
+          value={value}
+          aria-label={'Mode'}
+        >
+          <option value="present">Present</option>
+          <option value="edit">Free Layout</option>
+          <option value="grid">Tile Layout</option>
+        </HTMLSelect>
+      );
+    }
+
+    get dashboard(): Dashboard {
+      return this._dashboard;
+    }
+
+    private _dashboard: Dashboard;
   }
 }
 
