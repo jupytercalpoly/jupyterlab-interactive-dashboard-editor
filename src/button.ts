@@ -36,7 +36,6 @@ export class DashboardButton
     const callback = (): void => {
       const widgetFactory = this._app.docRegistry.getWidgetFactory('dashboard');
       const dashboard = widgetFactory.createNew(context);
-      console.log('new dashboard doc', dashboard);
 
       const currentNotebook = this._tracker.currentWidget;
 

@@ -213,8 +213,8 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     if (oldValue === newValue) {
       return;
     }
-    this.triggerStateChange({ name: 'mode', oldValue, newValue });
     this._mode = newValue;
+    this.triggerStateChange({ name: 'mode', oldValue, newValue });
   }
 
   get metadata(): IObservableJSON {

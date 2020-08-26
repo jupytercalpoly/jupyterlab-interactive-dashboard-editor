@@ -203,10 +203,6 @@ export class DashboardLayout extends Layout {
         widget.mode = 'present';
       }
       this.attachWidget(widget);
-      // if (widget.mode !== 'grid') {
-      //   this._moveWidget(widget, _pos, false);
-      //   this._outputTracker.add(widget);
-      // }
 
       const { id, notebookId, cellId } = widget;
 
@@ -618,14 +614,19 @@ export class DashboardLayout extends Layout {
     });
     switch (newMode) {
       case 'present':
+        this.canvas.style.backgroundPosition = null;
+        this.canvas.style.backgroundSize = null;
         this._canvas.classList.remove(FREE_LAYOUT_CLASS);
         this._canvas.classList.remove(TILED_LAYOUT_CLASS);
         break;
       case 'edit':
+        this.canvas.style.backgroundPosition = null;
+        this.canvas.style.backgroundSize = null;
         this._canvas.classList.remove(TILED_LAYOUT_CLASS);
         this._canvas.classList.add(FREE_LAYOUT_CLASS);
         break;
       case 'grid':
+        this.gridSize = this._gridSize;
         this._canvas.classList.remove(FREE_LAYOUT_CLASS);
         this.canvas.classList.add(TILED_LAYOUT_CLASS);
         break;
@@ -723,6 +724,7 @@ export class DashboardLayout extends Layout {
     each(this, (_widget) => {
       const widget = _widget as DashboardWidget;
       const { left, top, width, height } = widget.pos;
+
       if (left + width > maxWidth) {
         maxWidth = left + width;
       }

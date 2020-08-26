@@ -9,22 +9,39 @@
 }
 
 .pr-EditableWidget {
-    background: var(--jp-layout-color0);
     border: var(--jp-border-width) solid var(--jp-inverse-layout-color4);
+    background: var(--jp-layout-color0);
 }
 
-.pr-EditableWidget.pr-DashboardWidget:focus {
+.pr-EditableWidget > .pr-DashboardWidgetChild {
+    pointer-events: none;
+}
+
+.pr-EditableWidget:focus {
     border: var(--jp-border-width) solid var(--jp-brand-color1);
 }
 
-.pr-EditableWidget.pr-DashboardWidget:hover {
+.pr-EditableWidget:focus:after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    background: rgba(0,0,0,.10);
+}
+
+.pr-EditableWidget:hover {
     border: var(--jp-border-width) solid var(--jp-brand-color1);
     cursor: move;
-    opacity: 0.5;
 }
 
-.pr-EditableWidget.pr-DashboardWidget:hover *:not(.pr-Resizer) {
-    pointer-events: none;
+.pr-EditableWidget:hover:after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    background: rgba(0,0,0,.10);
 }
 
 .pr-DashboardArea {
@@ -37,6 +54,7 @@
     height: 15px;
     right: 0;
     bottom: 0;
+    z-index: 3;
     cursor: nwse-resize;
     position: absolute;
 }
@@ -45,7 +63,7 @@
     display: inline-block;
 }
 
-.pr-EditableWidget.pr-DashboardWidget:hover .pr-Resizer {
+.pr-EditableWidget:hover .pr-Resizer {
     display: block;
 }
 
@@ -72,3 +90,38 @@
     left: 0;
     top: 0;
 }
+
+.pr-DashboardToolbar {
+    padding: 2px;
+}
+
+.jp-Toolbar-item.pr-ToolbarModeSwitcher .jp-select-wrapper.jp-mod-focused {
+    border: none;
+    box-shadow: none;
+}
+  
+select.pr-ToolbarSelector.jp-mod-styled {
+    height: 24px;
+    font-size: var(--jp-ui-font-size1);
+    line-height: 14px;
+    border-radius: 0;
+    display: block;
+    box-shadow: none;
+    border: none;
+    /* top: 5px !important; */
+  }
+
+.pr-ToolbarSelector.jp-mod-styled select {
+    height: 24px;
+    font-size: var(--jp-ui-font-size1);
+    line-height: 14px;
+    border-radius: 0;
+    display: block;
+    box-shadow: none;
+    border: none;
+    /* top: 5px !important; */
+  }
+/*   
+  .pr-ToolbarSelector {
+    top: 5px !important;
+  } */
