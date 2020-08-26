@@ -42,6 +42,8 @@ const EDITABLE_WIDGET_CLASS = 'pr-EditableWidget';
 
 const IN_DRAG_CLASS = 'pr-InDrag';
 
+const MARKDOWN_OUTPUT_CLASS = 'pr-MarkdownOutput';
+
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
  */
@@ -90,10 +92,12 @@ export class DashboardWidget extends Widget {
       void this._notebook.context.ready.then(() => {
         let clone: Widget;
         const cellType = cell.model.type;
+        const container = document.createElement('div');
 
         switch (cellType) {
           case 'markdown':
             clone = (cell as MarkdownCell).clone().editorWidget.parent;
+            container.classList.add(MARKDOWN_OUTPUT_CLASS);
             break;
           case 'code':
             clone = (cell as CodeCell).cloneOutputArea();
@@ -105,7 +109,6 @@ export class DashboardWidget extends Widget {
         // Make widget invisible until it's properly loaded/sized.
         this.node.style.opacity = '0';
 
-        const container = document.createElement('div');
         container.classList.add(DASHBOARD_WIDGET_CHILD_CLASS);
         container.appendChild(clone.node);
         this.node.appendChild(container);
