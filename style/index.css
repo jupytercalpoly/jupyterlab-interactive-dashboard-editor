@@ -3,9 +3,13 @@
 }
 
 .pr-DashboardWidget {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.pr-DashboardWidget .pr-MarkdownOutput {
+    display: inline-block;
 }
 
 .pr-EditableWidget {
@@ -61,10 +65,6 @@
 
 .pr-DashboardWidgetChild {
     display: inline-block;
-}
-
-.pr-DashboardWidgetChild.pr-MarkdownOutput {
-    flex-grow: 1;
 }
 
 .pr-EditableWidget:hover .pr-Resizer {
