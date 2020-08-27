@@ -408,9 +408,8 @@ function addCommands(
     icon: runIcon,
     execute: (args) => {
       const widget = outputTracker.currentWidget;
-      const cell = widget.cell as CodeCell;
       const sessionContext = widget.notebook.sessionContext;
-      CodeCell.execute(cell, sessionContext);
+      CodeCell.execute(widget.cell as CodeCell, sessionContext);
     },
   });
 

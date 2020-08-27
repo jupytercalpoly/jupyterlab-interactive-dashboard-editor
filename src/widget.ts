@@ -93,10 +93,17 @@ export class DashboardWidget extends Widget {
         let clone: Widget;
         const cellType = cell.model.type;
         const container = document.createElement('div');
+        let cloneNode: HTMLElement;
+        let nodes: HTMLCollectionOf<Element>;
+        let node: HTMLElement;
 
         switch (cellType) {
           case 'markdown':
-            clone = (cell as MarkdownCell).clone().editorWidget.parent;
+            cloneNode = (cell as MarkdownCell).clone().node;
+            nodes = cloneNode.getElementsByClassName('jp-MarkdownOutput');
+            node = nodes[0] as HTMLElement;
+            node.style.paddingRight = '0';
+            clone = new Widget({ node });
             container.classList.add(MARKDOWN_OUTPUT_CLASS);
             break;
           case 'code':
@@ -567,6 +574,14 @@ export class DashboardWidget extends Widget {
   }
   set locked(newState: boolean) {
     this._locked = newState;
+  }
+
+  get content(): Widget {
+    return this._content;
+  }
+  set content(newContent: Widget) {
+    this._content.dispose();
+    this._content = newContent;
   }
 
   private _notebook: NotebookPanel;
