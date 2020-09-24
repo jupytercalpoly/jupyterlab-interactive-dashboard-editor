@@ -20,8 +20,6 @@ import { DocumentRegistry } from '@jupyterlab/docregistry';
 
 import { IChangedArgs } from '@jupyterlab/coreutils';
 
-import { mround } from './utils';
-
 const CANVAS_CLASS = 'pr-Canvas';
 
 const TILED_LAYOUT_CLASS = 'pr-TiledLayout';
@@ -290,10 +288,10 @@ export class DashboardLayout extends Layout {
 
     // Snap to grid if in grid mode.
     if (this._mode === 'grid') {
-      left = mround(left, this._gridSize);
-      top = mround(top, this._gridSize);
-      width = Math.max(mround(width, this._gridSize), this._gridSize);
-      height = Math.max(mround(height, this._gridSize), this._gridSize);
+      left = Private.mround(left, this._gridSize);
+      top = Private.mround(top, this._gridSize);
+      width = Math.max(Private.mround(width, this._gridSize), this._gridSize);
+      height = Math.max(Private.mround(height, this._gridSize), this._gridSize);
       // Change width/height now to force grid changes if they're small.
       item.update(0, 0, 0, 0);
     }
@@ -686,10 +684,10 @@ export class DashboardLayout extends Layout {
     let { left, top, width, height } = pos;
 
     if (this.mode === 'grid') {
-      width = Math.max(mround(width, this._gridSize), this._gridSize);
-      height = Math.max(mround(height, this._gridSize), this._gridSize);
-      left = mround(left, this._gridSize);
-      top = mround(top, this._gridSize);
+      width = Math.max(Private.mround(width, this._gridSize), this._gridSize);
+      height = Math.max(Private.mround(height, this._gridSize), this._gridSize);
+      left = Private.mround(left, this._gridSize);
+      top = Private.mround(top, this._gridSize);
     }
 
     context.strokeRect(left, top, width, height);
@@ -848,4 +846,16 @@ export interface IDashboardChange {
   cellId?: string;
 
   ignore?: boolean;
+}
+
+/**
+ * A namespace for private functionality
+ */
+namespace Private {
+  /**
+   * Rounds num to the nearest integer multiple of roundTo.
+   */
+  export function mround(num: number, roundTo: number): number {
+    return roundTo * Math.round(num / roundTo);
+  }
 }
