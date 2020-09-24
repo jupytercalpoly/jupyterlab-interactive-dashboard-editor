@@ -25,8 +25,6 @@ import { DashboardWidget } from './widget';
 
 import { IDocumentManager } from '@jupyterlab/docmanager';
 
-import { DBUtils } from './dbUtils';
-
 import { IMainMenu } from '@jupyterlab/mainmenu';
 
 import { Widget } from '@lumino/widgets';
@@ -55,6 +53,8 @@ import { ReadonlyJSONObject } from '@lumino/coreutils';
 
 import { DashboardLayout } from './custom_layout';
 
+import { Widgetstore } from './widgetstore';
+
 const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
@@ -77,8 +77,8 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       namespace: 'dashboard-outputs',
     });
 
-    //Singleton Utils: clipboard, fullscreen, content manager
-    const utils = new DBUtils();
+    // Clipboard for copy/pasting outputs.
+    const clipboard = new Set<Widgetstore.WidgetInfo>();
 
     // Define dashboard file type.
     const dashboardFiletype: Partial<DocumentRegistry.IFileType> = {
@@ -97,7 +97,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       app,
       dashboardTracker,
       outputTracker,
-      utils,
+      clipboard,
       docManager,
       notebookTracker
     );
@@ -287,7 +287,7 @@ function addCommands(
   app: JupyterFrontEnd,
   dashboardTracker: WidgetTracker<Dashboard>,
   outputTracker: WidgetTracker<DashboardWidget>,
-  utils: DBUtils,
+  clipboard: Set<Widgetstore.WidgetInfo>,
   docManager: IDocumentManager,
   notebookTracker: INotebookTracker
 ): void {
@@ -470,7 +470,6 @@ function addCommands(
     label: (args) => (inToolbar(args) ? '' : 'Copy'),
     icon: copyIcon,
     execute: (args) => {
-      const clipboard = utils.clipboard;
       const info = outputTracker.currentWidget.info;
       clipboard.clear();
       clipboard.add(info);
@@ -482,7 +481,6 @@ function addCommands(
     label: (args) => (inToolbar(args) ? '' : 'Cut'),
     icon: cutIcon,
     execute: (args) => {
-      const clipboard = utils.clipboard;
       const widget = outputTracker.currentWidget;
       const info = widget.info;
       const dashboard = dashboardTracker.currentWidget;
@@ -497,7 +495,6 @@ function addCommands(
     label: (args) => (inToolbar(args) ? '' : 'Paste'),
     icon: pasteIcon,
     execute: (args) => {
-      const clipboard = utils.clipboard;
       const id = args.dashboardId;
       let dashboard: Dashboard;
       if (id) {
@@ -517,7 +514,7 @@ function addCommands(
       });
     },
     isEnabled: (args) =>
-      inToolbar(args) || (hasOutput() && utils.clipboard.size !== 0),
+      inToolbar(args) || (hasOutput() && clipboard.size !== 0),
   });
 
   commands.addCommand(CommandIDs.createNew, {

@@ -6,6 +6,13 @@ import { UUID } from '@lumino/coreutils';
 
 import { ArrayExt, toArray } from '@lumino/algorithm';
 
+/**
+ * Adds a random, unique ID to a notebook's metadata.
+ *
+ * @param notebook - the notebook to add an ID to.
+ *
+ * @returns - the notebook's ID.
+ */
 export function addNotebookId(notebook: NotebookPanel): string {
   const metadata: any | undefined = notebook.model.metadata.get('presto');
   let id: string;
@@ -24,6 +31,11 @@ export function addNotebookId(notebook: NotebookPanel): string {
   return id;
 }
 
+/**
+ * Gets the unique ID of a notebook.
+ *
+ * @returns - the ID of the notebook, or undefined if it has none.
+ */
 export function getNotebookId(notebook: NotebookPanel): string | undefined {
   const metadata: any | undefined = notebook?.model.metadata.get('presto');
   if (metadata === undefined || metadata.id === undefined) {
@@ -32,6 +44,15 @@ export function getNotebookId(notebook: NotebookPanel): string | undefined {
   return metadata.id;
 }
 
+/**
+ * Gets a notebook given its ID.
+ *
+ * @param id - the ID of the notebook to retrieve.
+ *
+ * @param tracker - the notebook tracker to search for the notebook in.
+ *
+ * @returns - the Notebook, or undefined if no notebook with that ID exists.
+ */
 export function getNotebookById(
   id: string,
   tracker: INotebookTracker
@@ -39,6 +60,13 @@ export function getNotebookById(
   return tracker.find((notebook) => getNotebookId(notebook) === id);
 }
 
+/**
+ * Adds a random, unique ID to a notebook cell's metadata.
+ *
+ * @param notebook - the cell to add an ID to.
+ *
+ * @returns - the cell's ID.
+ */
 export function addCellId(cell: Cell): string {
   const metadata: any | undefined = cell.model.metadata.get('presto');
   let id: string;
@@ -57,6 +85,11 @@ export function addCellId(cell: Cell): string {
   return id;
 }
 
+/**
+ * Gets the unique ID of a cell.
+ *
+ * @returns - the ID of the cell, or undefined if it has none.
+ */
 export function getCellId(cell: Cell): string | undefined {
   const metadata: any | undefined = cell?.model.metadata.get('presto');
   if (metadata === undefined || metadata.id === undefined) {
@@ -65,6 +98,15 @@ export function getCellId(cell: Cell): string | undefined {
   return metadata.id;
 }
 
+/**
+ * Gets a cell given its ID.
+ *
+ * @param id - the ID of the cell to retrieve.
+ *
+ * @param tracker - the notebook tracker to search for the cell in.
+ *
+ * @returns - the Cell, or undefined if no cell with that ID exists.
+ */
 export function getCellById(
   id: string,
   tracker: INotebookTracker
@@ -84,8 +126,13 @@ export function getCellById(
 }
 
 /**
- * Should eventually return a file path to a notebook given its id.
- * For now, just returns a random string.
+ * Gets the path to a notebook given its ID.
+ *
+ * @param id - the ID of the notebook whose path is desired.
+ *
+ * @param notebookTracker - the notebook tracker to search for the notebook in.
+ *
+ * @returns - the path to the notebook, or undefined if it doesn't exist.
  */
 export function getPathFromNotebookId(
   id: string,
@@ -98,15 +145,4 @@ export function getPathFromNotebookId(
     return undefined;
   }
   return notebook.context.path;
-}
-
-export function toHex(str: string): string {
-  return str
-    .split('')
-    .map((c) => c.charCodeAt(0).toString(16))
-    .join('');
-}
-
-export function mround(num: number, roundTo: number): number {
-  return roundTo * Math.round(num / roundTo);
 }

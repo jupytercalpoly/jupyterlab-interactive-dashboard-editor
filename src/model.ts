@@ -103,7 +103,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
           notebookId,
           widgetId: DashboardWidget.createDashboardWidgetId(),
         };
-        console.log('info', info);
         outputs.push(info);
       }
     }
@@ -111,7 +110,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this._metadata.clear();
     const metadata = value.metadata;
     for (const [key, value] of Object.entries(metadata)) {
-      console.log('key, value', key, value);
       this._setMetadataProperty(key, value);
     }
 
@@ -124,7 +122,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
     this._loaded.emit(void 0);
     // this.mode = 'present';
-    console.log('loaded from json');
   }
 
   toJSON(): IDashboardContent {
@@ -186,7 +183,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
   async fromString(value: string): Promise<void> {
     if (!value) {
-      console.log('empty file');
       this._loaded.emit(void 0);
       return;
     }
