@@ -81,8 +81,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   async fromJSON(value: IDashboardContent): Promise<void> {
     const outputs: Widgetstore.WidgetInfo[] = [];
 
-    console.log(this._docManager);
-
     for (const [path, notebookId] of Object.entries(value.paths)) {
       if (!getNotebookById(notebookId, this.notebookTracker)) {
         await this.contentsManager
@@ -277,7 +275,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   private _loaded = new Signal<this, void>(this);
   private _path: string;
   private _mode: Dashboard.Mode = 'edit';
-  private _docManager: IDocumentManager;
   private _scrollMode: Dashboard.ScrollMode = 'constrained';
 }
 

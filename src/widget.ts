@@ -341,7 +341,7 @@ export class DashboardWidget extends Widget {
     this.node.style.height = `${height}px`;
 
     if (this.mode === 'grid') {
-      (this.parent.layout as DashboardLayout).drawDropZone(this.pos);
+      (this.parent.layout as DashboardLayout).drawDropZone(this.pos, '#2b98f0');
     }
     if (this.mode !== 'grid' && this._fitToContent && !event.altKey) {
       this.fitContent();
@@ -397,11 +397,6 @@ export class DashboardWidget extends Widget {
     clientX: number,
     clientY: number
   ): Promise<void> {
-    // const elems = document.elementsFromPoint()
-    // each(elems, (elem) => {
-    //   (elem as HTMLElement).style.pointerEvents = 'none';
-    // });
-
     const dragImage = target;
     dragImage.style.opacity = '0.6';
 

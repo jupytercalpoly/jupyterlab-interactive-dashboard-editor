@@ -120,6 +120,9 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
 
     app.docRegistry.addModelFactory(modelFactory);
     app.docRegistry.addWidgetFactory(widgetFactory);
+
+    // Add newly created dashboards to the tracker, set their icon and label,
+    // and set the default width, height, and scrollMode.
     widgetFactory.widgetCreated.connect((_sender, widget) => {
       void dashboardTracker.add(widget.content);
 
@@ -128,6 +131,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       widget.title.iconLabel = dashboardFiletype.iconLabel || '';
 
       const model = widget.content.model;
+      // TODO: Make scrollMode changable in JL. Default 'infinite' for now.
       model.scrollMode = 'infinite';
       model.width = Dashboard.DEFAULT_WIDTH;
       model.height = Dashboard.DEFAULT_HEIGHT;
@@ -152,35 +156,23 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       rank: 2,
     });
 
-    // app.contextMenu.addItem({
-    //   command: CommandIDs.toggleMode,
-    //   selector: '.pr-JupyterDashboard',
-    //   rank: 3,
-    // });
-
     app.contextMenu.addItem({
       command: CommandIDs.cut,
       selector: '.pr-JupyterDashboard',
-      rank: 4,
+      rank: 3,
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.copy,
       selector: '.pr-JupyterDashboard',
-      rank: 5,
+      rank: 4,
     });
 
     app.contextMenu.addItem({
       command: CommandIDs.paste,
       selector: '.pr-JupyterDashboard',
-      rank: 6,
+      rank: 5,
     });
-
-    // app.contextMenu.addItem({
-    //   command: CommandIDs.enableGrid,
-    //   selector: '.pr-JupyterDashboard',
-    //   rank: 7,
-    // });
 
     app.contextMenu.addItem({
       command: CommandIDs.deleteOutput,
@@ -222,13 +214,6 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       selector: '.pr-JupyterDashboard',
     });
 
-    // app.commands.addKeyBinding({
-    //   command: CommandIDs.toggleMode,
-    //   args: {},
-    //   keys: ['I'],
-    //   selector: '.pr-JupyterDashboard',
-    // });
-
     app.commands.addKeyBinding({
       command: CommandIDs.cut,
       args: {},
@@ -263,7 +248,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
         command: CommandIDs.setDimensions,
       },
       {
-        command: CommandIDs.setGridSize,
+        command: CommandIDs.setTileSize,
       },
     ]);
 
@@ -283,6 +268,21 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
   },
 };
 
+/**
+ * Add commands to the main JupyterLab command registry.
+ *
+ * @param app - the JupyterLab instance.
+ *
+ * @param dashboardTracker - a tracker for dashboards.
+ *
+ * @param outputTracker - a tracker for dashboard outputs.
+ *
+ * @param clipboard - a set used to keep track of widgets for copy/pasting.
+ *
+ * @param docManager - a document manager used to create/rename files.
+ *
+ * @param notebookTracker - a tracker for notebooks.
+ */
 function addCommands(
   app: JupyterFrontEnd,
   dashboardTracker: WidgetTracker<Dashboard>,
@@ -395,14 +395,6 @@ function addCommands(
     },
   });
 
-  commands.addCommand(CommandIDs.enableGrid, {
-    label: 'Enable Tiled Layout (EXPERIMENTAL)',
-    execute: (args) => {
-      const dashboard = dashboardTracker.currentWidget;
-      dashboard.model.mode = 'grid';
-    },
-  });
-
   commands.addCommand(CommandIDs.runOutput, {
     label: (args) => (inToolbar(args) ? '' : 'Run Output'),
     icon: runIcon,
@@ -452,7 +444,7 @@ function addCommands(
     isEnabled: hasDashboard,
   });
 
-  commands.addCommand(CommandIDs.setGridSize, {
+  commands.addCommand(CommandIDs.setTileSize, {
     label: 'Set Grid Dimensions',
     execute: async (args) => {
       const newSize = await InputDialog.getNumber({
@@ -460,7 +452,7 @@ function addCommands(
       });
       if (newSize.value) {
         const layout = dashboardTracker.currentWidget.layout as DashboardLayout;
-        layout.gridSize = newSize.value;
+        layout.setTileSize(newSize.value);
       }
     },
     isEnabled: hasDashboard,
@@ -556,7 +548,13 @@ function addCommands(
   });
 }
 
+/**
+ * A namespace for private functionality.
+ */
 namespace Private {
+  /**
+   * A dialog with two boxes for setting a dashboard's width and height.
+   */
   export class ResizeHandler extends Widget {
     constructor(oldWidth: number, oldHeight: number) {
       const node = document.createElement('div');
@@ -575,8 +573,6 @@ namespace Private {
       height.required = true;
       width.placeholder = `Width (${oldWidth})`;
       height.placeholder = `Height (${oldHeight})`;
-      // width.value = oldWidth.toString();
-      // height.value = oldHeight.toString();
 
       node.appendChild(name);
       node.appendChild(width);

@@ -20,13 +20,28 @@ import { DocumentRegistry } from '@jupyterlab/docregistry';
 
 import { IChangedArgs } from '@jupyterlab/coreutils';
 
+/**
+ * The class name added to the dashboard canvas.
+ */
 const CANVAS_CLASS = 'pr-Canvas';
 
+/**
+ * The class name added to a dashboard in tiled mode.
+ */
 const TILED_LAYOUT_CLASS = 'pr-TiledLayout';
 
+/**
+ * The class name added to a dashboard in free mode.
+ */
 const FREE_LAYOUT_CLASS = 'pr-FreeLayout';
 
+/**
+ * A layout for dashboards.
+ */
 export class DashboardLayout extends Layout {
+  /**
+   * Construct a dashboard layout.
+   */
   constructor(options: DashboardLayout.IOptions) {
     super(options);
 
@@ -43,6 +58,8 @@ export class DashboardLayout extends Layout {
 
     if (mode === 'edit') {
       this._canvas.classList.add(FREE_LAYOUT_CLASS);
+    } else if (mode === 'grid') {
+      this._canvas.classList.add(TILED_LAYOUT_CLASS);
     }
 
     this._mode = mode;
@@ -50,6 +67,9 @@ export class DashboardLayout extends Layout {
     model.stateChanged.connect(this._handleModelChange, this);
   }
 
+  /**
+   * Handles signals emitted by the underlying model.
+   */
   private _handleModelChange(
     _sender: DocumentRegistry.IModel,
     change: IChangedArgs<any>
@@ -63,13 +83,16 @@ export class DashboardLayout extends Layout {
         this.height = newValue;
         break;
       case 'mode':
-        this.mode = newValue;
+        this.setMode(newValue);
         break;
       default:
         break;
     }
   }
 
+  /**
+   * The canvas for the dashboard.
+   */
   get canvas(): HTMLCanvasElement {
     return this._canvas;
   }
@@ -81,11 +104,6 @@ export class DashboardLayout extends Layout {
     super.init();
     each(this, (widget) => this.attachWidget(widget));
     this.parent.node.appendChild(this._canvas);
-
-    // const gif = document.createElement('img');
-    // gif.src = 'https://s7.gifyu.com/images/onboardinga9323c302cba1cb3.gif';
-    // gif.classList.add('pr-OnboardingGif');
-    // this.parent.node.appendChild(gif);
   }
 
   /**
@@ -98,6 +116,9 @@ export class DashboardLayout extends Layout {
     super.dispose();
   }
 
+  /**
+   * Handle `after-attach` messages for the layout.
+   */
   onAfterAttach(msg: Message): void {
     super.onAfterAttach(msg);
     this._dashboard = this.parent as Dashboard;
@@ -178,15 +199,29 @@ export class DashboardLayout extends Layout {
     this.parent!.fit();
   }
 
+  /**
+   * Add a widget to the layout.
+   *
+   * @param widget - the widget to add.
+   *
+   * @param _pos - the desired size/position of the added widget.
+   */
   addWidget(widget: DashboardWidget, _pos: Widgetstore.WidgetPosition): void {
     this.startBatch();
     this._addWidget(widget, _pos);
   }
 
   /**
-   * Add a widget to the layout.
+   * A helper function to add a widget to the layout.
    *
    * @param widget - the widget to add.
+   *
+   * @param _pos - the desired size/position of the added widget.
+   *
+   * ### Notes
+   * This method is called recursively to handle overlapping widgets and
+   * shoudn't be called directly. If you want to add a widget, use the
+   * .addWidget() method instead.
    */
   _addWidget(widget: DashboardWidget, _pos: Widgetstore.WidgetPosition): void {
     // Add the widget to the layout.
@@ -207,7 +242,7 @@ export class DashboardLayout extends Layout {
       const ignore = !this._signalChanges;
 
       widget.ready.connect(() => {
-        this._moveWidget(widget, widget.pos, false);
+        this._updateWidget(widget, widget.pos, false);
         this.fixOverlaps(widget);
         this._outputTracker.add(widget);
 
@@ -219,12 +254,22 @@ export class DashboardLayout extends Layout {
           cellId,
           ignore,
         };
+
         this.signalChange(change);
         this.endBatch();
       });
     }
   }
 
+  /**
+   * Move or resize a widget in the layout.
+   *
+   * @param widget - the widget to update.
+   *
+   * @param pos - the new position/size for the widget.
+   *
+   * @returns - whether the update was successful.
+   */
   updateWidget(
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition
@@ -234,7 +279,7 @@ export class DashboardLayout extends Layout {
       this.startBatch();
     }
 
-    const success = this._updateWidget(widget, pos);
+    const success = this._updateWidgetHelper(widget, pos);
 
     if (!wasInBatch) {
       this.endBatch();
@@ -242,12 +287,28 @@ export class DashboardLayout extends Layout {
     return success;
   }
 
-  private _updateWidget(
+  /**
+   * A helper function to move or resize a widget in the layout.
+   *
+   * @param widget - the widget to update.
+   *
+   * @param pos - the new position/size for the widget.
+   *
+   * @param fixOverlaps - whether overlaps should be automatically resolved.
+   *
+   * @returns - whether the update was successful.
+   *
+   * ### Notes
+   * This is a helper function for the .updateWidget() method and should not
+   * be called directly. Use .updateWidget() if you want to move or resize a
+   * widget.
+   */
+  private _updateWidgetHelper(
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition,
     fixOverlaps = true
   ): boolean {
-    const success = this._moveWidget(widget, pos, fixOverlaps);
+    const success = this._updateWidget(widget, pos, fixOverlaps);
     if (success) {
       const change: IDashboardChange = {
         type: 'move',
@@ -259,7 +320,23 @@ export class DashboardLayout extends Layout {
     return success;
   }
 
-  private _moveWidget(
+  /**
+   * A helper function to move or resize a widget in the layout.
+   *
+   * @param widget - the widget to update.
+   *
+   * @param pos - the new position/size for the widget.
+   *
+   * @param fixOverlaps - whether overlaps should be automatically resolved.
+   *
+   * @returns - whether the update was successful.
+   *
+   * ### Notes
+   * This function is called recursively to handle overlapping widgets and
+   * shouldn't be called directly. If you want to update a widget, use
+   * .updateWidget() instead.
+   */
+  private _updateWidget(
     widget: DashboardWidget,
     pos: Widgetstore.WidgetPosition,
     fixOverlaps = true
@@ -267,7 +344,7 @@ export class DashboardLayout extends Layout {
     // Get the item from the map.
     const item = this._items.get(widget.id);
 
-    // If the item doesn't exist, exit.
+    // If the item doesn't exist, return.
     if (item === undefined) {
       return false;
     }
@@ -288,10 +365,10 @@ export class DashboardLayout extends Layout {
 
     // Snap to grid if in grid mode.
     if (this._mode === 'grid') {
-      left = Private.mround(left, this._gridSize);
-      top = Private.mround(top, this._gridSize);
-      width = Math.max(Private.mround(width, this._gridSize), this._gridSize);
-      height = Math.max(Private.mround(height, this._gridSize), this._gridSize);
+      left = Private.mround(left, this._tileSize);
+      top = Private.mround(top, this._tileSize);
+      width = Math.max(Private.mround(width, this._tileSize), this._tileSize);
+      height = Math.max(Private.mround(height, this._tileSize), this._tileSize);
       // Change width/height now to force grid changes if they're small.
       item.update(0, 0, 0, 0);
     }
@@ -324,7 +401,6 @@ export class DashboardLayout extends Layout {
    * Remove a widget from the layout.
    *
    * @param widget - the widget to remove.
-   *
    */
   deleteWidget(widget: DashboardWidget): boolean {
     // Look up the widget in the _items map.
@@ -452,16 +528,36 @@ export class DashboardLayout extends Layout {
     this.updateLayoutFromWidgetstore();
   }
 
-  widgetsAtPoint(x: number, y: number): IIterator<DashboardWidget.Overlap> {
+  /**
+   * Gets an iterator of widgets overlapping a point.
+   *
+   * @param left - the distance from the point to the left edge of the dashboard.
+   *
+   * @param top - the distance from the point to the top edge of the dashboard.
+   *
+   * @returns - an iterator containing widgets at the point.
+   */
+  widgetsAtPoint(
+    left: number,
+    top: number
+  ): IIterator<DashboardWidget.Overlap> {
     const pos = {
-      left: x,
-      top: y,
+      left,
+      top,
       width: 0,
       height: 0,
     };
     return this._widgetsInSelection(pos);
   }
 
+  /**
+   * Gets an iterator of widgets overlapping a selection
+   *
+   * @param pos - an object containing the left, top, width, and height
+   * of the selection.
+   *
+   * @returns - an iterator containing widgets in that selection.
+   */
   private _widgetsInSelection(
     pos: WidgetPosition
   ): IIterator<DashboardWidget.Overlap> {
@@ -476,6 +572,14 @@ export class DashboardLayout extends Layout {
     return overlaps;
   }
 
+  /**
+   * Resolve an overlap between two widgets.
+   *
+   * @param pos - the dimensions/position of the widget being overlapped.
+   *
+   * @param overlap - an object containing the overlapping widget and its position
+   * relative to the underlying widget.
+   */
   private _handleOverlap(
     pos: Widgetstore.WidgetPosition,
     overlap: DashboardWidget.Overlap
@@ -513,18 +617,23 @@ export class DashboardLayout extends Layout {
     }
     const heightDiff = newPos.top + newPos.height - this.height;
     if (heightDiff > 0) {
-      adjust = heightDiff;
-      this._expandCanvas(type, adjust);
+      this._expandCanvas(type, heightDiff);
     }
     const widthDiff = newPos.left + newPos.width - this.width;
     if (widthDiff > 0) {
-      adjust = widthDiff;
-      this._expandCanvas(type, adjust);
+      this._expandCanvas(type, widthDiff);
     }
 
-    this._moveWidget(widget, newPos);
+    this._updateWidget(widget, newPos);
   }
 
+  /**
+   * Resolves overlaps between several widgets.
+   *
+   * @param overlaps - an iterator containing information about widget overlaps.
+   *
+   * @param pos - the dimensions/position of the widget being overlapped.
+   */
   handleOverlaps(
     overlaps: IIterator<DashboardWidget.Overlap>,
     pos: Widgetstore.WidgetPosition
@@ -532,6 +641,11 @@ export class DashboardLayout extends Layout {
     each(overlaps, (overlap) => void this._handleOverlap(pos, overlap));
   }
 
+  /**
+   * Moves all widgets overlapping a selected widget.
+   *
+   * @param widget - the widget being overlapped.
+   */
   fixOverlaps(widget: DashboardWidget): void {
     const overlaps = filter(
       this._widgetsInSelection(widget.pos),
@@ -543,6 +657,14 @@ export class DashboardLayout extends Layout {
     widget.locked = false;
   }
 
+  /**
+   * Increase the width/height of the dashboard canvas and automatically move
+   * its widgets to accommodate the increase if necessary.
+   *
+   * @param direction - the direction to expand the canvas (left, right, up, down)
+   *
+   * @param amount - the number of pixels to expand the canvas.
+   */
   private _expandCanvas(
     direction: DashboardWidget.Direction,
     amount: number
@@ -557,7 +679,7 @@ export class DashboardLayout extends Layout {
           const widget = _widget as DashboardWidget;
           const pos = widget.pos;
           pos.left += amount;
-          this._updateWidget(widget, pos);
+          this._updateWidgetHelper(widget, pos);
         });
         break;
       case 'right':
@@ -569,7 +691,7 @@ export class DashboardLayout extends Layout {
           const widget = _widget as DashboardWidget;
           const pos = widget.pos;
           pos.top += amount;
-          this._updateWidget(widget, pos);
+          this._updateWidgetHelper(widget, pos);
         });
         break;
       case 'down':
@@ -578,6 +700,9 @@ export class DashboardLayout extends Layout {
     }
   }
 
+  /**
+   * The width of the dashboard in pixels.
+   */
   get width(): number {
     return this._width;
   }
@@ -589,6 +714,9 @@ export class DashboardLayout extends Layout {
     this._canvas.width = newWidth;
   }
 
+  /**
+   * The height of the dashboard in pixels.
+   */
   get height(): number {
     return this._height;
   }
@@ -600,10 +728,12 @@ export class DashboardLayout extends Layout {
     this._canvas.height = newHeight;
   }
 
-  get mode(): Dashboard.Mode {
-    return this._mode;
-  }
-  set mode(newMode: Dashboard.Mode) {
+  /**
+   * Set the dashboard display mode.
+   *
+   * @param newMode - the new mode (present, free, or tile).
+   */
+  setMode(newMode: Dashboard.Mode): void {
     this._mode = newMode;
     this.clearCanvas();
     each(this, (_widget) => {
@@ -624,17 +754,34 @@ export class DashboardLayout extends Layout {
         this._canvas.classList.add(FREE_LAYOUT_CLASS);
         break;
       case 'grid':
-        this.gridSize = this._gridSize;
+        this.setTileSize(this._tileSize);
         this._canvas.classList.remove(FREE_LAYOUT_CLASS);
         this.canvas.classList.add(TILED_LAYOUT_CLASS);
         break;
     }
   }
 
+  /**
+   * The display mode for the dashboard (present, free, or tile).
+   */
+  get mode(): Dashboard.Mode {
+    return this._mode;
+  }
+
+  /**
+   * Start a batch of widget updates.
+   */
   startBatch(): void {
     this._inBatch = true;
   }
 
+  /**
+   * End a batch of widget updates.
+   *
+   * ### Notes
+   * If startBatch() was called before endBatch(), this will signal all
+   * of the batched updates.
+   */
   endBatch(): void {
     const wasInBatch = this.inBatch;
     this._inBatch = false;
@@ -643,6 +790,9 @@ export class DashboardLayout extends Layout {
     }
   }
 
+  /**
+   * Whether the layout is in a batch of widget updates.
+   */
   get inBatch(): boolean {
     return this._inBatch;
   }
@@ -663,10 +813,18 @@ export class DashboardLayout extends Layout {
     return this._widgetstore.createWidget(info, fit);
   }
 
+  /**
+   * A signal emitted when the layout changes.
+   */
   get changed(): Signal<this, IDashboardChange[]> {
     return this._changed;
   }
 
+  /**
+   * Clear the layout's canvas.
+   *
+   * @returns a 2D context for the canvas.
+   */
   clearCanvas(): CanvasRenderingContext2D {
     const canvas = this.canvas;
     const context = canvas.getContext('2d');
@@ -674,28 +832,40 @@ export class DashboardLayout extends Layout {
     return context;
   }
 
-  drawDropZone(pos: Widgetstore.WidgetPosition): void {
+  /**
+   * Draw a rectangle on the canvas.
+   *
+   * @param pos - the location and size of the rectangle.
+   *
+   * @param color - the color of the rectangle.
+   */
+  drawDropZone(pos: Widgetstore.WidgetPosition, color: string): void {
     const context = this.clearCanvas();
 
     context.setLineDash([5]);
-    context.strokeStyle = '#2b98f0';
-    context.fillStyle = '#2b98f066';
+    context.strokeStyle = color;
+    context.fillStyle = `${color}66`;
 
     let { left, top, width, height } = pos;
 
     if (this.mode === 'grid') {
-      width = Math.max(Private.mround(width, this._gridSize), this._gridSize);
-      height = Math.max(Private.mround(height, this._gridSize), this._gridSize);
-      left = Private.mround(left, this._gridSize);
-      top = Private.mround(top, this._gridSize);
+      width = Math.max(Private.mround(width, this._tileSize), this._tileSize);
+      height = Math.max(Private.mround(height, this._tileSize), this._tileSize);
+      left = Private.mround(left, this._tileSize);
+      top = Private.mround(top, this._tileSize);
     }
 
     context.strokeRect(left, top, width, height);
     context.fillRect(left, top, width, height);
   }
 
-  set gridSize(s: number) {
-    this._gridSize = s;
+  /**
+   * Sets the size of a single tile in tile layout model.
+   *
+   * @param s - the new tile size in pixels.
+   */
+  setTileSize(s: number): void {
+    this._tileSize = s;
     const backgroundPosition = `0 0, 0 ${s}px, ${s}px -${s}px, -${s}px 0px`;
 
     this.canvas.style.backgroundPosition = backgroundPosition;
@@ -710,10 +880,18 @@ export class DashboardLayout extends Layout {
     this.endBatch();
   }
 
-  get gridSize(): number {
-    return this._gridSize;
+  /**
+   * The size of a single tile layout tile in pixels.
+   */
+  get tileSize(): number {
+    return this._tileSize;
   }
 
+  /**
+   * Reduces the dimensions of the dashboard to the minimum required to
+   * contain all the widgets ("trims" excess dashboard to the right and
+   * bottom of the content).
+   */
   trimCanvas(): void {
     const model = (this.parent as Dashboard).model;
     let maxWidth = 0;
@@ -755,16 +933,16 @@ export class DashboardLayout extends Layout {
   private _mode: Dashboard.Mode;
   // Parent dashboard.
   private _dashboard: Dashboard;
-
-  private _gridSize = 50;
-
+  // Size of a single tile in tiled layout in pixels.
+  private _tileSize = DashboardLayout.DEFAULT_TILE_SIZE;
   // Changed signal
   private _changed = new Signal<this, IDashboardChange[]>(this);
-
+  // An array of changes emitted when a single change or a batch finishes.
   private _changes: IDashboardChange[] = [];
-
+  // Whether the layout is currently in a batch of changes.
   private _inBatch = false;
-
+  // Whether the layout should emit the array of changes after a change or
+  // batch finishes.
   private _signalChanges = true;
 }
 
@@ -825,10 +1003,21 @@ export namespace DashboardLayout {
     canvas.classList.add(CANVAS_CLASS);
     return canvas;
   }
+
+  /**
+   * The default size of a single tile in tiled layout.
+   */
+  export const DEFAULT_TILE_SIZE = 50;
 }
 
+/**
+ * A type for dashboard changes emitted by the changed signal.
+ */
 export type DashboardChangeType = 'add' | 'remove' | 'move';
 
+/**
+ * An interface describing a change that occurs to the dashboard.
+ */
 export interface IDashboardChange {
   type: DashboardChangeType;
 
@@ -853,7 +1042,7 @@ export interface IDashboardChange {
  */
 namespace Private {
   /**
-   * Rounds num to the nearest integer multiple of roundTo.
+   * Rounds `num` to the nearest integer multiple of `roundTo`.
    */
   export function mround(num: number, roundTo: number): number {
     return roundTo * Math.round(num / roundTo);
