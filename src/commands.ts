@@ -1,3 +1,6 @@
+/**
+ * A namespace for dashboard command ids.
+ */
 export namespace CommandIDs {
   export const deleteOutput = 'dashboard:delete-dashboard-widget';
   export const undo = 'dashboard:undo';

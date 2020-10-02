@@ -45,6 +45,9 @@ export interface IOutputInfo extends PartialJSONObject {
    */
   cellId: string;
 
+  /**
+   * The position and size of an output.
+   */
   pos: {
     top: number;
     left: number;

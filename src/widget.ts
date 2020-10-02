@@ -26,20 +26,37 @@ import { Signal, ISignal } from '@lumino/signaling';
 import { DashboardIcons } from './icons';
 
 import { Widgetstore, WidgetPosition } from './widgetstore';
-import { DashboardLayout } from './custom_layout';
 
-// HTML element classes
+import { DashboardLayout } from './layout';
 
+/**
+ * The class name added to dashboard outputs
+ */
 const DASHBOARD_WIDGET_CLASS = 'pr-DashboardWidget';
 
+/**
+ * The class name for the widget drag mime.
+ */
 const DASHBOARD_WIDGET_MIME = 'pr-DashboardWidgetMine';
 
+/**
+ * The class name added to the children of dashboard outputs.
+ */
 const DASHBOARD_WIDGET_CHILD_CLASS = 'pr-DashboardWidgetChild';
 
+/**
+ * The class name added to editable dashboard outputs.
+ */
 const EDITABLE_WIDGET_CLASS = 'pr-EditableWidget';
 
+/**
+ * The class name added to dashboard outputs being dragged.
+ */
 const IN_DRAG_CLASS = 'pr-InDrag';
 
+/**
+ * The class name added to markdown dashboard outputs.
+ */
 const MARKDOWN_OUTPUT_CLASS = 'pr-MarkdownOutput';
 
 /**
@@ -237,7 +254,7 @@ export class DashboardWidget extends Widget {
   }
 
   /**
-   * Handle the `'dblclick'` event for the widget.
+   * Handle the `'dblclick'` event for the widget. Currently a no-op.
    */
   private _evtDblClick(event: MouseEvent): void {
     // Do nothing if it's not a left mouse press.
@@ -301,7 +318,7 @@ export class DashboardWidget extends Widget {
   }
 
   /**
-   * Handle `mousemove` event of widget
+   * Handle `mousemove` events for the widget.
    */
   private _evtMouseMove(event: MouseEvent): void {
     switch (this._mouseMode) {
@@ -316,6 +333,9 @@ export class DashboardWidget extends Widget {
     }
   }
 
+  /**
+   * Handle `mousemove` events when the widget mouseMode is `drag`.
+   */
   private _dragMouseMove(event: MouseEvent): void {
     const data = this._clickData;
     const { clientX, clientY } = event;
@@ -328,6 +348,9 @@ export class DashboardWidget extends Widget {
     }
   }
 
+  /**
+   * Handle `mousemove` events when the widget mouseMode is `resize`.
+   */
   private _resizeMouseMove(event: MouseEvent): void {
     const { pressX, pressY, pressWidth, pressHeight } = this._clickData;
 
@@ -358,6 +381,12 @@ export class DashboardWidget extends Widget {
     this.node.style.height = `${element.clientHeight + 2}px`;
   }
 
+  /**
+   * Determines whether the widget contains the point (left, top).
+   *
+   * ### Notes
+   * Both `left` and `top` are relative to the dashboard.
+   */
   containsPoint(left: number, top: number): boolean {
     const pos = {
       left,
@@ -369,6 +398,13 @@ export class DashboardWidget extends Widget {
     return overlap.type !== 'none';
   }
 
+  /**
+   * Determines whether the widget overlaps an area.
+   *
+   * @param _pos - the position and size of the test area.
+   *
+   * @returns - an object containing the type of overlap and this widget.
+   */
   overlaps(_pos: Widgetstore.WidgetPosition): DashboardWidget.Overlap {
     const { left, top, width, height } = _pos;
     const pos = this.pos;
@@ -430,6 +466,9 @@ export class DashboardWidget extends Widget {
     });
   }
 
+  /**
+   * Handle `mouseUp` events for the widget.
+   */
   private _evtMouseUp(event: MouseEvent): void {
     event.stopPropagation();
     event.preventDefault();
@@ -449,6 +488,10 @@ export class DashboardWidget extends Widget {
 
   /**
    * The widget's position on its dashboard.
+   *
+   * ### Notes
+   * When setting the widget pos, fields that you don't want to modify
+   * can be set as `undefined`.
    */
   get pos(): WidgetPosition {
     return {
@@ -565,6 +608,9 @@ export class DashboardWidget extends Widget {
     return this._ready;
   }
 
+  /**
+   * Whether the widget can be moved during a resize.
+   */
   get locked(): boolean {
     return this._locked;
   }
@@ -572,6 +618,9 @@ export class DashboardWidget extends Widget {
     this._locked = newState;
   }
 
+  /**
+   * The content of the widget.
+   */
   get content(): Widget {
     return this._content;
   }
@@ -641,17 +690,29 @@ export namespace DashboardWidget {
     fit?: boolean;
   }
 
+  /**
+   * A type for desccribing the direction of an overlap.
+   */
   export type Direction = 'left' | 'right' | 'up' | 'down' | 'none';
 
+  /**
+   * A type for describing an overlap between two widgets.
+   */
   export type Overlap = {
     widget: DashboardWidget;
     type: Direction;
   };
 
+  /**
+   * Create a unique widget id.
+   */
   export function createDashboardWidgetId(): string {
     return `DashboardWidget-${UUID.uuid4()}`;
   }
 
+  /**
+   * Create a resizer element for a dashboard widget.
+   */
   export function createResizer(): HTMLElement {
     const resizer = document.createElement('div');
     resizer.classList.add('pr-Resizer');
@@ -665,6 +726,18 @@ export namespace DashboardWidget {
     return resizer;
   }
 
+  /**
+   * Create a dashboard widget based on a WidgetInfo object.
+   *
+   * @param options - the options used to create the widget.
+   *
+   * @param notebookTracker - a notebook tracker used to locate a
+   * notebook/cell for the widget given a notebook/cell id.
+   *
+   * @param fit - whether to fit the new widget to its content.
+   *
+   * @returns - a new dashboard widget.
+   */
   export function createWidget(
     options: Widgetstore.WidgetInfo,
     notebookTracker: INotebookTracker,
@@ -701,6 +774,10 @@ export namespace DashboardWidget {
     return widget;
   }
 
+  /**
+   * A type to describe the different kinds of mouseMoves that can occur
+   * on a widget.
+   */
   export type MouseMode = 'drag' | 'resize' | 'none';
 
   /**
@@ -740,8 +817,11 @@ namespace Private {
    * mouse is moved beyond a certain distance (DRAG_THRESHOLD).
    *
    * @param prevX - X Coordinate of the mouse pointer during the mousedown event
+   *
    * @param prevY - Y Coordinate of the mouse pointer during the mousedown event
+   *
    * @param nextX - Current X Coordinate of the mouse pointer
+   *
    * @param nextY - Current Y Coordinate of the mouse pointer
    */
   export function shouldStartDrag(

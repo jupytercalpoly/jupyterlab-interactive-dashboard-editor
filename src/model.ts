@@ -33,6 +33,9 @@ import { Dashboard } from './dashboard';
 
 import { getNotebookById } from './utils';
 
+/**
+ * The definition of a model object for a dashboard widget.
+ */
 export interface IDashboardModel extends DocumentRegistry.IModel {
   /**
    * The widget store for the dashboard.
@@ -49,24 +52,54 @@ export interface IDashboardModel extends DocumentRegistry.IModel {
    */
   readonly contentsManager: ContentsManager;
 
+  /**
+   * The metadata associated with the dashboard.
+   */
   metadata: IObservableJSON;
 
+  /**
+   * A signal emitted when the dashboard finishes deserializing from a file.
+   */
   loaded: Signal<this, void>;
 
+  /**
+   * The display mode of the dashboard.
+   */
   mode: Dashboard.Mode;
 
+  /**
+   * The path to the dashboard file.
+   */
   path: string;
 
+  /**
+   * The name of the dashboard.
+   */
   name: string;
 
+  /**
+   * The width of the dashboard in pixels.
+   */
   width: number;
 
+  /**
+   * The height of the dashboard in pixels.
+   */
   height: number;
 
+  /**
+   * The scroll mode of the dashboard.
+   */
   scrollMode: Dashboard.ScrollMode;
 }
 
+/**
+ * An implementation of a dashboard Model.
+ */
 export class DashboardModel extends DocumentModel implements IDashboardModel {
+  /**
+   * Construct a new dashboard model.
+   */
   constructor(options: DashboardModel.IOptions) {
     super(options.languagePreference, options.modelDB);
 
@@ -78,6 +111,9 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this.contentsManager = options.contentsManager || new ContentsManager();
   }
 
+  /**
+   * Deserialize the model from JSON.
+   */
   async fromJSON(value: IDashboardContent): Promise<void> {
     const outputs: Widgetstore.WidgetInfo[] = [];
 
@@ -122,6 +158,9 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     // this.mode = 'present';
   }
 
+  /**
+   * Serialize the model to JSON.
+   */
   toJSON(): IDashboardContent {
     const notebookTracker = this.notebookTracker;
 
@@ -175,10 +214,16 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     return file;
   }
 
+  /**
+   * Serialize the model to a string.
+   */
   toString(): string {
     return JSON.stringify(this.toJSON(), undefined, 2);
   }
 
+  /**
+   * Deserialize the model from a string.
+   */
   async fromString(value: string): Promise<void> {
     if (!value) {
       this._loaded.emit(void 0);

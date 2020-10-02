@@ -10,7 +10,7 @@ import { Cell } from '@jupyterlab/cells';
 
 import { getNotebookById, getCellById } from './utils';
 
-import { IDashboardChange, DashboardLayout } from './custom_layout';
+import { IDashboardChange, DashboardLayout } from './layout';
 
 import { Dashboard } from './dashboard';
 

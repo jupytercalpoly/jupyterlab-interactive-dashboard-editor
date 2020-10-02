@@ -22,7 +22,7 @@ import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
 
-import { DashboardLayout } from './custom_layout';
+import { DashboardLayout } from './layout';
 
 import { DashboardWidget } from './widget';
 

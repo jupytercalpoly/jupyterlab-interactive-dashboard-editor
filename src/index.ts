@@ -51,7 +51,7 @@ import { CommandIDs } from './commands';
 
 import { ReadonlyJSONObject } from '@lumino/coreutils';
 
-import { DashboardLayout } from './custom_layout';
+import { DashboardLayout } from './layout';
 
 import { Widgetstore } from './widgetstore';
 
