@@ -541,7 +541,6 @@ function addCommands(
     icon: saveIcon,
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
-      dashboard.model.path;
       dashboard.context.save();
     },
     isEnabled: (args) => inToolbar(args) || hasDashboard(),

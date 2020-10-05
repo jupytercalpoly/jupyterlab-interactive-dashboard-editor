@@ -68,11 +68,6 @@ export interface IDashboardModel extends DocumentRegistry.IModel {
   mode: Dashboard.Mode;
 
   /**
-   * The path to the dashboard file.
-   */
-  path: string;
-
-  /**
    * The name of the dashboard.
    */
   name: string;
@@ -237,13 +232,9 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     // no-op
   }
 
-  get path(): string {
-    return this._path;
-  }
-  set path(newPath: string) {
-    this._path = newPath;
-  }
-
+  /**
+   * The display mode of the dashboard.
+   */
   get mode(): Dashboard.Mode {
     return this._mode;
   }
@@ -256,10 +247,19 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this.triggerStateChange({ name: 'mode', oldValue, newValue });
   }
 
+  /**
+   * The metadata associated with the dashboard;
+   */
   get metadata(): IObservableJSON {
     return this._metadata;
   }
 
+  /**
+   * The name of the dashboard.
+   *
+   * ### Development notes
+   * This may be redundant with the filename and could be removed.
+   */
   get name(): string {
     return this.metadata.get('name') as string;
   }
@@ -267,6 +267,9 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this._setMetadataProperty('name', newValue);
   }
 
+  /**
+   * The width of the dashboard in pixels.
+   */
   get width(): number {
     return +this.metadata.get('dashboardWidth');
   }
@@ -274,6 +277,9 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this._setMetadataProperty('dashboardWidth', newValue);
   }
 
+  /**
+   * The height of the dashboard in pixels.
+   */
   get height(): number {
     return +this.metadata.get('dashboardHeight');
   }
@@ -281,6 +287,16 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this._setMetadataProperty('dashboardHeight', newValue);
   }
 
+  /**
+   * Sets a key in the metadata and emits the change as a signal.
+   *
+   * @param key - the key to change in the metadata.
+   *
+   * @param newValue - the new value to set the key to.
+   *
+   * ### Notes
+   * No signal is emitted if newValue is the same as the old value.
+   */
   private _setMetadataProperty(key: string, newValue: any): void {
     const oldValue = this.metadata.get(key);
     if (oldValue === newValue) {
@@ -290,10 +306,16 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this.triggerStateChange({ name: key, oldValue, newValue });
   }
 
+  /**
+   * A signal emitted when the dashboard is done being deserialized.
+   */
   get loaded(): Signal<this, void> {
     return this._loaded;
   }
 
+  /**
+   * The scroll mode of the dashboard.
+   */
   get scrollMode(): Dashboard.ScrollMode {
     return this._scrollMode;
   }
@@ -318,7 +340,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
   private _metadata: IObservableJSON = new ObservableJSON();
   private _loaded = new Signal<this, void>(this);
-  private _path: string;
   private _mode: Dashboard.Mode = 'edit';
   private _scrollMode: Dashboard.ScrollMode = 'constrained';
 }
@@ -342,36 +363,67 @@ export namespace DashboardModel {
   }
 }
 
+/**
+ * A factory class for dashboard models.
+ */
 export class DashboardModelFactory
   implements DocumentRegistry.IModelFactory<IDashboardModel> {
+  /**
+   * Construct a new dashboard model factory.
+   */
   constructor(options: DashboardModelFactory.IOptions) {
     this._notebookTracker = options.notebookTracker;
   }
 
+  /**
+   * Whether the model factory is disposed.
+   */
   get isDisposed(): boolean {
     return this._disposed;
   }
 
+  /**
+   * Dispose of the resources held by the model factory.
+   */
   dispose(): void {
     this._disposed = true;
   }
 
+  /**
+   * The format of the file.
+   */
   get fileFormat(): Contents.FileFormat {
     return 'text';
   }
 
+  /**
+   * The name of the model.
+   */
   get name(): string {
     return 'dashboard';
   }
 
+  /**
+   * The content type of the file.
+   */
   get contentType(): Contents.ContentType {
     return 'file';
   }
 
+  /**
+   * Get the preferred kernel langauge given a path (currently a no-op).
+   */
   preferredLanguage(path: string): string {
     return '';
   }
 
+  /**
+   * Create a new model for a given path.
+   *
+   * @param languagePreference - an optional kernel language preference.
+   *
+   * @param modelDB - the model database associated with the model.
+   */
   createNew(languagePreference?: string, modelDB?: IModelDB): DashboardModel {
     const notebookTracker = this._notebookTracker;
     const contentsManager = new ContentsManager();
@@ -393,6 +445,9 @@ export class DashboardModelFactory
   private _docManager: IDocumentManager;
 }
 
+/**
+ * A namespace for the dashboard model factory.
+ */
 export namespace DashboardModelFactory {
   export interface IOptions {
     notebookTracker: INotebookTracker;
