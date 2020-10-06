@@ -10,7 +10,7 @@ import { Cell } from '@jupyterlab/cells';
 
 import { getNotebookById, getCellById } from './utils';
 
-import { IDashboardChange, DashboardLayout } from './custom_layout';
+import { IDashboardChange, DashboardLayout } from './layout';
 
 import { Dashboard } from './dashboard';
 
@@ -53,11 +53,12 @@ export class Widgetstore extends Litestore {
   /**
    * Start listening for changes to a dashboard and automatically
    * reflect them in the datastore.
-
    */
   connectDashboard(dashboard: Dashboard): void {
     const layout = dashboard.layout as DashboardLayout;
-    layout.changed.connect((_layout, changes) => this._handleChanges(changes));
+    layout.changed.connect((layout, changes) =>
+      this._handleChanges(layout, changes)
+    );
   }
 
   /**
@@ -65,15 +66,20 @@ export class Widgetstore extends Litestore {
    */
   disconnectDashboard(dashboard: Dashboard): void {
     const layout = dashboard.layout as DashboardLayout;
-    layout.changed.disconnect((_layout, changes) =>
-      this._handleChanges(changes)
+    layout.changed.disconnect((layout, changes) =>
+      this._handleChanges(layout, changes)
     );
   }
 
   /**
    * Handle change signals from a connected dashboard.
    */
-  private _handleChanges(changes: IDashboardChange[]): void {
+  private _handleChanges(
+    layout: DashboardLayout,
+    changes: IDashboardChange[]
+  ): void {
+    (layout.parent as Dashboard).model.dirty = true;
+
     this.startBatch();
 
     for (const change of changes) {

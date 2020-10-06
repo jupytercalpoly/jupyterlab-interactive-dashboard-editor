@@ -22,7 +22,7 @@ import { Message } from '@lumino/messaging';
 
 import { IDragEvent } from '@lumino/dragdrop';
 
-import { DashboardLayout } from './custom_layout';
+import { DashboardLayout } from './layout';
 
 import { DashboardWidget } from './widget';
 
@@ -144,7 +144,7 @@ export class Dashboard extends Widget {
     if (pos) {
       pos.left = event.offsetX + this.node.scrollLeft;
       pos.top = event.offsetY + this.node.scrollTop;
-      (this.layout as DashboardLayout).drawDropZone(pos);
+      (this.layout as DashboardLayout).drawDropZone(pos, '#2b98f0');
     }
     event.preventDefault();
     event.stopPropagation();
@@ -239,7 +239,6 @@ export class Dashboard extends Widget {
   private _evtScroll(_event: Event): void {
     const model = this.model;
 
-    console.log('scrollMode', model.scrollMode);
     if (model.scrollMode !== 'infinite') {
       return;
     }
