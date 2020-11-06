@@ -2,6 +2,8 @@ import { NotebookPanel } from '@jupyterlab/notebook';
 
 import { CodeCell, MarkdownCell, Cell } from '@jupyterlab/cells';
 
+import { filter, map, toArray, ArrayExt } from '@lumino/algorithm';
+
 import * as React from 'react';
 
 import {
@@ -10,6 +12,7 @@ import {
   IWidgetTracker,
   Toolbar,
   ReactWidget,
+  // MainAreaWidget,
 } from '@jupyterlab/apputils';
 
 import { CommandRegistry } from '@lumino/commands';
@@ -28,7 +31,7 @@ import { DashboardWidget } from './widget';
 
 import { Widgetstore } from './widgetstore';
 
-import { addCellId, addNotebookId } from './utils';
+import { addCellId, addNotebookId, getNotebookById, getCellId, updateMetadata } from './utils';
 
 import {
   DocumentWidget,
@@ -70,9 +73,11 @@ export class Dashboard extends Widget {
   constructor(options: Dashboard.IOptions) {
     super(options);
 
-    const { outputTracker, model, context } = options;
+    const { outputTracker, model } = options;
     this._model = model;
-    this._context = context;
+    if (options.context !== undefined) {
+      this._context = options.context;
+    }
     const { widgetstore, mode } = model;
 
     this.layout = new DashboardLayout({
@@ -349,6 +354,55 @@ export class Dashboard extends Widget {
     return (this.layout as DashboardLayout).createWidget(info, fit);
   }
 
+  saveToNotebookMetadata() {
+    // Get a list of all notebookIds used in the dashboard.
+    const widgets = toArray(
+      filter(
+        this.model.widgetstore.getWidgets(),
+        (widget) => widget.widgetId && !widget.removed
+      )
+    );
+
+    const notebookIds = toArray(
+      map(
+        widgets,
+        (record) => record.notebookId
+      )
+    );
+
+    if (!notebookIds.every((v) => v === notebookIds[0])) {
+      console.log(notebookIds);
+      throw new Error('Only single notebook dashboards can be saved to metadata.');
+    }
+
+    const notebookId = notebookIds[0];
+    const notebookTracker = this.model.notebookTracker;
+    const notebook = getNotebookById(notebookId, notebookTracker);
+    updateMetadata(notebook, { hasDashboard: true });
+
+    const cells = notebook.content.widgets;
+
+    for (let widget of widgets) {
+      let { pos, cellId } = widget;
+
+      let cell = ArrayExt.findFirstValue(
+        cells,
+        (cell) => getCellId(cell) === cellId
+      );
+
+      // let output = find(
+      //   this.layout,
+      //   (widget) => widget.id === widgetId
+      // );
+
+      if (cell !== undefined) {
+        updateMetadata(cell, { pos });
+      }
+    }
+
+    notebook.context.save();
+  }
+
   get model(): IDashboardModel {
     return this._model;
   }
@@ -394,15 +448,28 @@ export namespace Dashboard {
 
     model: IDashboardModel;
 
-    context: DocumentRegistry.IContext<DocumentRegistry.IModel>;
+    context?: DocumentRegistry.IContext<DocumentRegistry.IModel>;
   }
 }
+
+// export class SingleNotebookDashboard extends MainAreaWidget {
+//   constructor(options: SingleNotebookDashboard.IOptions) {
+
+//   }
+// }
+
+// export namespace SingleNotebookDashboard {
+//   export interface IOptions {
+
+//   }
+// }
 
 export class DashboardDocument extends DocumentWidget<Dashboard> {
   constructor(options: DashboardDocument.IOptions) {
     let { content, reveal } = options;
     const { context, commandRegistry } = options;
     const model = context.model as DashboardModel;
+    model.path = context.path;
     content = content || new Dashboard({ ...options, model, context });
     reveal = Promise.all([reveal, context.ready]);
     super({
@@ -473,7 +540,7 @@ export namespace DashboardDocument {
     name?: string;
 
     /**
-     * Dashboard canvas width (default is 1280).
+     * Optional widgetstore to restore from.
      */
     store?: Widgetstore;
 

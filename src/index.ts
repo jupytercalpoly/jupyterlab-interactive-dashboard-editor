@@ -35,7 +35,7 @@ import { ILauncher } from '@jupyterlab/launcher';
 
 import { DashboardIcons } from './icons';
 
-import { DashboardModelFactory } from './model';
+import { DashboardModel, DashboardModelFactory } from './model';
 
 import {
   undoIcon,
@@ -49,11 +49,13 @@ import {
 
 import { CommandIDs } from './commands';
 
-import { ReadonlyJSONObject } from '@lumino/coreutils';
+import { ReadonlyJSONObject, UUID } from '@lumino/coreutils';
 
 import { DashboardLayout } from './layout';
 
-import { Widgetstore } from './widgetstore';
+import { Widgetstore, WidgetInfo } from './widgetstore';
+
+import { getMetadata } from './utils';
 
 const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
   id: 'jupyterlab-interactive-dashboard-editor',
@@ -67,7 +69,6 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     docManager: IDocumentManager,
     launcher: ILauncher
   ): IDashboardTracker => {
-    console.log('JupyterLab extension presto is activated!');
 
     // Tracker for Dashboard
     const dashboardTracker = new DashboardTracker({ namespace: 'dashboards' });
@@ -103,10 +104,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     );
 
     // Create a new model factory.
-    const modelFactory = new DashboardModelFactory({
-      notebookTracker,
-      docManager,
-    });
+    const modelFactory = new DashboardModelFactory({ notebookTracker });
 
     // Create a new widget factory.
     const widgetFactory = new DashboardDocumentFactory({
@@ -175,6 +173,12 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     });
 
     app.contextMenu.addItem({
+      command: CommandIDs.saveToMetadata,
+      selector: '.pr-JupyterDashboard',
+      rank: 6,
+    });
+
+    app.contextMenu.addItem({
       command: CommandIDs.deleteOutput,
       selector: '.pr-EditableWidget',
       rank: 0,
@@ -190,6 +194,12 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       type: 'separator',
       selector: '.pr-EditableWidget',
       rank: 2,
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.openFromMetadata,
+      selector: '.jp-Notebook',
+      rank: 16
     });
 
     // Add commands to key bindings
@@ -509,6 +519,14 @@ function addCommands(
       inToolbar(args) || (hasOutput() && clipboard.size !== 0),
   });
 
+  commands.addCommand(CommandIDs.saveToMetadata, {
+    label: 'Save Dashboard To Notebook Metadata',
+    execute: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      dashboard.saveToNotebookMetadata();
+    }
+  });
+
   commands.addCommand(CommandIDs.createNew, {
     label: 'Dashboard',
     icon: DashboardIcons.blueDashboard,
@@ -545,6 +563,60 @@ function addCommands(
     },
     isEnabled: (args) => inToolbar(args) || hasDashboard(),
   });
+
+  commands.addCommand(CommandIDs.openFromMetadata, {
+    label: 'Open Metadata Dashboard',
+    execute: (args) => {
+      const notebook = notebookTracker.currentWidget;
+      const notebookMetadata = getMetadata(notebook);
+      const notebookId = notebookMetadata.id;
+      const cells = notebook.content.widgets;
+
+      let widgetstore = new Widgetstore({ id: 0, notebookTracker });
+
+      widgetstore.startBatch();
+
+      for (let cell of cells) {
+        let metadata = getMetadata(cell);
+        if (metadata !== undefined && metadata.pos !== undefined) {
+          let widgetInfo: WidgetInfo = {
+            widgetId: DashboardWidget.createDashboardWidgetId(),
+            notebookId,
+            cellId: metadata.id,
+            pos: metadata.pos
+          };
+          console.log('widget added', widgetInfo);
+          widgetstore.addWidget(widgetInfo);
+        }
+      }
+
+      widgetstore.endBatch();
+
+      const model = new DashboardModel({
+        widgetstore,
+        notebookTracker,
+      });
+
+      const dashboard = new Dashboard({
+        outputTracker,
+        model
+      });
+
+      dashboard.id = UUID.uuid4();
+      dashboard.updateLayoutFromWidgetstore();
+      dashboard.model.mode = 'present';
+
+      notebook.context.addSibling(dashboard, { mode: 'split-left' });
+    },
+    isEnabled: (args) => {
+      const notebook = notebookTracker.currentWidget;
+      const metadata = getMetadata(notebook);
+      if (metadata !== undefined && metadata.hasDashboard !== undefined) {
+        return metadata.hasDashboard;
+      }
+      return false;
+    }
+  })
 }
 
 /**

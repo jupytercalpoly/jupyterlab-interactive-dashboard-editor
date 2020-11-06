@@ -1,3 +1,5 @@
+import { PathExt } from '@jupyterlab/coreutils';
+
 import { DocumentRegistry, DocumentModel } from '@jupyterlab/docregistry';
 
 import {
@@ -14,8 +16,6 @@ import {
 } from './dbformat';
 
 import { DashboardWidget } from './widget';
-
-import { IDocumentManager } from '@jupyterlab/docmanager';
 
 import { INotebookTracker } from '@jupyterlab/notebook';
 
@@ -86,6 +86,11 @@ export interface IDashboardModel extends DocumentRegistry.IModel {
    * The scroll mode of the dashboard.
    */
   scrollMode: Dashboard.ScrollMode;
+
+  /**
+   * The current path associated with the model.
+   */
+  path: string;
 }
 
 /**
@@ -100,8 +105,12 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
     const notebookTracker = (this.notebookTracker = options.notebookTracker);
 
-    this.widgetstore =
-      options.widgetstore || new Widgetstore({ id: 0, notebookTracker });
+    if (options.widgetstore !== undefined) {
+      this.widgetstore = options.widgetstore;
+      this._restore = true;
+    } else {
+      this.widgetstore = new Widgetstore({ id: 0, notebookTracker });
+    }
 
     this.contentsManager = options.contentsManager || new ContentsManager();
   }
@@ -110,9 +119,15 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
    * Deserialize the model from JSON.
    */
   async fromJSON(value: IDashboardContent): Promise<void> {
+    // A widgetstore has been supplied and the dashboard is ready to be populated.
+    if (this._restore) {
+      this._loaded.emit(void 0);
+    }
+
     const outputs: Widgetstore.WidgetInfo[] = [];
 
-    for (const [path, notebookId] of Object.entries(value.paths)) {
+    for (const [_path, notebookId] of Object.entries(value.paths)) {
+      let path = PathExt.resolve(PathExt.dirname(this.path), _path);
       if (!getNotebookById(notebookId, this.notebookTracker)) {
         await this.contentsManager
           .get(path)
@@ -150,7 +165,6 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this.widgetstore.endBatch();
 
     this._loaded.emit(void 0);
-    // this.mode = 'present';
   }
 
   /**
@@ -180,13 +194,15 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
     each(records, (record) => {
       const notebookId = record.notebookId;
-      const path = getPathFromNotebookId(notebookId, notebookTracker);
+      const _path = getPathFromNotebookId(notebookId, notebookTracker);
 
-      if (path === undefined) {
+      if (_path === undefined) {
         throw new Error(
           `Notebook path for notebook with id ${notebookId} not found`
         );
       }
+
+      const path = PathExt.relative(PathExt.dirname(this.path), _path);
 
       if (file.paths[path] !== undefined && file.paths[path] !== notebookId) {
         throw new Error(`Conflicting paths for same notebook id ${notebookId}`);
@@ -324,6 +340,16 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   }
 
   /**
+   * The current path associated with the model.
+   */
+  get path(): string {
+    return this._path;
+  }
+  set path(newPath: string) {
+    this._path = newPath;
+  }
+
+  /**
    * The widget store for the dashboard.
    */
   readonly widgetstore: Widgetstore;
@@ -342,6 +368,8 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   private _loaded = new Signal<this, void>(this);
   private _mode: Dashboard.Mode = 'edit';
   private _scrollMode: Dashboard.ScrollMode = 'constrained';
+  private _path: string;
+  private _restore: boolean = false;
 }
 
 /**
@@ -358,8 +386,6 @@ export namespace DashboardModel {
     widgetstore?: Widgetstore;
 
     contentsManager?: ContentsManager;
-
-    docManager: IDocumentManager;
   }
 }
 
@@ -427,14 +453,12 @@ export class DashboardModelFactory
   createNew(languagePreference?: string, modelDB?: IModelDB): DashboardModel {
     const notebookTracker = this._notebookTracker;
     const contentsManager = new ContentsManager();
-    const docManager = this._docManager;
 
     const model = new DashboardModel({
       notebookTracker,
       languagePreference,
       modelDB,
       contentsManager,
-      docManager,
     });
 
     return model;
@@ -442,7 +466,6 @@ export class DashboardModelFactory
 
   private _disposed = false;
   private _notebookTracker: INotebookTracker;
-  private _docManager: IDocumentManager;
 }
 
 /**
@@ -451,6 +474,5 @@ export class DashboardModelFactory
 export namespace DashboardModelFactory {
   export interface IOptions {
     notebookTracker: INotebookTracker;
-    docManager: IDocumentManager;
   }
 }

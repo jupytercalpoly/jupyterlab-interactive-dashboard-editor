@@ -124,9 +124,8 @@ select.pr-ToolbarSelector.jp-mod-styled {
     display: block;
     box-shadow: none;
     border: none;
-    /* top: 5px !important; */
   }
-/*   
-  .pr-ToolbarSelector {
-    top: 5px !important;
-  } */
+
+  .pr-DragImage {
+    box-shadow: var(--jp-elevation-z2);
+  }

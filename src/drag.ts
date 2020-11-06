@@ -137,8 +137,8 @@ export class Drag implements IDisposable {
     this.proposedAction = options.proposedAction || 'copy';
     this.supportedActions = options.supportedActions || 'all';
     this.source = options.source || null;
-    this._widgetX = options.widgetX || 0;
-    this._widgetY = options.widgetY || 0;
+    this._dragAdjustX = options.dragAdjustX || 0;
+    this._dragAdjustY = options.dragAdjustY || 0;
   }
 
   /**
@@ -228,8 +228,8 @@ export class Drag implements IDisposable {
       return this._promise;
     }
 
-    this._deltaX = this._widgetX - clientX;
-    this._deltaY = this._widgetY - clientY;
+    this._dragOffsetX = this._dragAdjustX - clientX;
+    this._dragOffsetY = this._dragAdjustY - clientY;
 
     // Install the document listeners for the drag object.
     this._addListeners();
@@ -295,7 +295,7 @@ export class Drag implements IDisposable {
 
     // Move the drag image to the specified client position. This is
     // performed *after* dispatching to prevent unnecessary reflows.
-    this._moveDragImage(event.clientX, event.clientY);
+    this.moveDragImage(event.clientX, event.clientY);
   }
 
   /**
@@ -416,8 +416,8 @@ export class Drag implements IDisposable {
 
     // Find the current indicated element at the given position.
     const currElems = document.elementsFromPoint(
-      event.clientX + this._deltaX,
-      event.clientY + this._deltaY
+      event.clientX + this._dragOffsetX,
+      event.clientY + this._dragOffsetY
     );
 
     let currElem = currElems.find((elem) =>
@@ -470,8 +470,8 @@ export class Drag implements IDisposable {
     const style = this.dragImage.style;
     style.pointerEvents = 'none';
     style.position = 'fixed';
-    style.top = `${clientY + this._deltaY}px`;
-    style.left = `${clientX + this._deltaX}px`;
+    style.top = `${clientY + this._dragOffsetY}px`;
+    style.left = `${clientX + this._dragOffsetX}px`;
     document.body.appendChild(this.dragImage);
   }
 
@@ -480,13 +480,13 @@ export class Drag implements IDisposable {
    *
    * This is a no-op if there is no drag image element.
    */
-  private _moveDragImage(clientX: number, clientY: number): void {
+  protected moveDragImage(clientX: number, clientY: number): void {
     if (!this.dragImage) {
       return;
     }
     const style = this.dragImage.style;
-    style.top = `${clientY + this._deltaY}px`;
-    style.left = `${clientX + this._deltaX}px`;
+    style.top = `${clientY + this.dragOffsetY}px`;
+    style.left = `${clientX + this.dragOffsetX}px`;
   }
 
   /**
@@ -607,12 +607,12 @@ export class Drag implements IDisposable {
     requestAnimationFrame(this._onScrollFrame);
   };
 
-  get deltaX(): number {
-    return this._deltaX;
+  get dragOffsetX(): number {
+    return this._dragOffsetX;
   }
 
-  get deltaY(): number {
-    return this._deltaY;
+  get dragOffsetY(): number {
+    return this._dragOffsetY;
   }
 
   private _disposed = false;
@@ -623,10 +623,10 @@ export class Drag implements IDisposable {
   private _promise: Promise<DropAction> | null = null;
   private _scrollTarget: Private.IScrollTarget | null = null;
   private _resolve: ((value: DropAction) => void) | null = null;
-  private _widgetX: number;
-  private _widgetY: number;
-  private _deltaX: number;
-  private _deltaY: number;
+  private _dragAdjustX: number;
+  private _dragAdjustY: number;
+  private _dragOffsetX: number;
+  private _dragOffsetY: number;
 }
 
 /**
@@ -702,14 +702,14 @@ export namespace Drag {
      *
      * The default value is 0.
      */
-    widgetX?: number;
+    dragAdjustX?: number;
 
     /**
      * How many pixels to offset the drag/image in the y direction.
      *
      * The default value is 0.
      */
-    widgetY?: number;
+    dragAdjustY?: number;
   }
 
   /**
@@ -842,8 +842,8 @@ namespace Private {
     drag: Drag
   ): IScrollTarget | null {
     // Look up the client mouse position.
-    const x = event.clientX + drag.deltaX;
-    const y = event.clientY + drag.deltaY;
+    const x = event.clientX + drag.dragOffsetX;
+    const y = event.clientY + drag.dragOffsetY;
 
     // Get the element under the mouse.
     let element: Element | null = document.elementFromPoint(x, y);
@@ -1199,10 +1199,10 @@ namespace Private {
       true,
       window,
       0,
-      event.screenX + drag.deltaX,
-      event.screenY + drag.deltaY,
-      event.clientX + drag.deltaX,
-      event.clientY + drag.deltaY,
+      event.screenX + drag.dragOffsetX,
+      event.screenY + drag.dragOffsetY,
+      event.clientX + drag.dragOffsetX,
+      event.clientY + drag.dragOffsetY,
       event.ctrlKey,
       event.altKey,
       event.shiftKey,

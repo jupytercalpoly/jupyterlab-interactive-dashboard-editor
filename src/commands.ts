@@ -19,4 +19,6 @@ export namespace CommandIDs {
   export const startFullscreen = 'dashboard:start-fullscreen';
   export const createNew = 'dashboard:create-new';
   export const setTileSize = 'dashboard:set-tile-size';
+  export const saveToMetadata = 'dashboard:save-to-metadata';
+  export const openFromMetadata = 'dashboard:open-from-metadata';
 }
