@@ -366,7 +366,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
   private _metadata: IObservableJSON = new ObservableJSON();
   private _loaded = new Signal<this, void>(this);
-  private _mode: Dashboard.Mode = 'edit';
+  private _mode: Dashboard.Mode = 'grid-edit';
   private _scrollMode: Dashboard.ScrollMode = 'constrained';
   private _path: string;
   private _restore: boolean = false;

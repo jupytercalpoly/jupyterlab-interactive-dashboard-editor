@@ -56,9 +56,9 @@ export class DashboardLayout extends Layout {
 
     this._canvas = DashboardLayout.makeCanvas(this._width, this._height);
 
-    if (mode === 'edit') {
+    if (mode === 'free-edit') {
       this._canvas.classList.add(FREE_LAYOUT_CLASS);
-    } else if (mode === 'grid') {
+    } else if (mode === 'grid-edit') {
       this._canvas.classList.add(TILED_LAYOUT_CLASS);
     }
 
@@ -122,6 +122,9 @@ export class DashboardLayout extends Layout {
   onAfterAttach(msg: Message): void {
     super.onAfterAttach(msg);
     this._dashboard = this.parent as Dashboard;
+    if (this.mode === 'grid-edit') {
+      this.setTileSize(this.tileSize);
+    }
   }
 
   /**
@@ -364,7 +367,7 @@ export class DashboardLayout extends Layout {
     top = Math.max(top, 0);
 
     // Snap to grid if in grid mode.
-    if (this._mode === 'grid') {
+    if (widget.mode === 'grid-edit') {
       left = Private.mround(left, this._tileSize);
       top = Private.mround(top, this._tileSize);
       width = Math.max(Private.mround(width, this._tileSize), this._tileSize);
@@ -747,13 +750,13 @@ export class DashboardLayout extends Layout {
         this._canvas.classList.remove(FREE_LAYOUT_CLASS);
         this._canvas.classList.remove(TILED_LAYOUT_CLASS);
         break;
-      case 'edit':
+      case 'free-edit':
         this.canvas.style.backgroundPosition = null;
         this.canvas.style.backgroundSize = null;
         this._canvas.classList.remove(TILED_LAYOUT_CLASS);
         this._canvas.classList.add(FREE_LAYOUT_CLASS);
         break;
-      case 'grid':
+      case 'grid-edit':
         this.setTileSize(this._tileSize);
         this._canvas.classList.remove(FREE_LAYOUT_CLASS);
         this.canvas.classList.add(TILED_LAYOUT_CLASS);
@@ -848,7 +851,7 @@ export class DashboardLayout extends Layout {
 
     let { left, top, width, height } = pos;
 
-    if (this.mode === 'grid') {
+    if (this.mode === 'grid-edit') {
       width = Math.max(Private.mround(width, this._tileSize), this._tileSize);
       height = Math.max(Private.mround(height, this._tileSize), this._tileSize);
       left = Private.mround(left, this._tileSize);
@@ -892,7 +895,7 @@ export class DashboardLayout extends Layout {
    * contain all the widgets ("trims" excess dashboard to the right and
    * bottom of the content).
    */
-  trimCanvas(): void {
+  trimDashboard(): void {
     const model = (this.parent as Dashboard).model;
     let maxWidth = 0;
     let maxHeight = 0;
@@ -1007,7 +1010,7 @@ export namespace DashboardLayout {
   /**
    * The default size of a single tile in tiled layout.
    */
-  export const DEFAULT_TILE_SIZE = 50;
+  export const DEFAULT_TILE_SIZE = 32;
 }
 
 /**

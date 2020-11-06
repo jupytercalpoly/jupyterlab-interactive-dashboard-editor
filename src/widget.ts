@@ -363,10 +363,10 @@ export class DashboardWidget extends Widget {
     this.node.style.width = `${width}px`;
     this.node.style.height = `${height}px`;
 
-    if (this.mode === 'grid') {
+    if (this.mode === 'grid-edit') {
       (this.parent.layout as DashboardLayout).drawDropZone(this.pos, '#2b98f0');
     }
-    if (this.mode !== 'grid' && this._fitToContent && !event.altKey) {
+    if (this.mode === 'free-edit' && this._fitToContent && !event.altKey) {
       this.fitContent();
     }
   }
@@ -594,7 +594,7 @@ export class DashboardWidget extends Widget {
     } else {
       this.addClass(EDITABLE_WIDGET_CLASS);
     }
-    if (newMode === 'grid') {
+    if (newMode === 'grid-edit') {
       if (this.parent) {
         (this.parent as Dashboard).updateWidget(this, this.pos);
       }
@@ -635,9 +635,9 @@ export class DashboardWidget extends Widget {
   private _cell: CodeCell | MarkdownCell | null = null;
   private _cellId: string;
   private _ready = new Signal<this, void>(this);
-  private _fitToContent = true;
+  private _fitToContent = false;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
-  private _mode: Dashboard.Mode = 'edit';
+  private _mode: Dashboard.Mode = 'grid-edit';
   private _drag: Drag | null = null;
   private _clickData: {
     pressX: number;

@@ -179,6 +179,18 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     });
 
     app.contextMenu.addItem({
+      command: CommandIDs.toggleInfiniteScroll,
+      selector: '.pr-JupyterDashboard',
+      rank: 7,
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.trimDashboard,
+      selector: '.pr-JupyterDashboard',
+      rank: 8,
+    });
+
+    app.contextMenu.addItem({
       command: CommandIDs.deleteOutput,
       selector: '.pr-EditableWidget',
       rank: 0,
@@ -191,9 +203,15 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     });
 
     app.contextMenu.addItem({
-      type: 'separator',
+      command: CommandIDs.toggleWidgetMode,
       selector: '.pr-EditableWidget',
       rank: 2,
+    });
+
+    app.contextMenu.addItem({
+      type: 'separator',
+      selector: '.pr-EditableWidget',
+      rank: 3,
     });
 
     app.contextMenu.addItem({
@@ -372,6 +390,7 @@ function addCommands(
         widget.fitContent();
       }
     },
+    isVisible: (args) => outputTracker.currentWidget.mode === 'free-edit',
     isToggled: (args) => outputTracker.currentWidget.fitToContent,
   });
 
@@ -398,7 +417,7 @@ function addCommands(
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
       if (dashboard.model.mode === 'present') {
-        dashboard.model.mode = 'edit';
+        dashboard.model.mode = 'free-edit';
       } else {
         dashboard.model.mode = 'present';
       }
@@ -585,7 +604,6 @@ function addCommands(
             cellId: metadata.id,
             pos: metadata.pos
           };
-          console.log('widget added', widgetInfo);
           widgetstore.addWidget(widgetInfo);
         }
       }
@@ -616,7 +634,44 @@ function addCommands(
       }
       return false;
     }
-  })
+  });
+
+  commands.addCommand(CommandIDs.toggleWidgetMode, {
+    label: 'Snap to Grid',
+    isToggled: (args) => {
+      const widget = outputTracker.currentWidget;
+      return widget.mode === 'grid-edit';
+    },
+    execute: (args) => {
+      const widget = outputTracker.currentWidget;
+      if (widget.mode === 'grid-edit') {
+        widget.mode = 'free-edit';
+      } else if (widget.mode === 'free-edit') {
+        widget.mode = 'grid-edit';
+      }
+    }
+  });
+
+  commands.addCommand(CommandIDs.toggleInfiniteScroll, {
+    label: 'Infinite Scroll',
+    isToggled: (args) => dashboardTracker.currentWidget?.model.scrollMode === 'infinite',
+    execute: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      if (dashboard.model.scrollMode === 'infinite') {
+        dashboard.model.scrollMode = 'constrained';
+      } else {
+        dashboard.model.scrollMode = 'infinite';
+      }
+    }
+  });
+
+  commands.addCommand(CommandIDs.trimDashboard, {
+    label: 'Trim Dashboard',
+    execute: (args) => {
+      const dashboard = dashboardTracker.currentWidget;
+      (dashboard.layout as DashboardLayout).trimDashboard();
+    }
+  });
 }
 
 /**

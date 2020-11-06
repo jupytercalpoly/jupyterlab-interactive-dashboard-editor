@@ -146,7 +146,7 @@ export class Dashboard extends Widget {
     event.dropAction = 'copy';
     const source = event.source as DashboardWidget;
     const pos = source?.pos;
-    if (pos) {
+    if (pos && source.mode === 'grid-edit') {
       pos.left = event.offsetX + this.node.scrollLeft;
       pos.top = event.offsetY + this.node.scrollTop;
       (this.layout as DashboardLayout).drawDropZone(pos, '#2b98f0');
@@ -243,7 +243,7 @@ export class Dashboard extends Widget {
 
   private _evtScroll(_event: Event): void {
     const model = this.model;
-
+    
     if (model.scrollMode !== 'infinite') {
       return;
     }
@@ -421,7 +421,7 @@ export class Dashboard extends Widget {
  * Namespace for DashboardArea options.
  */
 export namespace Dashboard {
-  export type Mode = 'edit' | 'present' | 'grid';
+  export type Mode = 'free-edit' | 'present' | 'grid-edit';
 
   export type ScrollMode = 'infinite' | 'constrained';
 
@@ -589,9 +589,9 @@ export namespace DashboardDocument {
           value={value}
           aria-label={'Mode'}
         >
-          <option value="present">Present</option>
-          <option value="edit">Free Layout</option>
-          <option value="grid">Tile Layout</option>
+          <option value='present'>Present</option>
+          {/* <option value="free-edit">Free Layout</option> */}
+          <option value='grid-edit'>Edit</option>
         </HTMLSelect>
       );
     }
