@@ -25,13 +25,15 @@ import { Widgetstore } from './widgetstore';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 
-import { filter, each } from '@lumino/algorithm';
+import { each } from '@lumino/algorithm';
 
 import { Signal } from '@lumino/signaling';
 
 import { Dashboard } from './dashboard';
 
 import { getNotebookById } from './utils';
+
+import { PartialJSONObject } from '@lumino/coreutils';
 
 /**
  * The definition of a model object for a dashboard widget.
@@ -118,7 +120,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   /**
    * Deserialize the model from JSON.
    */
-  async fromJSON(value: IDashboardContent): Promise<void> {
+  async fromJSON(value: PartialJSONObject): Promise<void> {
     // A widgetstore has been supplied and the dashboard is ready to be populated.
     if (this._restore) {
       this._loaded.emit(void 0);
@@ -127,7 +129,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     const outputs: Widgetstore.WidgetInfo[] = [];
 
     for (const [_path, notebookId] of Object.entries(value.paths)) {
-      let path = PathExt.resolve(PathExt.dirname(this.path), _path);
+      const path = PathExt.resolve(PathExt.dirname(this.path), _path);
       if (!getNotebookById(notebookId, this.notebookTracker)) {
         await this.contentsManager
           .get(path)
@@ -170,14 +172,11 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   /**
    * Serialize the model to JSON.
    */
-  toJSON(): IDashboardContent {
+  toJSON(): PartialJSONObject {
     const notebookTracker = this.notebookTracker;
 
     // Get all widgets that haven't been removed.
-    const records = filter(
-      this.widgetstore.getWidgets(),
-      (widget) => widget.widgetId && !widget.removed
-    );
+    const records = this.widgetstore.getWidgets();
 
     const metadata: IDashboardMetadata = {
       name: this.name,
@@ -313,7 +312,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
    * ### Notes
    * No signal is emitted if newValue is the same as the old value.
    */
-  private _setMetadataProperty(key: string, newValue: any): void {
+  protected _setMetadataProperty(key: string, newValue: any): void {
     const oldValue = this.metadata.get(key);
     if (oldValue === newValue) {
       return;
@@ -364,12 +363,12 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
    */
   readonly contentsManager: ContentsManager;
 
-  private _metadata: IObservableJSON = new ObservableJSON();
-  private _loaded = new Signal<this, void>(this);
+  protected _metadata: IObservableJSON = new ObservableJSON();
+  protected _loaded = new Signal<this, void>(this);
   private _mode: Dashboard.Mode = 'grid-edit';
   private _scrollMode: Dashboard.ScrollMode = 'constrained';
   private _path: string;
-  private _restore: boolean = false;
+  private _restore = false;
 }
 
 /**

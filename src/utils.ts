@@ -6,25 +6,25 @@ import { UUID, ReadonlyPartialJSONObject } from '@lumino/coreutils';
 
 import { ArrayExt, toArray } from '@lumino/algorithm';
 
-
 /**
  * Gets the presto metadata portion of a notebook or cell.
- * 
+ *
  * @param source - the notebook or cell containing the metadata.
  */
-export function getMetadata(source: NotebookPanel | Cell): any| undefined {
+export function getMetadata(source: NotebookPanel | Cell): any | undefined {
   return source?.model.metadata.get('presto');
 }
 
-
-export function updateMetadata(source: NotebookPanel | Cell, newValues: ReadonlyPartialJSONObject): void {
+export function updateMetadata(
+  source: NotebookPanel | Cell,
+  newValues: ReadonlyPartialJSONObject
+): void {
   const oldMetadata = getMetadata(source);
-  if (oldMetadata !== undefined) {
+  if (oldMetadata != null) {
     source.model.metadata.set('presto', { ...oldMetadata, ...newValues });
   } else {
-    source.model.metadata.set('presto', newValues)
+    source.model.metadata.set('presto', newValues);
   }
-  
 }
 /**
  * Adds a random, unique ID to a notebook's metadata.

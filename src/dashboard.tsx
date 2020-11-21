@@ -2,7 +2,7 @@ import { NotebookPanel } from '@jupyterlab/notebook';
 
 import { CodeCell, MarkdownCell, Cell } from '@jupyterlab/cells';
 
-import { filter, map, toArray, ArrayExt } from '@lumino/algorithm';
+import { map, toArray, each } from '@lumino/algorithm';
 
 import * as React from 'react';
 
@@ -29,9 +29,15 @@ import { DashboardLayout } from './layout';
 
 import { DashboardWidget } from './widget';
 
-import { Widgetstore } from './widgetstore';
+import { WidgetPosition, Widgetstore } from './widgetstore';
 
-import { addCellId, addNotebookId, getNotebookById, getCellId, updateMetadata } from './utils';
+import {
+  addCellId,
+  addNotebookId,
+  getNotebookById,
+  getCellId,
+  updateMetadata,
+} from './utils';
 
 import {
   DocumentWidget,
@@ -46,17 +52,19 @@ import { CommandIDs } from './commands';
 
 import { HTMLSelect } from '@jupyterlab/ui-components';
 
+import { UUID } from '@lumino/coreutils';
+
 // HTML element classes
 
-const DASHBOARD_CLASS = 'pr-JupyterDashboard';
+export const DASHBOARD_CLASS = 'pr-JupyterDashboard';
 
-const DROP_TARGET_CLASS = 'pr-DropTarget';
+export const DROP_TARGET_CLASS = 'pr-DropTarget';
 
-const TOOLBAR_MODE_SWITCHER_CLASS = 'pr-ToolbarModeSwitcher';
+export const TOOLBAR_MODE_SWITCHER_CLASS = 'pr-ToolbarModeSwitcher';
 
-const TOOLBAR_SELECT_CLASS = 'pr-ToolbarSelector';
+export const TOOLBAR_SELECT_CLASS = 'pr-ToolbarSelector';
 
-const TOOLBAR_CLASS = 'pr-DashboardToolbar';
+export const TOOLBAR_CLASS = 'pr-DashboardToolbar';
 
 export const IDashboardTracker = new Token<IDashboardTracker>(
   'jupyterlab-interactive-dashboard-editor'
@@ -72,6 +80,8 @@ export class DashboardTracker extends WidgetTracker<Dashboard> {}
 export class Dashboard extends Widget {
   constructor(options: Dashboard.IOptions) {
     super(options);
+
+    this.id = UUID.uuid4();
 
     const { outputTracker, model } = options;
     this._model = model;
@@ -243,7 +253,7 @@ export class Dashboard extends Widget {
 
   private _evtScroll(_event: Event): void {
     const model = this.model;
-    
+
     if (model.scrollMode !== 'infinite') {
       return;
     }
@@ -354,51 +364,39 @@ export class Dashboard extends Widget {
     return (this.layout as DashboardLayout).createWidget(info, fit);
   }
 
-  saveToNotebookMetadata() {
+  saveToNotebookMetadata(): void {
     // Get a list of all notebookIds used in the dashboard.
-    const widgets = toArray(
-      filter(
-        this.model.widgetstore.getWidgets(),
-        (widget) => widget.widgetId && !widget.removed
-      )
-    );
+    const widgets = toArray(this.model.widgetstore.getWidgets());
 
-    const notebookIds = toArray(
-      map(
-        widgets,
-        (record) => record.notebookId
-      )
-    );
+    const notebookIds = toArray(map(widgets, (record) => record.notebookId));
 
     if (!notebookIds.every((v) => v === notebookIds[0])) {
-      console.log(notebookIds);
-      throw new Error('Only single notebook dashboards can be saved to metadata.');
+      throw new Error(
+        'Only single notebook dashboards can be saved to metadata.'
+      );
     }
 
     const notebookId = notebookIds[0];
     const notebookTracker = this.model.notebookTracker;
     const notebook = getNotebookById(notebookId, notebookTracker);
+
     updateMetadata(notebook, { hasDashboard: true });
 
     const cells = notebook.content.widgets;
 
-    for (let widget of widgets) {
-      let { pos, cellId } = widget;
+    const widgetMap = new Map<string, WidgetPosition>(
+      widgets.map((widget) => [widget.cellId, widget.pos])
+    );
 
-      let cell = ArrayExt.findFirstValue(
-        cells,
-        (cell) => getCellId(cell) === cellId
-      );
-
-      // let output = find(
-      //   this.layout,
-      //   (widget) => widget.id === widgetId
-      // );
-
-      if (cell !== undefined) {
-        updateMetadata(cell, { pos });
+    each(cells, (cell) => {
+      const cellId = getCellId(cell);
+      const pos = widgetMap.get(cellId);
+      if (pos != null) {
+        updateMetadata(cell, { pos, hidden: false });
+      } else {
+        updateMetadata(cell, { hidden: true });
       }
-    }
+    });
 
     notebook.context.save();
   }
@@ -452,18 +450,6 @@ export namespace Dashboard {
   }
 }
 
-// export class SingleNotebookDashboard extends MainAreaWidget {
-//   constructor(options: SingleNotebookDashboard.IOptions) {
-
-//   }
-// }
-
-// export namespace SingleNotebookDashboard {
-//   export interface IOptions {
-
-//   }
-// }
-
 export class DashboardDocument extends DocumentWidget<Dashboard> {
   constructor(options: DashboardDocument.IOptions) {
     let { content, reveal } = options;
@@ -483,7 +469,7 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
     this.toolbar.addClass(TOOLBAR_CLASS);
 
     const commands = commandRegistry;
-    const { save, undo, redo, cut, copy, paste, runOutput } = CommandIDs;
+    const { save, undo, redo, cut, copy, paste } = CommandIDs;
 
     const args = { toolbar: true, dashboardId: content.id };
 
@@ -505,7 +491,6 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
       paste,
       'Paste outputs from the clipboard'
     );
-    const runButton = makeToolbarButton(runOutput, 'Run the selected outputs');
 
     this.toolbar.addItem(save, saveButton);
     this.toolbar.addItem(undo, undoButton);
@@ -513,7 +498,6 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
     this.toolbar.addItem(cut, cutButton);
     this.toolbar.addItem(copy, copyButton);
     this.toolbar.addItem(paste, pasteButton);
-    this.toolbar.addItem(runOutput, runButton);
     this.toolbar.addItem('spacer', Toolbar.createSpacerItem());
     this.toolbar.addItem(
       'switchMode',
@@ -589,9 +573,9 @@ export namespace DashboardDocument {
           value={value}
           aria-label={'Mode'}
         >
-          <option value='present'>Present</option>
+          <option value="present">Present</option>
           {/* <option value="free-edit">Free Layout</option> */}
-          <option value='grid-edit'>Edit</option>
+          <option value="grid-edit">Edit</option>
         </HTMLSelect>
       );
     }

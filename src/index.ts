@@ -27,7 +27,7 @@ import { IDocumentManager } from '@jupyterlab/docmanager';
 
 import { IMainMenu } from '@jupyterlab/mainmenu';
 
-import { Widget } from '@lumino/widgets';
+import { Widget, Menu } from '@lumino/widgets';
 
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 
@@ -49,7 +49,7 @@ import {
 
 import { CommandIDs } from './commands';
 
-import { ReadonlyJSONObject, UUID } from '@lumino/coreutils';
+import { ReadonlyJSONObject } from '@lumino/coreutils';
 
 import { DashboardLayout } from './layout';
 
@@ -69,7 +69,6 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     docManager: IDocumentManager,
     launcher: ILauncher
   ): IDashboardTracker => {
-
     // Tracker for Dashboard
     const dashboardTracker = new DashboardTracker({ namespace: 'dashboards' });
 
@@ -172,22 +171,26 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       rank: 5,
     });
 
-    app.contextMenu.addItem({
+    const experimentalMenu = new Menu({ commands: app.commands });
+    experimentalMenu.title.label = 'Experimental';
+
+    experimentalMenu.addItem({
       command: CommandIDs.saveToMetadata,
+    });
+
+    experimentalMenu.addItem({
+      command: CommandIDs.toggleInfiniteScroll,
+    });
+
+    experimentalMenu.addItem({
+      command: CommandIDs.trimDashboard,
+    });
+
+    app.contextMenu.addItem({
+      type: 'submenu',
+      submenu: experimentalMenu,
       selector: '.pr-JupyterDashboard',
       rank: 6,
-    });
-
-    app.contextMenu.addItem({
-      command: CommandIDs.toggleInfiniteScroll,
-      selector: '.pr-JupyterDashboard',
-      rank: 7,
-    });
-
-    app.contextMenu.addItem({
-      command: CommandIDs.trimDashboard,
-      selector: '.pr-JupyterDashboard',
-      rank: 8,
     });
 
     app.contextMenu.addItem({
@@ -217,7 +220,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     app.contextMenu.addItem({
       command: CommandIDs.openFromMetadata,
       selector: '.jp-Notebook',
-      rank: 16
+      rank: 16,
     });
 
     // Add commands to key bindings
@@ -543,7 +546,7 @@ function addCommands(
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
       dashboard.saveToNotebookMetadata();
-    }
+    },
   });
 
   commands.addCommand(CommandIDs.createNew, {
@@ -591,18 +594,18 @@ function addCommands(
       const notebookId = notebookMetadata.id;
       const cells = notebook.content.widgets;
 
-      let widgetstore = new Widgetstore({ id: 0, notebookTracker });
+      const widgetstore = new Widgetstore({ id: 0, notebookTracker });
 
       widgetstore.startBatch();
 
-      for (let cell of cells) {
-        let metadata = getMetadata(cell);
-        if (metadata !== undefined && metadata.pos !== undefined) {
-          let widgetInfo: WidgetInfo = {
+      for (const cell of cells) {
+        const metadata = getMetadata(cell);
+        if (metadata !== undefined && !metadata.hidden) {
+          const widgetInfo: WidgetInfo = {
             widgetId: DashboardWidget.createDashboardWidgetId(),
             notebookId,
             cellId: metadata.id,
-            pos: metadata.pos
+            pos: metadata.pos,
           };
           widgetstore.addWidget(widgetInfo);
         }
@@ -617,10 +620,9 @@ function addCommands(
 
       const dashboard = new Dashboard({
         outputTracker,
-        model
+        model,
       });
 
-      dashboard.id = UUID.uuid4();
       dashboard.updateLayoutFromWidgetstore();
       dashboard.model.mode = 'present';
 
@@ -633,7 +635,7 @@ function addCommands(
         return metadata.hasDashboard;
       }
       return false;
-    }
+    },
   });
 
   commands.addCommand(CommandIDs.toggleWidgetMode, {
@@ -649,12 +651,13 @@ function addCommands(
       } else if (widget.mode === 'free-edit') {
         widget.mode = 'grid-edit';
       }
-    }
+    },
   });
 
   commands.addCommand(CommandIDs.toggleInfiniteScroll, {
     label: 'Infinite Scroll',
-    isToggled: (args) => dashboardTracker.currentWidget?.model.scrollMode === 'infinite',
+    isToggled: (args) =>
+      dashboardTracker.currentWidget?.model.scrollMode === 'infinite',
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
       if (dashboard.model.scrollMode === 'infinite') {
@@ -662,7 +665,7 @@ function addCommands(
       } else {
         dashboard.model.scrollMode = 'infinite';
       }
-    }
+    },
   });
 
   commands.addCommand(CommandIDs.trimDashboard, {
@@ -670,7 +673,7 @@ function addCommands(
     execute: (args) => {
       const dashboard = dashboardTracker.currentWidget;
       (dashboard.layout as DashboardLayout).trimDashboard();
-    }
+    },
   });
 }
 
