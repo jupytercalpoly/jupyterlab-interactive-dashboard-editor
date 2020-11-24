@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# install extension
+# install extensions, don't minimize as this uses too much memory
+# https://discourse.jupyter.org/t/tip-binder-jupyterlab-extension/6022
 jupyter labextension install @jupyter-widgets/jupyterlab-manager --no-build
 jupyter labextension install plotlywidget --no-build
 jupyter labextension install @jupyterlab/plotly-extension --no-build
-jupyter labextension install jupyterlab-interactive-dashboard-editor
+jupyter labextension install jupyterlab-interactive-dashboard-editor --no-build
+jupyter lab build --minimize=False
 
 # remove unnecessary directories when using the binder
 rm -rf src
