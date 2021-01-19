@@ -2,6 +2,8 @@ import { NotebookPanel } from '@jupyterlab/notebook';
 
 import { CodeCell, MarkdownCell, Cell } from '@jupyterlab/cells';
 
+import { map, toArray, each } from '@lumino/algorithm';
+
 import * as React from 'react';
 
 import {
@@ -10,6 +12,7 @@ import {
   IWidgetTracker,
   Toolbar,
   ReactWidget,
+  // MainAreaWidget,
 } from '@jupyterlab/apputils';
 
 import { CommandRegistry } from '@lumino/commands';
@@ -26,9 +29,15 @@ import { DashboardLayout } from './layout';
 
 import { DashboardWidget } from './widget';
 
-import { Widgetstore } from './widgetstore';
+import { WidgetPosition, Widgetstore } from './widgetstore';
 
-import { addCellId, addNotebookId } from './utils';
+import {
+  addCellId,
+  addNotebookId,
+  getNotebookById,
+  getCellId,
+  updateMetadata,
+} from './utils';
 
 import {
   DocumentWidget,
@@ -43,17 +52,19 @@ import { CommandIDs } from './commands';
 
 import { HTMLSelect } from '@jupyterlab/ui-components';
 
+import { UUID } from '@lumino/coreutils';
+
 // HTML element classes
 
-const DASHBOARD_CLASS = 'pr-JupyterDashboard';
+export const DASHBOARD_CLASS = 'pr-JupyterDashboard';
 
-const DROP_TARGET_CLASS = 'pr-DropTarget';
+export const DROP_TARGET_CLASS = 'pr-DropTarget';
 
-const TOOLBAR_MODE_SWITCHER_CLASS = 'pr-ToolbarModeSwitcher';
+export const TOOLBAR_MODE_SWITCHER_CLASS = 'pr-ToolbarModeSwitcher';
 
-const TOOLBAR_SELECT_CLASS = 'pr-ToolbarSelector';
+export const TOOLBAR_SELECT_CLASS = 'pr-ToolbarSelector';
 
-const TOOLBAR_CLASS = 'pr-DashboardToolbar';
+export const TOOLBAR_CLASS = 'pr-DashboardToolbar';
 
 export const IDashboardTracker = new Token<IDashboardTracker>(
   'jupyterlab-interactive-dashboard-editor'
@@ -70,9 +81,13 @@ export class Dashboard extends Widget {
   constructor(options: Dashboard.IOptions) {
     super(options);
 
-    const { outputTracker, model, context } = options;
+    this.id = UUID.uuid4();
+
+    const { outputTracker, model } = options;
     this._model = model;
-    this._context = context;
+    if (options.context !== undefined) {
+      this._context = options.context;
+    }
     const { widgetstore, mode } = model;
 
     this.layout = new DashboardLayout({
@@ -141,7 +156,7 @@ export class Dashboard extends Widget {
     event.dropAction = 'copy';
     const source = event.source as DashboardWidget;
     const pos = source?.pos;
-    if (pos) {
+    if (pos && source.mode === 'grid-edit') {
       pos.left = event.offsetX + this.node.scrollLeft;
       pos.top = event.offsetY + this.node.scrollTop;
       (this.layout as DashboardLayout).drawDropZone(pos, '#2b98f0');
@@ -349,6 +364,43 @@ export class Dashboard extends Widget {
     return (this.layout as DashboardLayout).createWidget(info, fit);
   }
 
+  saveToNotebookMetadata(): void {
+    // Get a list of all notebookIds used in the dashboard.
+    const widgets = toArray(this.model.widgetstore.getWidgets());
+
+    const notebookIds = toArray(map(widgets, (record) => record.notebookId));
+
+    if (!notebookIds.every((v) => v === notebookIds[0])) {
+      throw new Error(
+        'Only single notebook dashboards can be saved to metadata.'
+      );
+    }
+
+    const notebookId = notebookIds[0];
+    const notebookTracker = this.model.notebookTracker;
+    const notebook = getNotebookById(notebookId, notebookTracker);
+
+    updateMetadata(notebook, { hasDashboard: true });
+
+    const cells = notebook.content.widgets;
+
+    const widgetMap = new Map<string, WidgetPosition>(
+      widgets.map((widget) => [widget.cellId, widget.pos])
+    );
+
+    each(cells, (cell) => {
+      const cellId = getCellId(cell);
+      const pos = widgetMap.get(cellId);
+      if (pos != null) {
+        updateMetadata(cell, { pos, hidden: false });
+      } else {
+        updateMetadata(cell, { hidden: true });
+      }
+    });
+
+    notebook.context.save();
+  }
+
   get model(): IDashboardModel {
     return this._model;
   }
@@ -367,7 +419,7 @@ export class Dashboard extends Widget {
  * Namespace for DashboardArea options.
  */
 export namespace Dashboard {
-  export type Mode = 'edit' | 'present' | 'grid';
+  export type Mode = 'free-edit' | 'present' | 'grid-edit';
 
   export type ScrollMode = 'infinite' | 'constrained';
 
@@ -394,7 +446,7 @@ export namespace Dashboard {
 
     model: IDashboardModel;
 
-    context: DocumentRegistry.IContext<DocumentRegistry.IModel>;
+    context?: DocumentRegistry.IContext<DocumentRegistry.IModel>;
   }
 }
 
@@ -403,6 +455,7 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
     let { content, reveal } = options;
     const { context, commandRegistry } = options;
     const model = context.model as DashboardModel;
+    model.path = context.path;
     content = content || new Dashboard({ ...options, model, context });
     reveal = Promise.all([reveal, context.ready]);
     super({
@@ -416,7 +469,7 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
     this.toolbar.addClass(TOOLBAR_CLASS);
 
     const commands = commandRegistry;
-    const { save, undo, redo, cut, copy, paste, runOutput } = CommandIDs;
+    const { save, undo, redo, cut, copy, paste } = CommandIDs;
 
     const args = { toolbar: true, dashboardId: content.id };
 
@@ -438,7 +491,6 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
       paste,
       'Paste outputs from the clipboard'
     );
-    const runButton = makeToolbarButton(runOutput, 'Run the selected outputs');
 
     this.toolbar.addItem(save, saveButton);
     this.toolbar.addItem(undo, undoButton);
@@ -446,7 +498,6 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
     this.toolbar.addItem(cut, cutButton);
     this.toolbar.addItem(copy, copyButton);
     this.toolbar.addItem(paste, pasteButton);
-    this.toolbar.addItem(runOutput, runButton);
     this.toolbar.addItem('spacer', Toolbar.createSpacerItem());
     this.toolbar.addItem(
       'switchMode',
@@ -473,7 +524,7 @@ export namespace DashboardDocument {
     name?: string;
 
     /**
-     * Dashboard canvas width (default is 1280).
+     * Optional widgetstore to restore from.
      */
     store?: Widgetstore;
 
@@ -523,8 +574,8 @@ export namespace DashboardDocument {
           aria-label={'Mode'}
         >
           <option value="present">Present</option>
-          <option value="edit">Free Layout</option>
-          <option value="grid">Tile Layout</option>
+          {/* <option value="free-edit">Free Layout</option> */}
+          <option value="grid-edit">Edit</option>
         </HTMLSelect>
       );
     }

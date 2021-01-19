@@ -1,3 +1,5 @@
+import { PathExt } from '@jupyterlab/coreutils';
+
 import { DocumentRegistry, DocumentModel } from '@jupyterlab/docregistry';
 
 import {
@@ -15,8 +17,6 @@ import {
 
 import { DashboardWidget } from './widget';
 
-import { IDocumentManager } from '@jupyterlab/docmanager';
-
 import { INotebookTracker } from '@jupyterlab/notebook';
 
 import { getPathFromNotebookId } from './utils';
@@ -25,13 +25,15 @@ import { Widgetstore } from './widgetstore';
 
 import { ContentsManager, Contents } from '@jupyterlab/services';
 
-import { filter, each } from '@lumino/algorithm';
+import { each } from '@lumino/algorithm';
 
 import { Signal } from '@lumino/signaling';
 
 import { Dashboard } from './dashboard';
 
 import { getNotebookById } from './utils';
+
+import { PartialJSONObject } from '@lumino/coreutils';
 
 /**
  * The definition of a model object for a dashboard widget.
@@ -86,6 +88,11 @@ export interface IDashboardModel extends DocumentRegistry.IModel {
    * The scroll mode of the dashboard.
    */
   scrollMode: Dashboard.ScrollMode;
+
+  /**
+   * The current path associated with the model.
+   */
+  path: string;
 }
 
 /**
@@ -100,8 +107,12 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
     const notebookTracker = (this.notebookTracker = options.notebookTracker);
 
-    this.widgetstore =
-      options.widgetstore || new Widgetstore({ id: 0, notebookTracker });
+    if (options.widgetstore !== undefined) {
+      this.widgetstore = options.widgetstore;
+      this._restore = true;
+    } else {
+      this.widgetstore = new Widgetstore({ id: 0, notebookTracker });
+    }
 
     this.contentsManager = options.contentsManager || new ContentsManager();
   }
@@ -109,10 +120,16 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   /**
    * Deserialize the model from JSON.
    */
-  async fromJSON(value: IDashboardContent): Promise<void> {
+  async fromJSON(value: PartialJSONObject): Promise<void> {
+    // A widgetstore has been supplied and the dashboard is ready to be populated.
+    if (this._restore) {
+      this._loaded.emit(void 0);
+    }
+
     const outputs: Widgetstore.WidgetInfo[] = [];
 
-    for (const [path, notebookId] of Object.entries(value.paths)) {
+    for (const [_path, notebookId] of Object.entries(value.paths)) {
+      const path = PathExt.resolve(PathExt.dirname(this.path), _path);
       if (!getNotebookById(notebookId, this.notebookTracker)) {
         await this.contentsManager
           .get(path)
@@ -150,20 +167,16 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     this.widgetstore.endBatch();
 
     this._loaded.emit(void 0);
-    // this.mode = 'present';
   }
 
   /**
    * Serialize the model to JSON.
    */
-  toJSON(): IDashboardContent {
+  toJSON(): PartialJSONObject {
     const notebookTracker = this.notebookTracker;
 
     // Get all widgets that haven't been removed.
-    const records = filter(
-      this.widgetstore.getWidgets(),
-      (widget) => widget.widgetId && !widget.removed
-    );
+    const records = this.widgetstore.getWidgets();
 
     const metadata: IDashboardMetadata = {
       name: this.name,
@@ -180,13 +193,15 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
     each(records, (record) => {
       const notebookId = record.notebookId;
-      const path = getPathFromNotebookId(notebookId, notebookTracker);
+      const _path = getPathFromNotebookId(notebookId, notebookTracker);
 
-      if (path === undefined) {
+      if (_path === undefined) {
         throw new Error(
           `Notebook path for notebook with id ${notebookId} not found`
         );
       }
+
+      const path = PathExt.relative(PathExt.dirname(this.path), _path);
 
       if (file.paths[path] !== undefined && file.paths[path] !== notebookId) {
         throw new Error(`Conflicting paths for same notebook id ${notebookId}`);
@@ -297,7 +312,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
    * ### Notes
    * No signal is emitted if newValue is the same as the old value.
    */
-  private _setMetadataProperty(key: string, newValue: any): void {
+  protected _setMetadataProperty(key: string, newValue: any): void {
     const oldValue = this.metadata.get(key);
     if (oldValue === newValue) {
       return;
@@ -324,6 +339,16 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
   }
 
   /**
+   * The current path associated with the model.
+   */
+  get path(): string {
+    return this._path;
+  }
+  set path(newPath: string) {
+    this._path = newPath;
+  }
+
+  /**
    * The widget store for the dashboard.
    */
   readonly widgetstore: Widgetstore;
@@ -338,10 +363,12 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
    */
   readonly contentsManager: ContentsManager;
 
-  private _metadata: IObservableJSON = new ObservableJSON();
-  private _loaded = new Signal<this, void>(this);
-  private _mode: Dashboard.Mode = 'edit';
+  protected _metadata: IObservableJSON = new ObservableJSON();
+  protected _loaded = new Signal<this, void>(this);
+  private _mode: Dashboard.Mode = 'grid-edit';
   private _scrollMode: Dashboard.ScrollMode = 'constrained';
+  private _path: string;
+  private _restore = false;
 }
 
 /**
@@ -358,8 +385,6 @@ export namespace DashboardModel {
     widgetstore?: Widgetstore;
 
     contentsManager?: ContentsManager;
-
-    docManager: IDocumentManager;
   }
 }
 
@@ -427,14 +452,12 @@ export class DashboardModelFactory
   createNew(languagePreference?: string, modelDB?: IModelDB): DashboardModel {
     const notebookTracker = this._notebookTracker;
     const contentsManager = new ContentsManager();
-    const docManager = this._docManager;
 
     const model = new DashboardModel({
       notebookTracker,
       languagePreference,
       modelDB,
       contentsManager,
-      docManager,
     });
 
     return model;
@@ -442,7 +465,6 @@ export class DashboardModelFactory
 
   private _disposed = false;
   private _notebookTracker: INotebookTracker;
-  private _docManager: IDocumentManager;
 }
 
 /**
@@ -451,6 +473,5 @@ export class DashboardModelFactory
 export namespace DashboardModelFactory {
   export interface IOptions {
     notebookTracker: INotebookTracker;
-    docManager: IDocumentManager;
   }
 }

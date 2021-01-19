@@ -229,7 +229,7 @@ export class Widgetstore extends Litestore {
 
   getWidgets(): IIterator<Record<WidgetSchema>> {
     const table = this.get(Widgetstore.WIDGET_SCHEMA);
-    return filter(table, (record) => true);
+    return filter(table, (record) => record.widgetId && !record.removed);
   }
 
   /**

@@ -2,10 +2,30 @@ import { NotebookPanel, INotebookTracker } from '@jupyterlab/notebook';
 
 import { Cell } from '@jupyterlab/cells';
 
-import { UUID } from '@lumino/coreutils';
+import { UUID, ReadonlyPartialJSONObject } from '@lumino/coreutils';
 
 import { ArrayExt, toArray } from '@lumino/algorithm';
 
+/**
+ * Gets the presto metadata portion of a notebook or cell.
+ *
+ * @param source - the notebook or cell containing the metadata.
+ */
+export function getMetadata(source: NotebookPanel | Cell): any | undefined {
+  return source?.model.metadata.get('presto');
+}
+
+export function updateMetadata(
+  source: NotebookPanel | Cell,
+  newValues: ReadonlyPartialJSONObject
+): void {
+  const oldMetadata = getMetadata(source);
+  if (oldMetadata != null) {
+    source.model.metadata.set('presto', { ...oldMetadata, ...newValues });
+  } else {
+    source.model.metadata.set('presto', newValues);
+  }
+}
 /**
  * Adds a random, unique ID to a notebook's metadata.
  *
@@ -14,7 +34,7 @@ import { ArrayExt, toArray } from '@lumino/algorithm';
  * @returns - the notebook's ID.
  */
 export function addNotebookId(notebook: NotebookPanel): string {
-  const metadata: any | undefined = notebook.model.metadata.get('presto');
+  const metadata = getMetadata(notebook);
   let id: string;
 
   if (metadata !== undefined) {
@@ -37,7 +57,7 @@ export function addNotebookId(notebook: NotebookPanel): string {
  * @returns - the ID of the notebook, or undefined if it has none.
  */
 export function getNotebookId(notebook: NotebookPanel): string | undefined {
-  const metadata: any | undefined = notebook?.model.metadata.get('presto');
+  const metadata = getMetadata(notebook);
   if (metadata === undefined || metadata.id === undefined) {
     return undefined;
   }
@@ -68,7 +88,7 @@ export function getNotebookById(
  * @returns - the cell's ID.
  */
 export function addCellId(cell: Cell): string {
-  const metadata: any | undefined = cell.model.metadata.get('presto');
+  const metadata = getMetadata(cell);
   let id: string;
 
   if (metadata !== undefined) {
@@ -91,7 +111,7 @@ export function addCellId(cell: Cell): string {
  * @returns - the ID of the cell, or undefined if it has none.
  */
 export function getCellId(cell: Cell): string | undefined {
-  const metadata: any | undefined = cell?.model.metadata.get('presto');
+  const metadata = getMetadata(cell);
   if (metadata === undefined || metadata.id === undefined) {
     return undefined;
   }

@@ -50,14 +50,14 @@ const DASHBOARD_WIDGET_CHILD_CLASS = 'pr-DashboardWidgetChild';
 const EDITABLE_WIDGET_CLASS = 'pr-EditableWidget';
 
 /**
- * The class name added to dashboard outputs being dragged.
- */
-const IN_DRAG_CLASS = 'pr-InDrag';
-
-/**
  * The class name added to markdown dashboard outputs.
  */
 const MARKDOWN_OUTPUT_CLASS = 'pr-MarkdownOutput';
+
+/**
+ * The class name added to dashboard widget drag images.
+ */
+const DRAG_IMAGE_CLASS = 'pr-DragImage';
 
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).
@@ -292,7 +292,7 @@ export class DashboardWidget extends Widget {
     window.addEventListener('mouseup', this);
     window.addEventListener('mousemove', this);
 
-    this.node.style.opacity = '0.6';
+    // this.node.style.opacity = '0.6';
 
     // Set mode to resize if the mousedown happened on a resizer.
     if ((target as HTMLElement).classList.contains('pr-Resizer')) {
@@ -363,10 +363,10 @@ export class DashboardWidget extends Widget {
     this.node.style.width = `${width}px`;
     this.node.style.height = `${height}px`;
 
-    if (this.mode === 'grid') {
+    if (this.mode === 'grid-edit') {
       (this.parent.layout as DashboardLayout).drawDropZone(this.pos, '#2b98f0');
     }
-    if (this.mode !== 'grid' && this._fitToContent && !event.altKey) {
+    if (this.mode === 'free-edit' && this._fitToContent && !event.altKey) {
       this.fitContent();
     }
   }
@@ -434,7 +434,8 @@ export class DashboardWidget extends Widget {
     clientY: number
   ): Promise<void> {
     const dragImage = target;
-    dragImage.style.opacity = '0.6';
+
+    dragImage.classList.add(DRAG_IMAGE_CLASS);
 
     this.node.style.opacity = '0';
     this.node.style.pointerEvents = 'none';
@@ -445,8 +446,8 @@ export class DashboardWidget extends Widget {
       proposedAction: 'move',
       supportedActions: 'copy-move',
       source: this,
-      widgetX: this._clickData.widgetX,
-      widgetY: this._clickData.widgetY,
+      dragAdjustX: this._clickData.widgetX,
+      dragAdjustY: this._clickData.widgetY,
     });
 
     this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
@@ -460,7 +461,6 @@ export class DashboardWidget extends Widget {
       }
       this.node.style.opacity = null;
       this.node.style.pointerEvents = 'auto';
-      this.removeClass(IN_DRAG_CLASS);
       this._drag = null;
       this._clickData = null;
     });
@@ -594,7 +594,7 @@ export class DashboardWidget extends Widget {
     } else {
       this.addClass(EDITABLE_WIDGET_CLASS);
     }
-    if (newMode === 'grid') {
+    if (newMode === 'grid-edit') {
       if (this.parent) {
         (this.parent as Dashboard).updateWidget(this, this.pos);
       }
@@ -635,9 +635,9 @@ export class DashboardWidget extends Widget {
   private _cell: CodeCell | MarkdownCell | null = null;
   private _cellId: string;
   private _ready = new Signal<this, void>(this);
-  private _fitToContent = true;
+  private _fitToContent = false;
   private _mouseMode: DashboardWidget.MouseMode = 'none';
-  private _mode: Dashboard.Mode = 'edit';
+  private _mode: Dashboard.Mode = 'grid-edit';
   private _drag: Drag | null = null;
   private _clickData: {
     pressX: number;

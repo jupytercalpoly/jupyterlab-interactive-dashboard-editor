@@ -84,8 +84,8 @@
 
 .pr-Canvas.pr-TiledLayout {
     background-image: linear-gradient(45deg, rgba(160,160,160,.15) 25%, transparent 25%), linear-gradient(-45deg, rgba(160,160,160,.15) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(160,160,160,.15) 75%), linear-gradient(-45deg, transparent 75%, rgba(160,160,160,.15) 70%);
-    background-size: 100px 100px;
-    background-position: 0 0, 0 50px, 50px -50px, -50px 0px;
+    background-size: 64px 64px;
+    background-position: 0 0, 0 32px, 32px -32px, -32px 0px;
 }
 
 .pr-OnboardingGif {
@@ -113,7 +113,6 @@ select.pr-ToolbarSelector.jp-mod-styled {
     display: block;
     box-shadow: none;
     border: none;
-    /* top: 5px !important; */
   }
 
 .pr-ToolbarSelector.jp-mod-styled select {
@@ -124,9 +123,9 @@ select.pr-ToolbarSelector.jp-mod-styled {
     display: block;
     box-shadow: none;
     border: none;
-    /* top: 5px !important; */
   }
-/*   
-  .pr-ToolbarSelector {
-    top: 5px !important;
-  } */
+
+  .pr-DragImage {
+    box-shadow: var(--jp-elevation-z1);
+    border: var(--jp-border-width) solid var(--jp-brand-color1);
+  }
