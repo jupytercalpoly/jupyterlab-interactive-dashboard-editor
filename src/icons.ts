@@ -19,62 +19,62 @@ import resizer2Svgstr from '../style/icons/drag indicator lines.svg';
 export namespace DashboardIcons {
   export const whiteDashboard = new LabIcon({
     name: 'pr-icons:white-dashboard',
-    svgstr: whiteDashboardSvgstr,
+    svgstr: whiteDashboardSvgstr
   });
 
   export const greyDashboard = new LabIcon({
     name: 'pr-icons:grey-dashboard',
-    svgstr: greyDashboardSvgstr,
+    svgstr: greyDashboardSvgstr
   });
 
   export const blueDashboard = new LabIcon({
     name: 'pr-icons:blue-dashboard',
-    svgstr: blueDashboardSvgstr,
+    svgstr: blueDashboardSvgstr
   });
 
   export const whiteDashboardOutline = new LabIcon({
     name: 'pr-icons:white-dashboard-outline',
-    svgstr: whiteDashboardOutlineSvgstr,
+    svgstr: whiteDashboardOutlineSvgstr
   });
 
   export const greyDashboardOutline = new LabIcon({
     name: 'pr-icons:grey-dashboard-outline',
-    svgstr: greyDashboardOutlineSvgstr,
+    svgstr: greyDashboardOutlineSvgstr
   });
 
   export const redo = new LabIcon({
     name: 'pr-icons:redo',
-    svgstr: redoIcon,
+    svgstr: redoIcon
   });
 
   export const fullscreen = new LabIcon({
     name: 'pr-icons:fullscreen',
-    svgstr: fullscreenIcon,
+    svgstr: fullscreenIcon
   });
 
   export const status = new LabIcon({
     name: 'pr-icons:status',
-    svgstr: statusIcon,
+    svgstr: statusIcon
   });
 
   export const resizer = new LabIcon({
     name: 'pr-icons:resizer',
-    svgstr: resizerSvgstr,
+    svgstr: resizerSvgstr
   });
 
   export const view = new LabIcon({
     name: 'pr-icons:view',
-    svgstr: viewSvgstr,
+    svgstr: viewSvgstr
   });
 
   export const edit = new LabIcon({
     name: 'pr-icons:edit',
-    svgstr: editSvgstr,
+    svgstr: editSvgstr
   });
 
   export const resizer2 = new LabIcon({
     name: 'pr-icons:resizer2',
-    svgstr: resizer2Svgstr,
+    svgstr: resizer2Svgstr
   });
 }
 
