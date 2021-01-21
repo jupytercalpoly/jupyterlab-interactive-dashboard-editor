@@ -28,7 +28,7 @@
   "scripts": {
     "build": "jlpm run build:lib",
     "build:all": "jlpm run build:labextension",
-    "build:labextension": "cd jupyterlab_interactive_dashboard_editor && rimraf labextension && mkdirp labextension && cd labextension && npm pack ../..",
+    "build:labextension": "jlpm run clean:all && jlpm run build && jupyter labextension build .",
     "build:lib": "tsc",
     "clean": "jlpm run clean:lib",
     "clean:all": "jlpm run clean:lib && jlpm run clean:labextension",
@@ -75,8 +75,8 @@
     "style/index.js"
   ],
   "jupyterlab": {
-    "extension": true,
-    "outputDir": "jupyterlab-interactive-dashboard-editor/labextension"
+    "extension": "lib",
+    "outputDir": "jupyterlab_interactive_dashboard_editor/labextension"
   },
   "husky": {
     "hooks": {

@@ -2,58 +2,60 @@
 jupyterlab-interactive-dashboard-editor setup
 """
 import json
-import os
+from os import path
 
 from jupyter_packaging import (
     create_cmdclass, install_npm, ensure_targets,
     combine_commands, skip_if_exists
 )
+
 import setuptools
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = path.abspath(path.dirname(__file__))
 
 # The name of the project
-name="jupyterlab-interactive-dashboard-editor"
+name = "jupyterlab-interactive-dashboard-editor"
+module = "jupyterlab_interactive_dashboard_editor"
+labext_name = "jupyterlab-interactive-dashboard-editor"
 
 # Get our version
-with open(os.path.join(HERE, 'package.json')) as f:
+with open(path.join(HERE, 'package.json')) as f:
     version = json.load(f)['version']
 
-lab_path = os.path.join(HERE, name, "labextension")
+lab_path = path.join(HERE, module, "labextension")
 
 # Representative files that should exist after a successful build
 jstargets = [
-    os.path.join(lab_path, "package.json"),
+    path.join(lab_path, "package.json"),
 ]
 
 package_data_spec = {
-    name: [
-        "*"
+    module: [
+        "labextension/*"
     ]
 }
 
-labext_name = "jupyterlab-interactive-dashboard-editor"
 
 data_files_spec = [
-    ("share/jupyter/labextensions/%s" % labext_name, lab_path, "**"),
-    ("share/jupyter/labextensions/%s" % labext_name, HERE, "install.json"),
+    ("share/jupyter/labextensions/%s" % labext_name, lab_path, "**")
 ]
 
-cmdclass = create_cmdclass("jsdeps",
+
+cmdclass = create_cmdclass("js",
     package_data_spec=package_data_spec,
     data_files_spec=data_files_spec
 )
 
-js_command = combine_commands(
-    install_npm(HERE, build_cmd="build:prod", npm=["jlpm"]),
+cmdclass['js'] = combine_commands(
+    install_npm(
+        path=HERE,
+        npm=["jlpm"],
+        build_cmd="build:labextension",
+        build_dir=path.join(HERE, 'dist'),
+        source_dir=path.join(HERE, 'src')
+    ),
     ensure_targets(jstargets),
 )
-
-is_repo = os.path.exists(os.path.join(HERE, ".git"))
-if is_repo:
-    cmdclass["jsdeps"] = js_command
-else:
-    cmdclass["jsdeps"] = skip_if_exists(jstargets, js_command)
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -64,9 +66,9 @@ setup_args = dict(
     url="https://github.com/jupytercalpoly/jupyterlab-interactive-dashboard-editor.git",
     author="jupytercalpoly",
     description="Interactively create and customize dashboards in JupyterLab",
-    long_description= long_description,
+    long_description=long_description,
     long_description_content_type="text/markdown",
-    cmdclass= cmdclass,
+    cmdclass=cmdclass,
     packages=setuptools.find_packages(),
     install_requires=[
         "jupyterlab>=3.0.0rc13,==3.*",
@@ -87,7 +89,6 @@ setup_args = dict(
         "Framework :: Jupyter",
     ],
 )
-
 
 if __name__ == "__main__":
     setuptools.setup(**setup_args)
