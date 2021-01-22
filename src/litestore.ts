@@ -5,7 +5,7 @@ import {
   IServerAdapter,
   Schema,
   Table,
-  Record,
+  Record
 } from '@lumino/datastore';
 
 import { IDisposable } from '@lumino/disposable';

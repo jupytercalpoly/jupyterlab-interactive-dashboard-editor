@@ -11,7 +11,7 @@ import {
   CommandToolbarButton,
   IWidgetTracker,
   Toolbar,
-  ReactWidget,
+  ReactWidget
   // MainAreaWidget,
 } from '@jupyterlab/apputils';
 
@@ -36,14 +36,14 @@ import {
   addNotebookId,
   getNotebookById,
   getCellId,
-  updateMetadata,
+  updateMetadata
 } from './utils';
 
 import {
   DocumentWidget,
   DocumentRegistry,
   ABCWidgetFactory,
-  IDocumentWidget,
+  IDocumentWidget
 } from '@jupyterlab/docregistry';
 
 import { IDashboardModel, DashboardModel } from './model';
@@ -96,7 +96,7 @@ export class Dashboard extends Widget {
       model,
       mode,
       width: options.dashboardWidth || Dashboard.DEFAULT_WIDTH,
-      height: options.dashboardHeight || Dashboard.DEFAULT_HEIGHT,
+      height: options.dashboardHeight || Dashboard.DEFAULT_HEIGHT
     });
 
     widgetstore.connectDashboard(this);
@@ -191,7 +191,7 @@ export class Dashboard extends Widget {
           notebookId: widget.notebookId,
           cellId: widget.cellId,
           pos,
-          removed: false,
+          removed: false
         };
 
         const newWidget = this.createWidget(info);
@@ -217,9 +217,9 @@ export class Dashboard extends Widget {
           left,
           top,
           width: DashboardWidget.DEFAULT_WIDTH,
-          height: DashboardWidget.DEFAULT_HEIGHT,
+          height: DashboardWidget.DEFAULT_HEIGHT
         },
-        removed: false,
+        removed: false
       };
 
       const newWidget = this.createWidget(info, true);
@@ -368,9 +368,9 @@ export class Dashboard extends Widget {
     // Get a list of all notebookIds used in the dashboard.
     const widgets = toArray(this.model.widgetstore.getWidgets());
 
-    const notebookIds = toArray(map(widgets, (record) => record.notebookId));
+    const notebookIds = toArray(map(widgets, record => record.notebookId));
 
-    if (!notebookIds.every((v) => v === notebookIds[0])) {
+    if (!notebookIds.every(v => v === notebookIds[0])) {
       throw new Error(
         'Only single notebook dashboards can be saved to metadata.'
       );
@@ -385,10 +385,10 @@ export class Dashboard extends Widget {
     const cells = notebook.content.widgets;
 
     const widgetMap = new Map<string, WidgetPosition>(
-      widgets.map((widget) => [widget.cellId, widget.pos])
+      widgets.map(widget => [widget.cellId, widget.pos])
     );
 
-    each(cells, (cell) => {
+    each(cells, cell => {
       const cellId = getCellId(cell);
       const pos = widgetMap.get(cellId);
       if (pos != null) {
@@ -461,7 +461,7 @@ export class DashboardDocument extends DocumentWidget<Dashboard> {
     super({
       ...options,
       content: content as Dashboard,
-      reveal,
+      reveal
     });
 
     // Build the toolbar
@@ -601,7 +601,7 @@ export class DashboardDocumentFactory extends ABCWidgetFactory<
     return new DashboardDocument({
       context,
       commandRegistry: this._commandRegistry,
-      outputTracker: this._outputTracker,
+      outputTracker: this._outputTracker
     });
   }
 

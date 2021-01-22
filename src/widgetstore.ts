@@ -123,14 +123,14 @@ export class Widgetstore extends Litestore {
     this.updateRecord(
       {
         schema: Widgetstore.WIDGET_SCHEMA,
-        record: info.widgetId,
+        record: info.widgetId
       },
       {
         widgetId,
         pos,
         cellId,
         notebookId,
-        removed: false,
+        removed: false
       }
     );
 
@@ -159,7 +159,7 @@ export class Widgetstore extends Litestore {
 
     const recordLoc = {
       schema: Widgetstore.WIDGET_SCHEMA,
-      record: widgetId,
+      record: widgetId
     };
 
     const oldRecord = this.getRecord(recordLoc);
@@ -191,7 +191,7 @@ export class Widgetstore extends Litestore {
 
     const recordLoc = {
       schema: Widgetstore.WIDGET_SCHEMA,
-      record: widgetId,
+      record: widgetId
     };
 
     const oldRecord = this.getRecord(recordLoc);
@@ -219,7 +219,7 @@ export class Widgetstore extends Litestore {
   getWidget(widgetId: string): Widgetstore.WidgetInfo | undefined {
     const record = this.getRecord({
       schema: Widgetstore.WIDGET_SCHEMA,
-      record: widgetId,
+      record: widgetId
     });
     if (record === undefined) {
       return undefined;
@@ -229,7 +229,7 @@ export class Widgetstore extends Litestore {
 
   getWidgets(): IIterator<Record<WidgetSchema>> {
     const table = this.get(Widgetstore.WIDGET_SCHEMA);
-    return filter(table, (record) => record.widgetId && !record.removed);
+    return filter(table, record => record.widgetId && !record.removed);
   }
 
   /**
@@ -302,11 +302,11 @@ export namespace Widgetstore {
           left: 0,
           top: 0,
           width: 0,
-          height: 0,
-        },
+          height: 0
+        }
       }),
-      removed: Fields.Boolean(),
-    },
+      removed: Fields.Boolean()
+    }
   };
 
   /**
@@ -317,8 +317,8 @@ export namespace Widgetstore {
     fields: {
       name: Fields.String(),
       width: Fields.Number(),
-      height: Fields.Number(),
-    },
+      height: Fields.Number()
+    }
   };
 
   export const schemas = [DASHBOARD_SCHEMA, WIDGET_SCHEMA];

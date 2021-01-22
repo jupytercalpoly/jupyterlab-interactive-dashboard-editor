@@ -18,7 +18,7 @@ import {
   getNotebookId,
   getCellId,
   getNotebookById,
-  getCellById,
+  getCellById
 } from './utils';
 
 import { Signal, ISignal } from '@lumino/signaling';
@@ -313,7 +313,7 @@ export class DashboardWidget extends Widget {
       pressHeight: parseInt(this.node.style.height, 10),
       target: this.node.cloneNode(true) as HTMLElement,
       widgetX: rect.left,
-      widgetY: rect.top,
+      widgetY: rect.top
     };
   }
 
@@ -392,7 +392,7 @@ export class DashboardWidget extends Widget {
       left,
       top,
       width: 0,
-      height: 0,
+      height: 0
     };
     const overlap = this.overlaps(pos);
     return overlap.type !== 'none';
@@ -447,7 +447,7 @@ export class DashboardWidget extends Widget {
       supportedActions: 'copy-move',
       source: this,
       dragAdjustX: this._clickData.widgetX,
-      dragAdjustY: this._clickData.widgetY,
+      dragAdjustY: this._clickData.widgetY
     });
 
     this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
@@ -498,7 +498,7 @@ export class DashboardWidget extends Widget {
       left: parseInt(this.node.style.left, 10),
       top: parseInt(this.node.style.top, 10),
       width: parseInt(this.node.style.width, 10),
-      height: parseInt(this.node.style.height, 10),
+      height: parseInt(this.node.style.height, 10)
     };
   }
   set pos(newPos: WidgetPosition) {
@@ -520,7 +520,7 @@ export class DashboardWidget extends Widget {
       widgetId: this.id,
       cellId: this.cellId,
       notebookId: this.notebookId,
-      removed: false,
+      removed: false
     };
   }
 
@@ -569,7 +569,7 @@ export class DashboardWidget extends Widget {
     return this._cell
       ? ArrayExt.findFirstIndex(
           this._notebook.content.widgets,
-          (c) => c === this._cell
+          c => c === this._cell
         )
       : this._index;
   }
@@ -720,7 +720,7 @@ export namespace DashboardWidget {
       container: resizer,
       width: '15px',
       height: '15px',
-      pointerEvents: 'none',
+      pointerEvents: 'none'
     });
 
     return resizer;
@@ -765,7 +765,7 @@ export namespace DashboardWidget {
       cellId,
       notebook,
       cell,
-      fit,
+      fit
     });
 
     widget.pos = pos;

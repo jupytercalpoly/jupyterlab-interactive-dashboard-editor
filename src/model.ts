@@ -5,14 +5,14 @@ import { DocumentRegistry, DocumentModel } from '@jupyterlab/docregistry';
 import {
   IModelDB,
   IObservableJSON,
-  ObservableJSON,
+  ObservableJSON
 } from '@jupyterlab/observables';
 
 import {
   IDashboardContent,
   IDashboardMetadata,
   DASHBOARD_VERSION,
-  IOutputInfo,
+  IOutputInfo
 } from './dbformat';
 
 import { DashboardWidget } from './widget';
@@ -133,10 +133,10 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
       if (!getNotebookById(notebookId, this.notebookTracker)) {
         await this.contentsManager
           .get(path)
-          .then(async (model) => {
+          .then(async model => {
             // no-op for now. Open notebook in future.
           })
-          .catch((error) => {
+          .catch(error => {
             throw new Error(`Error reading notebook ${notebookId} at ${path}`);
           });
       }
@@ -147,7 +147,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
         const info: Widgetstore.WidgetInfo = {
           ...outputInfo,
           notebookId,
-          widgetId: DashboardWidget.createDashboardWidgetId(),
+          widgetId: DashboardWidget.createDashboardWidgetId()
         };
         outputs.push(info);
       }
@@ -161,7 +161,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
     this.widgetstore.startBatch();
     this.widgetstore.clear();
-    outputs.forEach((output) => {
+    outputs.forEach(output => {
       this.widgetstore.addWidget(output);
     });
     this.widgetstore.endBatch();
@@ -181,17 +181,17 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
     const metadata: IDashboardMetadata = {
       name: this.name,
       dashboardHeight: this.height,
-      dashboardWidth: this.width,
+      dashboardWidth: this.width
     };
 
     const file: IDashboardContent = {
       metadata,
       version: DASHBOARD_VERSION,
       outputs: {},
-      paths: {},
+      paths: {}
     };
 
-    each(records, (record) => {
+    each(records, record => {
       const notebookId = record.notebookId;
       const _path = getPathFromNotebookId(notebookId, notebookTracker);
 
@@ -215,7 +215,7 @@ export class DashboardModel extends DocumentModel implements IDashboardModel {
 
       const outputInfo: IOutputInfo = {
         cellId: record.cellId,
-        pos: record.pos,
+        pos: record.pos
       };
 
       file.outputs[notebookId].push(outputInfo);
@@ -457,7 +457,7 @@ export class DashboardModelFactory
       notebookTracker,
       languagePreference,
       modelDB,
-      contentsManager,
+      contentsManager
     });
 
     return model;

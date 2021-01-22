@@ -102,7 +102,7 @@ export class DashboardLayout extends Layout {
    */
   init(): void {
     super.init();
-    each(this, (widget) => this.attachWidget(widget));
+    each(this, widget => this.attachWidget(widget));
     this.parent.node.appendChild(this._canvas);
   }
 
@@ -110,7 +110,7 @@ export class DashboardLayout extends Layout {
    * Dispose of resources held by the layout.
    */
   dispose(): void {
-    this._items.forEach((item) => item.dispose());
+    this._items.forEach(item => item.dispose());
     this._outputTracker = null;
     this._widgetstore = null;
     super.dispose();
@@ -135,7 +135,7 @@ export class DashboardLayout extends Layout {
   iter(): IIterator<Widget> {
     // Is there a lazy way to iterate through the map?
     const arr = Array.from(this._items.values());
-    return map(arr, (item) => item.widget);
+    return map(arr, item => item.widget);
   }
 
   signalChange(change?: IDashboardChange): void {
@@ -255,7 +255,7 @@ export class DashboardLayout extends Layout {
           widgetId: id,
           notebookId,
           cellId,
-          ignore,
+          ignore
         };
 
         this.signalChange(change);
@@ -316,7 +316,7 @@ export class DashboardLayout extends Layout {
       const change: IDashboardChange = {
         type: 'move',
         widgetId: widget.id,
-        pos: widget.pos,
+        pos: widget.pos
       };
       this.signalChange(change);
     }
@@ -416,7 +416,7 @@ export class DashboardLayout extends Layout {
 
     const change: IDashboardChange = {
       type: 'remove',
-      widgetId: widget.id,
+      widgetId: widget.id
     };
 
     // Remove the item from the map.
@@ -509,7 +509,7 @@ export class DashboardLayout extends Layout {
   updateLayoutFromWidgetstore(): void {
     this._signalChanges = false;
     const records = this._widgetstore.getWidgets();
-    each(records, (record) => {
+    each(records, record => {
       this._updateLayoutFromRecord(record);
     });
     this._signalChanges = true;
@@ -548,7 +548,7 @@ export class DashboardLayout extends Layout {
       left,
       top,
       width: 0,
-      height: 0,
+      height: 0
     };
     return this._widgetsInSelection(pos);
   }
@@ -564,13 +564,13 @@ export class DashboardLayout extends Layout {
   private _widgetsInSelection(
     pos: WidgetPosition
   ): IIterator<DashboardWidget.Overlap> {
-    const relations = map(this, (_widget) => {
+    const relations = map(this, _widget => {
       const widget = _widget as DashboardWidget;
       return widget.overlaps(pos);
     });
     const overlaps = filter(
       relations,
-      (relation) => relation.type !== 'none' && !relation.widget.locked
+      relation => relation.type !== 'none' && !relation.widget.locked
     );
     return overlaps;
   }
@@ -641,7 +641,7 @@ export class DashboardLayout extends Layout {
     overlaps: IIterator<DashboardWidget.Overlap>,
     pos: Widgetstore.WidgetPosition
   ): void {
-    each(overlaps, (overlap) => void this._handleOverlap(pos, overlap));
+    each(overlaps, overlap => void this._handleOverlap(pos, overlap));
   }
 
   /**
@@ -652,7 +652,7 @@ export class DashboardLayout extends Layout {
   fixOverlaps(widget: DashboardWidget): void {
     const overlaps = filter(
       this._widgetsInSelection(widget.pos),
-      (overlap) => overlap.widget !== widget
+      overlap => overlap.widget !== widget
     );
 
     widget.locked = true;
@@ -678,7 +678,7 @@ export class DashboardLayout extends Layout {
     switch (direction) {
       case 'left':
         model.height += amount;
-        each(widgets, (_widget) => {
+        each(widgets, _widget => {
           const widget = _widget as DashboardWidget;
           const pos = widget.pos;
           pos.left += amount;
@@ -690,7 +690,7 @@ export class DashboardLayout extends Layout {
         break;
       case 'up':
         model.height += amount;
-        each(widgets, (_widget) => {
+        each(widgets, _widget => {
           const widget = _widget as DashboardWidget;
           const pos = widget.pos;
           pos.top += amount;
@@ -739,7 +739,7 @@ export class DashboardLayout extends Layout {
   setMode(newMode: Dashboard.Mode): void {
     this._mode = newMode;
     this.clearCanvas();
-    each(this, (_widget) => {
+    each(this, _widget => {
       const widget = _widget as DashboardWidget;
       widget.mode = newMode;
     });
@@ -876,7 +876,7 @@ export class DashboardLayout extends Layout {
     this.parent.update();
 
     this.startBatch();
-    each(this, (_widget) => {
+    each(this, _widget => {
       const widget = _widget as DashboardWidget;
       this.updateWidget(widget, widget.pos);
     });
@@ -900,7 +900,7 @@ export class DashboardLayout extends Layout {
     let maxWidth = 0;
     let maxHeight = 0;
 
-    each(this, (_widget) => {
+    each(this, _widget => {
       const widget = _widget as DashboardWidget;
       const { left, top, width, height } = widget.pos;
 

@@ -77,7 +77,7 @@ export function getNotebookById(
   id: string,
   tracker: INotebookTracker
 ): NotebookPanel | undefined {
-  return tracker.find((notebook) => getNotebookId(notebook) === id);
+  return tracker.find(notebook => getNotebookId(notebook) === id);
 }
 
 /**
@@ -136,7 +136,7 @@ export function getCellById(
     const cells = notebook.content.widgets;
     const value = ArrayExt.findFirstValue(
       cells,
-      (cell) => getCellId(cell) === id
+      cell => getCellId(cell) === id
     );
     if (value !== undefined) {
       return value;
@@ -159,7 +159,7 @@ export function getPathFromNotebookId(
   notebookTracker: INotebookTracker
 ): string | undefined {
   const notebook = notebookTracker.find(
-    (notebook) => getNotebookId(notebook) === id
+    notebook => getNotebookId(notebook) === id
   );
   if (notebook === undefined) {
     return undefined;

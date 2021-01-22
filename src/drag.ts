@@ -420,7 +420,7 @@ export class Drag implements IDisposable {
       event.clientY + this._dragOffsetY
     );
 
-    let currElem = currElems.find((elem) =>
+    let currElem = currElems.find(elem =>
       elem.classList.contains('pr-JupyterDashboard')
     );
 
@@ -1152,7 +1152,7 @@ namespace Private {
     none: 0x0,
     copy: 0x1,
     link: 0x2,
-    move: 0x4,
+    move: 0x4
   };
 
   /**
@@ -1166,7 +1166,7 @@ namespace Private {
     'copy-link': actionTable['copy'] | actionTable['link'],
     'copy-move': actionTable['copy'] | actionTable['move'],
     'link-move': actionTable['link'] | actionTable['move'],
-    all: actionTable['copy'] | actionTable['link'] | actionTable['move'],
+    all: actionTable['copy'] | actionTable['link'] | actionTable['move']
   };
 
   /**
