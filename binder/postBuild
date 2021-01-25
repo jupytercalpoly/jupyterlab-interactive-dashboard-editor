@@ -2,25 +2,21 @@
 
 # install extensions, don't minimize as this uses too much memory
 # https://discourse.jupyter.org/t/tip-binder-jupyterlab-extension/6022
-jupyter labextension install @jupyter-widgets/jupyterlab-manager --no-build
-jupyter labextension install plotlywidget --no-build
-jupyter labextension install @jupyterlab/plotly-extension --no-build
 jupyter labextension install jupyterlab-interactive-dashboard-editor --no-build
 jupyter lab build --minimize=False
 
 # remove unnecessary directories when using the binder
 rm -rf src
 rm -rf style
-rm -rf Design
+rm -rf design
 rm -rf .github
 rm -rf binder
 rm -rf docs
-rm -rf demo
+rm -rf jupyterlab_interactive_dashboard_editor
 rm package.json
 rm tsconfig.json
 rm yarn.lock
 rm MANIFEST.in
-rm covid-19.ipynb
-rm sample.dash
+rm pyproject.toml
 
 jupyter lab clean
