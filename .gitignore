@@ -113,3 +113,6 @@ dmypy.json
 .DS_Store
 .eslintcache
 .vscode
+
+# Local testing
+__test/
