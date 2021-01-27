@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# install extensions, don't minimize as this uses too much memory
-# https://discourse.jupyter.org/t/tip-binder-jupyterlab-extension/6022
+# install extension using pip
 python -m pip install .
 
 # remove unnecessary directories when using the binder
@@ -17,5 +16,6 @@ rm tsconfig.json
 rm yarn.lock
 rm MANIFEST.in
 rm pyproject.toml
+rm setup.py
 
 jupyter lab clean
