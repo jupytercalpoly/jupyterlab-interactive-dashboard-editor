@@ -2,8 +2,7 @@
 
 # install extensions, don't minimize as this uses too much memory
 # https://discourse.jupyter.org/t/tip-binder-jupyterlab-extension/6022
-jupyter labextension install jupyterlab-interactive-dashboard-editor --no-build
-jupyter lab build --minimize=False
+python -m pip install .
 
 # remove unnecessary directories when using the binder
 rm -rf src
