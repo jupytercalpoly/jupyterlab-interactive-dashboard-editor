@@ -23,8 +23,6 @@ import {
 
 import { Signal, ISignal } from '@lumino/signaling';
 
-import { DashboardIcons } from './icons';
-
 import { Widgetstore, WidgetPosition } from './widgetstore';
 
 import { DashboardLayout } from './layout';
@@ -152,8 +150,14 @@ export class DashboardWidget extends Widget {
       });
     }
 
-    const resizer = DashboardWidget.createResizer();
-    this.node.appendChild(resizer);
+    const resizerTopLeft = DashboardWidget.createResizer('top-left');
+    const resizerTopRight = DashboardWidget.createResizer('top-right');
+    const resizerBottomLeft = DashboardWidget.createResizer('bottom-left');
+    const resizerBottomRight = DashboardWidget.createResizer('bottom-right');
+    this.node.appendChild(resizerTopLeft);
+    this.node.appendChild(resizerTopRight);
+    this.node.appendChild(resizerBottomLeft);
+    this.node.appendChild(resizerBottomRight);
 
     this.addClass(DASHBOARD_WIDGET_CLASS);
     this.addClass(EDITABLE_WIDGET_CLASS);
@@ -294,9 +298,19 @@ export class DashboardWidget extends Widget {
 
     // this.node.style.opacity = '0.6';
 
+    const elem = target as HTMLElement;
     // Set mode to resize if the mousedown happened on a resizer.
-    if ((target as HTMLElement).classList.contains('pr-Resizer')) {
+    if (elem.classList.contains('pr-Resizer')) {
       this._mouseMode = 'resize';
+      if (elem.classList.contains('pr-ResizerTopRight')) {
+        this._selectedResizer = 'top-right';
+      } else if (elem.classList.contains('pr-ResizerTopLeft')) {
+        this._selectedResizer = 'top-left';
+      } else if (elem.classList.contains('pr-ResizerBottomLeft')) {
+        this._selectedResizer = 'bottom-left';
+      } else {
+        this._selectedResizer = 'bottom-right';
+      }
     } else {
       this._mouseMode = 'drag';
     }
@@ -305,12 +319,16 @@ export class DashboardWidget extends Widget {
 
     const rect = this.node.getBoundingClientRect();
 
+    const { width, height, top, left } = this.pos;
+
     this._clickData = {
       pressX: event.clientX,
       pressY: event.clientY,
       cell,
-      pressWidth: parseInt(this.node.style.width, 10),
-      pressHeight: parseInt(this.node.style.height, 10),
+      origWidth: width,
+      origHeight: height,
+      origLeft: left,
+      origTop: top,
       target: this.node.cloneNode(true) as HTMLElement,
       widgetX: rect.left,
       widgetY: rect.top
@@ -352,16 +370,44 @@ export class DashboardWidget extends Widget {
    * Handle `mousemove` events when the widget mouseMode is `resize`.
    */
   private _resizeMouseMove(event: MouseEvent): void {
-    const { pressX, pressY, pressWidth, pressHeight } = this._clickData;
+    const {
+      pressX,
+      pressY,
+      origWidth,
+      origHeight,
+      origLeft,
+      origTop
+    } = this._clickData;
 
     const deltaX = event.clientX - pressX;
     const deltaY = event.clientY - pressY;
 
-    const width = Math.max(pressWidth + deltaX, DashboardWidget.MIN_WIDTH);
-    const height = Math.max(pressHeight + deltaY, DashboardWidget.MIN_HEIGHT);
+    let { width, height, top, left } = this.pos;
 
-    this.node.style.width = `${width}px`;
-    this.node.style.height = `${height}px`;
+    switch (this._selectedResizer) {
+      case 'bottom-right':
+        width = Math.max(origWidth + deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight + deltaY, DashboardWidget.MIN_HEIGHT);
+        break;
+      case 'bottom-left':
+        width = Math.max(origWidth - deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight + deltaY, DashboardWidget.MIN_HEIGHT);
+        left = origLeft + deltaX;
+        break;
+      case 'top-right':
+        width = Math.max(origWidth + deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight - deltaY, DashboardWidget.MIN_HEIGHT);
+        top = origTop + deltaY;
+        break;
+      case 'top-left':
+        width = Math.max(origWidth - deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight - deltaY, DashboardWidget.MIN_HEIGHT);
+        top = origTop + deltaY;
+        left = origLeft + deltaX;
+        break;
+    }
+
+    this.pos = { width, height, top, left };
 
     if (this.mode === 'grid-edit') {
       (this.parent.layout as DashboardLayout).drawDropZone(this.pos, '#2b98f0');
@@ -377,8 +423,12 @@ export class DashboardWidget extends Widget {
   fitContent(): void {
     const element = this._content.node;
     // Pixels are added to prevent weird wrapping issues. Kind of a hack.
-    this.node.style.width = `${element.clientWidth + 3}px`;
-    this.node.style.height = `${element.clientHeight + 2}px`;
+    this.pos = {
+      width: element.clientWidth + 3,
+      height: element.clientHeight + 2,
+      left: undefined,
+      top: undefined
+    };
   }
 
   /**
@@ -642,8 +692,10 @@ export class DashboardWidget extends Widget {
   private _clickData: {
     pressX: number;
     pressY: number;
-    pressWidth: number;
-    pressHeight: number;
+    origWidth: number;
+    origHeight: number;
+    origLeft: number;
+    origTop: number;
     target: HTMLElement;
     cell: CodeCell | MarkdownCell;
     widgetX: number;
@@ -651,6 +703,7 @@ export class DashboardWidget extends Widget {
   } | null = null;
   private _locked = false;
   private _content: Widget;
+  private _selectedResizer: DashboardWidget.ResizerCorner;
 }
 
 /**
@@ -711,17 +764,38 @@ export namespace DashboardWidget {
   }
 
   /**
+   * A type for describing the corner for a widget resizer.
+   */
+  export type ResizerCorner =
+    | 'top-left'
+    | 'bottom-left'
+    | 'top-right'
+    | 'bottom-right';
+
+  /**
    * Create a resizer element for a dashboard widget.
    */
-  export function createResizer(): HTMLElement {
+  export function createResizer(corner: ResizerCorner): HTMLElement {
     const resizer = document.createElement('div');
     resizer.classList.add('pr-Resizer');
-    DashboardIcons.resizer2.element({
-      container: resizer,
-      width: '15px',
-      height: '15px',
-      pointerEvents: 'none'
-    });
+
+    switch (corner) {
+      case 'top-left':
+        resizer.classList.add('pr-ResizerTopLeft');
+        break;
+      case 'top-right':
+        resizer.classList.add('pr-ResizerTopRight');
+        break;
+      case 'bottom-left':
+        resizer.classList.add('pr-ResizerBottomLeft');
+        break;
+      case 'bottom-right':
+        resizer.classList.add('pr-ResizerBottomRight');
+        break;
+      default:
+        resizer.classList.add('pr-ResizerBottomRight');
+        break;
+    }
 
     return resizer;
   }
