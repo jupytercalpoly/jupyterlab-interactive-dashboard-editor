@@ -27,6 +27,7 @@ jobs:
       run: |
         jlpm
         jlpm run eslint:check
+        jlpm run prettier:check
 
         python -m pip install .
 

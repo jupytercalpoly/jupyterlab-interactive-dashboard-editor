@@ -1,1 +1,26 @@
-{"data":{"layout-restorer:data":{"main":{"dock":{"type":"tab-area","currentIndex":0,"widgets":[]},"mode":"multiple-document"},"left":{"collapsed":false,"current":"filebrowser","widgets":["filebrowser","running-sessions","command-palette","jp-property-inspector","tab-manager","@jupyterlab/toc:plugin","extensionmanager.main-view"]},"right":{"collapsed":true,"widgets":[]}},"file-browser-filebrowser:cwd":{"path":"demo"}},"metadata":{"id":"/lab"}}
+{
+  "data": {
+    "layout-restorer:data": {
+      "main": {
+        "dock": { "type": "tab-area", "currentIndex": 0, "widgets": [] },
+        "mode": "multiple-document"
+      },
+      "left": {
+        "collapsed": false,
+        "current": "filebrowser",
+        "widgets": [
+          "filebrowser",
+          "running-sessions",
+          "command-palette",
+          "jp-property-inspector",
+          "tab-manager",
+          "@jupyterlab/toc:plugin",
+          "extensionmanager.main-view"
+        ]
+      },
+      "right": { "collapsed": true, "widgets": [] }
+    },
+    "file-browser-filebrowser:cwd": { "path": "demo" }
+  },
+  "metadata": { "id": "/lab" }
+}
