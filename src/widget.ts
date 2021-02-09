@@ -267,7 +267,7 @@ export class DashboardWidget extends Widget {
     }
 
     if (pos !== oldPos) {
-      (this.parent as Dashboard).updateWidget(this, pos);
+      (this.parent as Dashboard).updateWidget(this, { pos });
     }
   }
 
@@ -541,7 +541,7 @@ export class DashboardWidget extends Widget {
 
     if (this._mouseMode === 'resize' && this.parent !== undefined) {
       const pos = this.pos;
-      (this.parent as Dashboard).updateWidget(this, pos);
+      (this.parent as Dashboard).updateWidget(this, { pos });
     }
 
     this._mouseMode = 'none';
@@ -584,7 +584,8 @@ export class DashboardWidget extends Widget {
       widgetId: this.id,
       cellId: this.cellId,
       notebookId: this.notebookId,
-      removed: false
+      removed: false,
+      snapToGrid: this.snapToGrid
     };
   }
 
@@ -653,15 +654,26 @@ export class DashboardWidget extends Widget {
   }
   set mode(newMode: Dashboard.Mode) {
     this._mode = newMode;
-    if (newMode === 'present') {
-      this.removeClass(EDITABLE_WIDGET_CLASS);
-    } else {
-      this.addClass(EDITABLE_WIDGET_CLASS);
-    }
-    if (newMode === 'grid-edit') {
-      if (this.parent) {
-        (this.parent as Dashboard).updateWidget(this, this.pos);
-      }
+
+
+    switch (newMode) {
+      case 'present':
+        this.removeClass(EDITABLE_WIDGET_CLASS);
+        break;
+      case 'free-edit':
+        this.addClass(EDITABLE_WIDGET_CLASS);
+        if (this.parent) {
+          (this.parent as Dashboard).updateWidget(this, { snapToGrid: false });
+        }
+        break;
+      case 'grid-edit':
+        this.addClass(EDITABLE_WIDGET_CLASS);
+        if (this.parent) {
+          (this.parent as Dashboard).updateWidget(this, {
+            pos: this.pos,
+            snapToGrid: true
+          });
+        }
     }
   }
 
@@ -691,6 +703,10 @@ export class DashboardWidget extends Widget {
   set content(newContent: Widget) {
     this._content.dispose();
     this._content = newContent;
+  }
+
+  get snapToGrid(): boolean {
+    return this.mode === 'grid-edit';
   }
 
   private _notebook: NotebookPanel;

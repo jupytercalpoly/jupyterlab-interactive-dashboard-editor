@@ -591,7 +591,23 @@ function addCommands(
     execute: args => {
       const notebook = notebookTracker.currentWidget;
       const notebookMetadata = getMetadata(notebook);
+      if (!('views' in notebookMetadata)) {
+        throw new Error('No views in notebook');
+      }
       const notebookId = notebookMetadata.id;
+      let dashboardId: string;
+      if (args.id != null) {
+        dashboardId = args.id as string;
+        if (!(notebookMetadata.views as Object).hasOwnProperty(dashboardId)) {
+          throw new Error(`Dashboard id ${dashboardId} doesn't exist in notebook ${notebookId}`);
+        }
+      } else {
+        dashboardId = Object.keys(notebookMetadata.views)[0]
+      }
+
+      const dashboardView = notebookMetadata.views[dashboardId];
+      const { cellHeight, cellWidth, dashboardHeight, dashboardWidth } = dashboardView;
+
       const cells = notebook.content.widgets;
 
       const widgetstore = new Widgetstore({ id: 0, notebookTracker });
@@ -600,12 +616,23 @@ function addCommands(
 
       for (const cell of cells) {
         const metadata = getMetadata(cell);
-        if (metadata !== undefined && !metadata.hidden) {
+        if (metadata !== undefined && !metadata.views[dashboardId].hidden) {
+          let { pos, snapToGrid } = metadata.views[dashboardId];
+          let { left, top, width, height } = pos;
+
+          let adjustedPos = !snapToGrid ? pos : {
+            left: left * cellWidth,
+            top: top * cellHeight,
+            width: width * cellWidth,
+            height: height * cellHeight
+          };
+
           const widgetInfo: WidgetInfo = {
             widgetId: DashboardWidget.createDashboardWidgetId(),
             notebookId,
             cellId: metadata.id,
-            pos: metadata.pos
+            snapToGrid,
+            pos: adjustedPos
           };
           widgetstore.addWidget(widgetInfo);
         }
@@ -623,6 +650,10 @@ function addCommands(
         model
       });
 
+      dashboard.model.width = dashboardWidth;
+      dashboard.model.height = dashboardHeight;
+      (dashboard.layout as DashboardLayout).setTileSize(cellHeight);
+
       dashboard.updateLayoutFromWidgetstore();
       dashboard.model.mode = 'present';
 
@@ -631,8 +662,8 @@ function addCommands(
     isEnabled: args => {
       const notebook = notebookTracker.currentWidget;
       const metadata = getMetadata(notebook);
-      if (metadata !== undefined && metadata.hasDashboard !== undefined) {
-        return metadata.hasDashboard;
+      if (metadata !== undefined) {
+        return true
       }
       return false;
     }

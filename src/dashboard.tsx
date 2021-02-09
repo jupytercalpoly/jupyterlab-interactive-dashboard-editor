@@ -29,14 +29,15 @@ import { DashboardLayout } from './layout';
 
 import { DashboardWidget } from './widget';
 
-import { WidgetPosition, Widgetstore } from './widgetstore';
+import { Widgetstore, WidgetInfo } from './widgetstore';
 
 import {
   addCellId,
   addNotebookId,
   getNotebookById,
   getCellId,
-  updateMetadata
+  getMetadata,
+  addMetadataView
 } from './utils';
 
 import {
@@ -53,6 +54,8 @@ import { CommandIDs } from './commands';
 import { HTMLSelect } from '@jupyterlab/ui-components';
 
 import { UUID } from '@lumino/coreutils';
+
+import * as dbformat from './dbformat';
 
 // HTML element classes
 
@@ -182,8 +185,8 @@ export class Dashboard extends Widget {
       const pos = { left, top, width, height };
 
       if (oldDashboard === this) {
-        // dragging in same dashboard.ono
-        this.updateWidget(widget, pos);
+        // dragging in same dashboard.
+        this.updateWidget(widget, { pos });
       } else {
         // dragging between dashboards
         const info: Widgetstore.WidgetInfo = {
@@ -284,9 +287,9 @@ export class Dashboard extends Widget {
 
   updateWidget(
     widget: DashboardWidget,
-    pos: Widgetstore.WidgetPosition
+    newInfo: Partial<WidgetInfo>
   ): boolean {
-    return (this.layout as DashboardLayout).updateWidget(widget, pos);
+    return (this.layout as DashboardLayout).updateWidget(widget, newInfo);
   }
 
   /**
@@ -364,7 +367,7 @@ export class Dashboard extends Widget {
     return (this.layout as DashboardLayout).createWidget(info, fit);
   }
 
-  saveToNotebookMetadata(): void {
+  saveToNotebookMetadata(name: string = 'default'): void {
     // Get a list of all notebookIds used in the dashboard.
     const widgets = toArray(this.model.widgetstore.getWidgets());
 
@@ -380,22 +383,64 @@ export class Dashboard extends Widget {
     const notebookTracker = this.model.notebookTracker;
     const notebook = getNotebookById(notebookId, notebookTracker);
 
-    updateMetadata(notebook, { hasDashboard: true });
+    const oldDashboardMetadata = getMetadata(notebook);
+    let dashboardId: string;
+
+    if ((oldDashboardMetadata as Object).hasOwnProperty('views')) {
+      const dashboardIds = Object.keys(oldDashboardMetadata.views);
+      if (dashboardIds.length != 1) {
+        throw new Error(
+          'Multiple dashboards are embedded--currently only a single embedded dashboard is supported.'
+        );
+      }
+      dashboardId = dashboardIds[0];
+    } else {
+      dashboardId = UUID.uuid4();
+    }
+
+    const cellWidth = (this.layout as DashboardLayout).tileSize;
+    // Only square dimensions are currently supported.
+    const cellHeight = cellWidth;
+
+    const dashboardView = {
+      name,
+      cellWidth,
+      cellHeight,
+      dashboardWidth: this.model.width,
+      dashboardHeight: this.model.height
+    };
+    addMetadataView(notebook, dashboardId, dashboardView);
 
     const cells = notebook.content.widgets;
 
-    const widgetMap = new Map<string, WidgetPosition>(
-      widgets.map(widget => [widget.cellId, widget.pos])
+    const widgetMap = new Map<string, WidgetInfo>(
+      widgets.map(widget => [widget.cellId, widget])
     );
 
     each(cells, cell => {
       const cellId = getCellId(cell);
-      const pos = widgetMap.get(cellId);
-      if (pos != null) {
-        updateMetadata(cell, { pos, hidden: false });
-      } else {
-        updateMetadata(cell, { hidden: true });
+      const info = widgetMap.get(cellId);
+      let view: Partial<dbformat.ICellView> = { hidden: true };
+
+      if (info != null) {
+        let { pos, snapToGrid } = info;
+        let { left, top, width, height } = pos;
+        let adjustedPos = !snapToGrid ? pos : {
+          left: left / cellWidth,
+          top: top / cellHeight,
+          width: width / cellWidth,
+          height: height / cellHeight
+        };
+
+        view = {
+          hidden: false,
+          name,
+          pos: adjustedPos,
+          snapToGrid: snapToGrid
+        };
       }
+
+      addMetadataView(cell, dashboardId, view);
     });
 
     notebook.context.save();

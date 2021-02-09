@@ -83,7 +83,7 @@ export class Widgetstore extends Litestore {
     this.startBatch();
 
     for (const change of changes) {
-      const { widgetId, pos, ignore } = change;
+      const { widgetId, pos, snapToGrid, ignore } = change;
 
       if (ignore) {
         continue;
@@ -91,10 +91,10 @@ export class Widgetstore extends Litestore {
 
       switch (change.type) {
         case 'add':
-          this.addWidget(change as Widgetstore.WidgetInfo);
+          this.addWidget(change as WidgetInfo);
           break;
-        case 'move':
-          this.moveWidget(widgetId, pos as WidgetPosition);
+        case 'update':
+          this.updateWidget(widgetId, { pos: pos as WidgetPosition, snapToGrid });
           break;
         case 'remove':
           this.deleteWidget(widgetId);
@@ -118,7 +118,7 @@ export class Widgetstore extends Litestore {
       this.beginTransaction();
     }
 
-    const { widgetId, pos, cellId, notebookId } = info;
+    const { widgetId, pos, cellId, notebookId, snapToGrid } = info;
 
     this.updateRecord(
       {
@@ -130,6 +130,7 @@ export class Widgetstore extends Litestore {
         pos,
         cellId,
         notebookId,
+        snapToGrid,
         removed: false
       }
     );
@@ -140,7 +141,7 @@ export class Widgetstore extends Litestore {
   }
 
   /**
-   * Updates the position of a widget already in the widgetstore.
+   * Update a widget already in the widgetstore.
    *
    * @param widget - the widget to update.
    *
@@ -152,7 +153,7 @@ export class Widgetstore extends Litestore {
    * The update will be unsuccesful if the widget isn't in the store or was
    * previously removed.
    */
-  moveWidget(widgetId: string, pos: Widgetstore.WidgetPosition): boolean {
+  updateWidget(widgetId: string, newInfo: Partial<WidgetInfo>): boolean {
     if (!this._inBatch) {
       this.beginTransaction();
     }
@@ -165,10 +166,13 @@ export class Widgetstore extends Litestore {
     const oldRecord = this.getRecord(recordLoc);
 
     if (oldRecord === undefined || oldRecord.removed) {
+      if (!this._inBatch) {
+        this.endTransaction();
+      }
       return false;
     }
 
-    this.updateRecord(recordLoc, { pos });
+    this.updateRecord(recordLoc, newInfo);
 
     if (!this._inBatch) {
       this.endTransaction();
@@ -305,7 +309,8 @@ export namespace Widgetstore {
           height: 0
         }
       }),
-      removed: Fields.Boolean()
+      removed: Fields.Boolean(),
+      snapToGrid: Fields.Boolean()
     }
   };
 
@@ -352,6 +357,11 @@ export namespace Widgetstore {
      * Whether the widget has been removed.
      */
     removed?: boolean;
+
+    /**
+     * Whether the widget should snap to the gridlines in edit mode.
+     */
+    snapToGrid?: boolean;
   };
 
   export type WidgetPosition = {

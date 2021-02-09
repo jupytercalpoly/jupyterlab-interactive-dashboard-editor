@@ -1,5 +1,7 @@
 import { PartialJSONObject } from '@lumino/coreutils';
 
+import { WidgetPosition } from './widgetstore';
+
 export const DASHBOARD_VERSION = 1;
 
 /**
@@ -54,4 +56,30 @@ export interface IOutputInfo extends PartialJSONObject {
     width: number;
     height: number;
   };
+}
+
+export interface ICellView {
+  name: string;
+  pos: WidgetPosition,
+  hidden: boolean,
+  snapToGrid: boolean,
+}
+
+export interface ICellMetadataFormat {
+  id: string;
+  views: { [id: string]: ICellView }
+}
+
+export interface IDashboardView {
+  name: string;
+  cellWidth: number;
+  cellHeight: number;
+  dashboardWidth: number;
+  dashboardHeight: number;
+}
+
+
+export interface INBMetadataFormat {
+  id: string;
+  views: { [id: string]: IDashboardView }
 }
