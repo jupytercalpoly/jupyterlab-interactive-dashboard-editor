@@ -4,6 +4,8 @@ import { CodeCell, MarkdownCell } from '@jupyterlab/cells';
 
 import { Widget } from '@lumino/widgets';
 
+import { MessageLoop } from '@lumino/messaging';
+
 import { UUID, MimeData } from '@lumino/coreutils';
 
 import { ArrayExt } from '@lumino/algorithm';
@@ -130,8 +132,20 @@ export class DashboardWidget extends Widget {
         this.node.style.opacity = '0';
 
         container.classList.add(DASHBOARD_WIDGET_CHILD_CLASS);
-        container.appendChild(clone.node);
-        this.node.appendChild(container);
+
+        // Fake an attach in order to render LaTeX properly.
+        // Note: This is not how you should use Lumino widgets.
+        if (this.parent) {
+          if (this.parent!.isAttached) {
+            MessageLoop.sendMessage(clone, Widget.Msg.BeforeAttach);
+            container.appendChild(clone.node);
+            this.node.appendChild(container);
+            if (this.parent!.isAttached) {
+              MessageLoop.sendMessage(clone, Widget.Msg.AfterAttach);
+            }
+          }
+        }
+
         this._content = clone;
 
         const done = (): void => {
@@ -421,7 +435,7 @@ export class DashboardWidget extends Widget {
    * Fit widget width/height to the width/height of the underlying content.
    */
   fitContent(): void {
-    const element = this._content.node;
+    const element = this._content.node.firstChild as HTMLElement;
     // Pixels are added to prevent weird wrapping issues. Kind of a hack.
     this.pos = {
       width: element.clientWidth + 3,
