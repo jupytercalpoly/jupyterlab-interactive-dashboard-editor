@@ -5,6 +5,7 @@ import greyDashboardSvgstr from '../style/icons/dashboard_icon_filled_grey.svg';
 import blueDashboardSvgstr from '../style/icons/dashboard_icon_filled_blue.svg';
 import whiteDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_white.svg';
 import greyDashboardOutlineSvgstr from '../style/icons/dashboard_icon_outline_grey.svg';
+import tealDashboardSvgstr from '../style/icons/dashboard_icon_filled_teal.svg';
 import redoIcon from '../style/icons/redo.svg';
 import fullscreenIcon from '../style/icons/fullscreen.svg';
 import statusIcon from '../style/icons/dummy.svg';
@@ -17,6 +18,11 @@ import resizer2Svgstr from '../style/icons/drag indicator lines.svg';
  * Dashboard icons
  */
 export namespace DashboardIcons {
+  export const tealDashboard = new LabIcon({
+    name: 'pr-icons:teal-dashboard',
+    svgstr: tealDashboardSvgstr
+  });
+
   export const whiteDashboard = new LabIcon({
     name: 'pr-icons:white-dashboard',
     svgstr: whiteDashboardSvgstr
