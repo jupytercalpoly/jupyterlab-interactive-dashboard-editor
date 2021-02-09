@@ -4,8 +4,6 @@
 
 .pr-DashboardWidget {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .pr-DashboardWidget .pr-MarkdownOutput {
@@ -13,8 +11,10 @@
 }
 
 .pr-EditableWidget {
-  border: var(--jp-border-width) solid var(--jp-inverse-layout-color4);
+  outline: var(--jp-border-width) solid var(--jp-inverse-layout-color4);
+  outline-offset: calc(-1 * var(--jp-border-width));
   background: var(--jp-layout-color0);
+  overflow: visible;
 }
 
 .pr-EditableWidget > .pr-DashboardWidgetChild {
@@ -22,30 +22,14 @@
 }
 
 .pr-EditableWidget:focus {
-  border: var(--jp-border-width) solid var(--jp-brand-color1);
-}
-
-.pr-EditableWidget:focus:after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.1);
+  outline: var(--jp-border-width) solid var(--jp-brand-color1);
+  outline-offset: calc(-1 * var(--jp-border-width));
 }
 
 .pr-EditableWidget:hover {
-  border: var(--jp-border-width) solid var(--jp-brand-color1);
+  outline: var(--jp-border-width) solid var(--jp-brand-color1);
+  outline-offset: calc(-1 * var(--jp-border-width));
   cursor: move;
-}
-
-.pr-EditableWidget:hover:after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.1);
 }
 
 .pr-DashboardArea {
@@ -54,20 +38,52 @@
 
 .pr-Resizer {
   display: none;
-  width: 15px;
-  height: 15px;
-  right: 0;
-  bottom: 0;
+  width: 8px;
+  height: 8px;
+  outline: 2px solid var(--jp-brand-color1);
   z-index: 3;
-  cursor: nwse-resize;
+  background-color: var(--jp-layout-color0);
   position: absolute;
 }
 
-.pr-DashboardWidgetChild {
-  display: inline-block;
+.pr-Resizer:hover {
+  background-color: var(--jp-brand-color1);
 }
 
-.pr-EditableWidget:hover .pr-Resizer {
+.pr-ResizerBottomRight {
+  right: -4px;
+  bottom: -4px;
+  cursor: nwse-resize;
+}
+
+.pr-ResizerBottomLeft {
+  left: -4px;
+  bottom: -4px;
+  cursor: nesw-resize;
+}
+
+.pr-ResizerTopRight {
+  right: -4px;
+  top: -4px;
+  cursor: nesw-resize;
+}
+
+.pr-ResizerTopLeft {
+  left: -4px;
+  top: -4px;
+  cursor: nwse-resize;
+}
+
+.pr-DashboardWidgetChild {
+  /* width: 100%;
+  height: 100%; */
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pr-EditableWidget:focus .pr-Resizer {
   display: block;
 }
 
@@ -77,28 +93,24 @@
 
 .pr-Canvas.pr-FreeLayout {
   background-image: linear-gradient(
-      45deg,
-      rgba(160, 160, 160, 0.15) 25%,
-      transparent 25%
+      to right,
+      var(--jp-border-color2) 1px,
+      transparent 1px
     ),
-    linear-gradient(-45deg, rgba(160, 160, 160, 0.15) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(160, 160, 160, 0.15) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(160, 160, 160, 0.15) 70%);
-  background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    linear-gradient(to bottom, var(--jp-border-color2) 1px, transparent 1px);
+  background-color: var(--jp-cell-editor-background);
+  background-size: 10px 10px;
 }
 
 .pr-Canvas.pr-TiledLayout {
   background-image: linear-gradient(
-      45deg,
-      rgba(160, 160, 160, 0.15) 25%,
-      transparent 25%
+      to right,
+      var(--jp-border-color2) 1px,
+      transparent 1px
     ),
-    linear-gradient(-45deg, rgba(160, 160, 160, 0.15) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(160, 160, 160, 0.15) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(160, 160, 160, 0.15) 70%);
-  background-size: 64px 64px;
-  background-position: 0 0, 0 32px, 32px -32px, -32px 0px;
+    linear-gradient(to bottom, var(--jp-border-color2) 1px, transparent 1px);
+  background-color: var(--jp-cell-editor-background);
+  background-size: 32px 32px;
 }
 
 .pr-OnboardingGif {
@@ -140,5 +152,6 @@ select.pr-ToolbarSelector.jp-mod-styled {
 
 .pr-DragImage {
   box-shadow: var(--jp-elevation-z1);
-  border: var(--jp-border-width) solid var(--jp-brand-color1);
+  outline: var(--jp-border-width) solid var(--jp-brand-color1);
+  outline-offset: calc(-1 * var(--jp-border-width));
 }

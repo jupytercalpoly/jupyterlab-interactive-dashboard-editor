@@ -508,7 +508,7 @@ export class DashboardLayout extends Layout {
    */
   updateLayoutFromWidgetstore(): void {
     this._signalChanges = false;
-    const records = this._widgetstore.getWidgets();
+    const records = this._widgetstore.get(Widgetstore.WIDGET_SCHEMA);
     each(records, record => {
       this._updateLayoutFromRecord(record);
     });
@@ -869,10 +869,10 @@ export class DashboardLayout extends Layout {
    */
   setTileSize(s: number): void {
     this._tileSize = s;
-    const backgroundPosition = `0 0, 0 ${s}px, ${s}px -${s}px, -${s}px 0px`;
+    // const backgroundPosition = `0 0, 0 ${s}px, ${s}px -${s}px, -${s}px 0px`;
 
-    this.canvas.style.backgroundPosition = backgroundPosition;
-    this.canvas.style.backgroundSize = `${2 * s}px ${2 * s}px`;
+    // this.canvas.style.backgroundPosition = backgroundPosition;
+    this.canvas.style.backgroundSize = `${s}px ${s}px`;
     this.parent.update();
 
     this.startBatch();

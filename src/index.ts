@@ -86,7 +86,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       contentType: 'file',
       extensions: ['.dashboard', '.dash'],
       fileFormat: 'text',
-      icon: DashboardIcons.blueDashboard,
+      icon: DashboardIcons.tealDashboard,
       iconLabel: 'Dashboard',
       mimeTypes: ['application/json']
     };
@@ -550,7 +550,7 @@ function addCommands(
 
   commands.addCommand(CommandIDs.createNew, {
     label: 'Dashboard',
-    icon: DashboardIcons.blueDashboard,
+    icon: DashboardIcons.tealDashboard,
     execute: async args => {
       // A new file is created and opened separately to override the default
       // opening behavior when there's a notebook and open the dashboard in a
