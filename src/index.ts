@@ -83,6 +83,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     // Define dashboard file type.
     const dashboardFiletype: Partial<DocumentRegistry.IFileType> = {
       name: 'dashboard',
+      displayName: 'Dashboard',
       contentType: 'file',
       extensions: ['.dashboard', '.dash'],
       fileFormat: 'text',
@@ -274,7 +275,7 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     });
 
     // Add commands to edit menu.
-    mainMenu.editMenu.addGroup([
+    mainMenu.fileMenu.addGroup([
       {
         command: CommandIDs.setDimensions
       },
