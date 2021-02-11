@@ -38,9 +38,9 @@
 
 .pr-Resizer {
   display: none;
-  width: 8px;
-  height: 8px;
-  outline: 2px solid var(--jp-brand-color1);
+  width: 4px;
+  height: 4px;
+  outline: 1px solid var(--jp-brand-color1);
   z-index: 3;
   background-color: var(--jp-layout-color0);
   position: absolute;
@@ -51,26 +51,26 @@
 }
 
 .pr-ResizerBottomRight {
-  right: -4px;
-  bottom: -4px;
+  right: -2px;
+  bottom: -2px;
   cursor: nwse-resize;
 }
 
 .pr-ResizerBottomLeft {
-  left: -4px;
-  bottom: -4px;
+  left: -2px;
+  bottom: -2px;
   cursor: nesw-resize;
 }
 
 .pr-ResizerTopRight {
-  right: -4px;
-  top: -4px;
+  right: -2px;
+  top: -2px;
   cursor: nesw-resize;
 }
 
 .pr-ResizerTopLeft {
-  left: -4px;
-  top: -4px;
+  left: -2px;
+  top: -2px;
   cursor: nwse-resize;
 }
 
