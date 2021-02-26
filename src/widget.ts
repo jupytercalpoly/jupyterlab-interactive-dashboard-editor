@@ -245,7 +245,12 @@ export class DashboardWidget extends Widget {
     const pos = this.pos;
     const oldPos = { ...pos };
 
-    const bumpDistance = event.altKey ? 1 : DashboardWidget.BUMP_DISTANCE;
+    let bumpDistance: number;
+    if (this._mode === 'grid-edit') {
+      bumpDistance = (this.parent.layout as DashboardLayout).tileSize;
+    } else {
+      bumpDistance = event.altKey ? 1 : DashboardWidget.BUMP_DISTANCE;
+    }
 
     switch (event.keyCode) {
       // Left arrow key
@@ -654,7 +659,6 @@ export class DashboardWidget extends Widget {
   }
   set mode(newMode: Dashboard.Mode) {
     this._mode = newMode;
-
 
     switch (newMode) {
       case 'present':

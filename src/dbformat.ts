@@ -60,14 +60,14 @@ export interface IOutputInfo extends PartialJSONObject {
 
 export interface ICellView {
   name: string;
-  pos: WidgetPosition,
-  hidden: boolean,
-  snapToGrid: boolean,
+  pos: WidgetPosition;
+  hidden: boolean;
+  snapToGrid: boolean;
 }
 
 export interface ICellMetadataFormat {
   id: string;
-  views: { [id: string]: ICellView }
+  views: { [id: string]: ICellView };
 }
 
 export interface IDashboardView {
@@ -78,8 +78,7 @@ export interface IDashboardView {
   dashboardHeight: number;
 }
 
-
 export interface INBMetadataFormat {
   id: string;
-  views: { [id: string]: IDashboardView }
+  views: { [id: string]: IDashboardView };
 }

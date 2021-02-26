@@ -45,7 +45,8 @@ export function addMetadataView(
     newMetadata = { ...oldMetadata };
   }
 
-  if (!(newMetadata as Object).hasOwnProperty('views')) {
+  // eslint-disable-next-line no-prototype-builtins
+  if (!(newMetadata as Record<string, any>).hasOwnProperty('views')) {
     newMetadata['views'] = {};
   }
   newMetadata.views[viewId] = view;

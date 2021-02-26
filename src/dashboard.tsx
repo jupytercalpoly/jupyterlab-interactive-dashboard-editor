@@ -98,8 +98,8 @@ export class Dashboard extends Widget {
       outputTracker,
       model,
       mode,
-      width: options.dashboardWidth || Dashboard.DEFAULT_WIDTH,
-      height: options.dashboardHeight || Dashboard.DEFAULT_HEIGHT
+      width: options.dashboardWidth || window.innerWidth,
+      height: options.dashboardHeight || window.innerHeight
     });
 
     widgetstore.connectDashboard(this);
@@ -261,19 +261,21 @@ export class Dashboard extends Widget {
       return;
     }
 
+    // Changed to only "infinitely" scroll on the vertical
+
     const elem = this.node;
-    const rightEdge = elem.offsetWidth + elem.scrollLeft;
+    // const rightEdge = elem.offsetWidth + elem.scrollLeft;
     const bottomEdge = elem.offsetHeight + elem.scrollTop;
 
-    if (rightEdge >= model.width && rightEdge > this._oldRightEdge) {
-      model.width += 200;
-    }
+    // if (rightEdge >= model.width && rightEdge > this._oldRightEdge) {
+    //   model.width += 200;
+    // }
     if (bottomEdge >= model.height && bottomEdge > this._oldBottomEdge) {
-      model.height += 200;
+      model.height += (this.layout as DashboardLayout).tileSize;
     }
 
     this._oldBottomEdge = bottomEdge;
-    this._oldRightEdge = rightEdge;
+    // this._oldRightEdge = rightEdge;
   }
 
   /**
@@ -285,10 +287,7 @@ export class Dashboard extends Widget {
     (this.layout as DashboardLayout).addWidget(widget, pos);
   }
 
-  updateWidget(
-    widget: DashboardWidget,
-    newInfo: Partial<WidgetInfo>
-  ): boolean {
+  updateWidget(widget: DashboardWidget, newInfo: Partial<WidgetInfo>): boolean {
     return (this.layout as DashboardLayout).updateWidget(widget, newInfo);
   }
 
@@ -367,7 +366,7 @@ export class Dashboard extends Widget {
     return (this.layout as DashboardLayout).createWidget(info, fit);
   }
 
-  saveToNotebookMetadata(name: string = 'default'): void {
+  saveToNotebookMetadata(name = 'default'): void {
     // Get a list of all notebookIds used in the dashboard.
     const widgets = toArray(this.model.widgetstore.getWidgets());
 
@@ -386,14 +385,13 @@ export class Dashboard extends Widget {
     const oldDashboardMetadata = getMetadata(notebook);
     let dashboardId: string;
 
-    if ((oldDashboardMetadata as Object).hasOwnProperty('views')) {
+    // eslint-disable-next-line no-prototype-builtins
+    if ((oldDashboardMetadata as Record<string, any>).hasOwnProperty('views')) {
       const dashboardIds = Object.keys(oldDashboardMetadata.views);
-      if (dashboardIds.length != 1) {
-        throw new Error(
-          'Multiple dashboards are embedded--currently only a single embedded dashboard is supported.'
-        );
-      }
-      dashboardId = dashboardIds[0];
+      const names = new Map<string, string>(
+        dashboardIds.map(id => [oldDashboardMetadata.views[id].name, id])
+      );
+      dashboardId = names.get(name) || UUID.uuid4();
     } else {
       dashboardId = UUID.uuid4();
     }
@@ -423,14 +421,16 @@ export class Dashboard extends Widget {
       let view: Partial<dbformat.ICellView> = { hidden: true };
 
       if (info != null) {
-        let { pos, snapToGrid } = info;
-        let { left, top, width, height } = pos;
-        let adjustedPos = !snapToGrid ? pos : {
-          left: left / cellWidth,
-          top: top / cellHeight,
-          width: width / cellWidth,
-          height: height / cellHeight
-        };
+        const { pos, snapToGrid } = info;
+        const { left, top, width, height } = pos;
+        const adjustedPos = !snapToGrid
+          ? pos
+          : {
+              left: left / cellWidth,
+              top: top / cellHeight,
+              width: width / cellWidth,
+              height: height / cellHeight
+            };
 
         view = {
           hidden: false,
@@ -456,7 +456,7 @@ export class Dashboard extends Widget {
 
   private _model: IDashboardModel;
   private _context: DocumentRegistry.IContext<DocumentRegistry.IModel>;
-  private _oldRightEdge = 0;
+  // private _oldRightEdge = 0;
   private _oldBottomEdge = 0;
 }
 
@@ -467,10 +467,6 @@ export namespace Dashboard {
   export type Mode = 'free-edit' | 'present' | 'grid-edit';
 
   export type ScrollMode = 'infinite' | 'constrained';
-
-  export const DEFAULT_WIDTH = 1920;
-
-  export const DEFAULT_HEIGHT = 1080;
 
   export interface IOptions extends Widget.IOptions {
     /**

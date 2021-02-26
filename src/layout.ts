@@ -8,7 +8,12 @@ import { MessageLoop, Message } from '@lumino/messaging';
 
 import { DashboardWidget } from './widget';
 
-import { Widgetstore, WidgetSchema, WidgetInfo, WidgetPosition } from './widgetstore';
+import {
+  Widgetstore,
+  WidgetSchema,
+  WidgetInfo,
+  WidgetPosition
+} from './widgetstore';
 
 import { WidgetTracker } from '@jupyterlab/apputils';
 
@@ -274,10 +279,7 @@ export class DashboardLayout extends Layout {
    *
    * @returns - whether the update was successful.
    */
-  updateWidget(
-    widget: DashboardWidget,
-    newInfo: Partial<WidgetInfo>
-  ): boolean {
+  updateWidget(widget: DashboardWidget, newInfo: Partial<WidgetInfo>): boolean {
     const wasInBatch = this.inBatch;
     if (!wasInBatch) {
       this.startBatch();
@@ -356,7 +358,7 @@ export class DashboardLayout extends Layout {
 
     // Just changing snap-to-grid status.
     if (newInfo.pos == null) {
-      return true
+      return true;
     }
 
     let { left, top, width, height } = newInfo.pos;

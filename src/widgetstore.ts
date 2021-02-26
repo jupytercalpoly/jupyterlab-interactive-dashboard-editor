@@ -94,7 +94,10 @@ export class Widgetstore extends Litestore {
           this.addWidget(change as WidgetInfo);
           break;
         case 'update':
-          this.updateWidget(widgetId, { pos: pos as WidgetPosition, snapToGrid });
+          this.updateWidget(widgetId, {
+            pos: pos as WidgetPosition,
+            snapToGrid
+          });
           break;
         case 'remove':
           this.deleteWidget(widgetId);
