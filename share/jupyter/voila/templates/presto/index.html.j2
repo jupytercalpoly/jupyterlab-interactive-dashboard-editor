@@ -1,0 +1,151 @@
+{%- extends 'nbconvert/templates/lab/index.html.j2' -%}
+{% import "spinner.macro.html.j2" as spinner %}
+{% import "log.macro.html.j2" as log %}
+{% from 'voila_setup.macro.html.j2' import voila_setup with context %}
+
+{%- block html_head_js -%}
+{%- block html_head_js_logs -%}
+{{ log.js() }}
+{%- endblock html_head_js_logs -%}
+{%- endblock html_head_js -%}
+
+{%- block html_head_css -%}
+<link rel="stylesheet" href="https://unpkg.com/font-awesome@4.5.0/css/font-awesome.min.css" type="text/css" />
+{{ super() }}
+{{ spinner.css() }}
+  <style>
+    /*Hide empty cells*/
+    .jp-mod-noOutputs.jp-mod-noInput {
+      display: none;
+    }
+    
+    .pr-DashboardWidget {
+      position: absolute;
+      display: inline-flex;
+      align-items: flex-start;
+      justify-content: left;
+      overflow: hidden;
+    }
+
+    .jp-MarkdownOutput {
+      display: inline-block;
+      padding-right: 0;
+    }
+
+    .widget-dimensions {
+      position: absolute;
+      border: 1px solid black;
+      text-align: center;
+      width: 100px;
+    }
+  </style>
+{%- endblock html_head_css -%}
+
+{# this overrides the default behaviour of rendering static widgets #}
+{% block jupyter_widgets %}
+{% endblock jupyter_widgets %}
+
+{%- block body_header -%}
+{% if resources.theme == 'dark' %}
+<body class="jp-Notebook theme-dark" data-base-url="{{resources.base_url}}voila/">
+{% else %}
+<body class="jp-Notebook theme-light" data-base-url="{{resources.base_url}}voila/">
+{% endif %}
+{{ spinner.html() }}
+<script>
+var voila_process = function(cell_index, cell_count) {
+  var el = document.getElementById("loading_text")
+  el.innerHTML = `Executing ${cell_index} of ${cell_count}`
+}
+var voila_heartbeat = function() {
+  console.log('Ok, voila is still executing...')
+}
+</script>
+<div id="rendered_cells" style="display: none">
+{%- endblock body_header -%}
+
+{%- block body_loop -%}
+  {# from this point on, the kernel is started #}
+  {%- with kernel_id = kernel_start(nb) -%}
+    <script id="jupyter-config-data" type="application/json">
+    {
+        "baseUrl": "{{resources.base_url}}",
+        "kernelId": "{{kernel_id}}"
+    }
+    </script>
+    {% set cell_count = nb.cells|length %}
+    {#
+    Voilà is using Jinja's Template.generate method to not render the whole template in one go.
+    The current implementation of Jinja will however not yield template snippets if we call a blocks' super()
+    Therefore it is important to have the cell loop in the template.
+    The issue for Jinja is: https://github.com/pallets/jinja/issues/1044
+    #}
+    {% set dashboardInfo = namespace(id=None, name=None, view=None) %}
+    {# If no id or name is provided the first embedded dashboard is used #}
+    {% set dashboardInfo.id = resources.presto.dashboardId or nb.metadata.presto.views.keys()|first %}
+    {% set dashboardInfo.name = resources.presto.dashboardName %}
+    {% set dashboardInfo.view = nb.metadata.presto.views[dashboardInfo.id] %}
+    {# If only a dashboard name is supplied #}
+    {% if dashboardInfo.view.name != dashboardInfo.name %}
+      {%- for id, view in nb.metadata.presto.views.items() if view.name == dashboardInfo.name -%}
+        {% set dashboardInfo.view = view %}
+        {% set dashboardInfo.id = id %}
+      {% endfor %}
+    {% endif %}
+
+    {% set cellHeight = dashboardInfo.view.cellHeight %}
+    {% set cellWidth = dashboardInfo.view.cellWidth %}
+    {% set dashboardHeight = dashboardInfo.view.dashboardHeight %}
+    {% set dashboardWidth = dashboardInfo.view.dashboardWidth %}
+
+    <div style="height: {{ dashboardHeight }}px; width: {{ dashboardWidth }}px;">
+      {%- for cell in cell_generator(nb, kernel_id) -%}
+        {% if 'presto' in cell.metadata and dashboardInfo.id in cell.metadata.presto.views and not cell.metadata.presto.views[dashboardInfo.id].hidden %}
+          {% set cellloop = loop %}
+          {%- block any_cell scoped -%}
+            {% set pos = cell.metadata.presto.views[dashboardInfo.id].pos %}
+            {% set snapToGrid = cell.metadata.presto.views[dashboardInfo.id].snapToGrid %}
+            {% set left = pos.left * cellWidth if snapToGrid else pos.left %}
+            {% set top = pos.top  * cellHeight if snapToGrid else pos.top %}
+            {% set width = pos.width * cellWidth if snapToGrid else pos.width %}
+            {% set height = pos.height * cellHeight if snapToGrid else pos.height %}
+
+            <div class="pr-DashboardWidget" style="top:{{top}}px;left:{{left}}px;width:{{width}}px;height:{{height}}px">
+              <script>
+                voila_process({{ cellloop.index }}, {{ cell_count }});
+              </script>
+                {{ super() }}
+            </div>
+            {% if resources.presto.showDimensions %}
+              </div>
+              <p class="widget-dimensions" style="top:{{top + height + 20}}px; left:{{left + (width / 2) - 50}}px;">
+                {{ width }} x {{ height }}
+              </p>
+            {% endif %}
+          {%- endblock any_cell -%}
+        {% endif %}
+      {%- endfor -%}
+    </div>
+
+    
+  {% endwith %}
+{%- endblock body_loop -%}
+
+{%- block body_footer -%}
+</div>
+<script type="text/javascript">
+  (function() {
+    // remove the loading element
+    var el = document.getElementById("loading")
+    el.parentNode.removeChild(el)
+    // show the cell output
+    el = document.getElementById("rendered_cells")
+    el.style.display = 'unset'
+  })();
+</script>
+{{ super() }}
+{%- endblock body_footer -%}
+
+{% block footer_js %}
+{{ voila_setup(resources.base_url, resources.nbextensions) }}
+{% endblock footer_js %}
