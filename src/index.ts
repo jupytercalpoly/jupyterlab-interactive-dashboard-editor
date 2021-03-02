@@ -131,8 +131,8 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       const model = widget.content.model;
       // TODO: Make scrollMode changable in JL. Default 'infinite' for now.
       model.scrollMode = 'infinite';
-      model.width = Dashboard.DEFAULT_WIDTH;
-      model.height = Dashboard.DEFAULT_HEIGHT;
+      model.width = (widget.content.layout as DashboardLayout).width;
+      model.height = (widget.content.layout as DashboardLayout).height;
     });
 
     // Add commands to context menus.
@@ -442,8 +442,8 @@ function addCommands(
     label: 'Set Dashboard Dimensions',
     execute: async args => {
       const model = dashboardTracker.currentWidget.model;
-      const width = model.width ? model.width : Dashboard.DEFAULT_WIDTH;
-      const height = model.height ? model.height : Dashboard.DEFAULT_HEIGHT;
+      const width = model.width ? model.width : window.innerWidth;
+      const height = model.height ? model.height : window.innerHeight;
       await showDialog({
         title: 'Enter Dimensions',
         body: new Private.ResizeHandler(width, height),
@@ -458,14 +458,14 @@ function addCommands(
         }
         if (!newWidth) {
           if (!model.width) {
-            newWidth = Dashboard.DEFAULT_WIDTH;
+            newWidth = window.innerWidth;
           } else {
             newWidth = model.width;
           }
         }
         if (!newHeight) {
           if (!model.height) {
-            newHeight = Dashboard.DEFAULT_HEIGHT;
+            newHeight = window.innerHeight;
           } else {
             newHeight = model.height;
           }
@@ -543,9 +543,15 @@ function addCommands(
 
   commands.addCommand(CommandIDs.saveToMetadata, {
     label: 'Save Dashboard To Notebook Metadata',
-    execute: args => {
-      const dashboard = dashboardTracker.currentWidget;
-      dashboard.saveToNotebookMetadata();
+    execute: async args => {
+      const name = await InputDialog.getText({
+        title: 'Dashboard name',
+        text: 'default'
+      });
+      if (name.value) {
+        const dashboard = dashboardTracker.currentWidget;
+        dashboard.saveToNotebookMetadata(name.value);
+      }
     }
   });
 
@@ -588,10 +594,51 @@ function addCommands(
 
   commands.addCommand(CommandIDs.openFromMetadata, {
     label: 'Open Metadata Dashboard',
-    execute: args => {
+    execute: async args => {
       const notebook = notebookTracker.currentWidget;
       const notebookMetadata = getMetadata(notebook);
+      if (!('views' in notebookMetadata)) {
+        throw new Error('No views in notebook');
+      }
       const notebookId = notebookMetadata.id;
+      let dashboardId: string;
+      if (args.id != null) {
+        dashboardId = args.id as string;
+        if (
+          // eslint-disable-next-line no-prototype-builtins
+          !(notebookMetadata.views as Record<string, any>).hasOwnProperty(
+            dashboardId
+          )
+        ) {
+          throw new Error(
+            `Dashboard id ${dashboardId} doesn't exist in notebook ${notebookId}`
+          );
+        }
+      } else {
+        const dashboardIds = Object.keys(notebookMetadata.views);
+        const nameMap = new Map<string, string>(
+          dashboardIds.map(id => [notebookMetadata.views[id].name, id])
+        );
+        const dashboardName = await InputDialog.getItem({
+          title: 'Select a Dashboard',
+          current: 0,
+          items: Array.from(nameMap.keys())
+        });
+        if (dashboardName.value) {
+          dashboardId = nameMap.get(dashboardName.value);
+        } else {
+          return;
+        }
+      }
+
+      const dashboardView = notebookMetadata.views[dashboardId];
+      const {
+        cellHeight,
+        cellWidth,
+        dashboardHeight,
+        dashboardWidth
+      } = dashboardView;
+
       const cells = notebook.content.widgets;
 
       const widgetstore = new Widgetstore({ id: 0, notebookTracker });
@@ -600,12 +647,25 @@ function addCommands(
 
       for (const cell of cells) {
         const metadata = getMetadata(cell);
-        if (metadata !== undefined && !metadata.hidden) {
+        if (metadata !== undefined && !metadata.views[dashboardId].hidden) {
+          const { pos, snapToGrid } = metadata.views[dashboardId];
+          const { left, top, width, height } = pos;
+
+          const adjustedPos = !snapToGrid
+            ? pos
+            : {
+                left: left * cellWidth,
+                top: top * cellHeight,
+                width: width * cellWidth,
+                height: height * cellHeight
+              };
+
           const widgetInfo: WidgetInfo = {
             widgetId: DashboardWidget.createDashboardWidgetId(),
             notebookId,
             cellId: metadata.id,
-            pos: metadata.pos
+            snapToGrid,
+            pos: adjustedPos
           };
           widgetstore.addWidget(widgetInfo);
         }
@@ -623,6 +683,10 @@ function addCommands(
         model
       });
 
+      dashboard.model.width = dashboardWidth;
+      dashboard.model.height = dashboardHeight;
+      (dashboard.layout as DashboardLayout).setTileSize(cellHeight);
+
       dashboard.updateLayoutFromWidgetstore();
       dashboard.model.mode = 'present';
 
@@ -631,8 +695,8 @@ function addCommands(
     isEnabled: args => {
       const notebook = notebookTracker.currentWidget;
       const metadata = getMetadata(notebook);
-      if (metadata !== undefined && metadata.hasDashboard !== undefined) {
-        return metadata.hasDashboard;
+      if (metadata !== undefined) {
+        return true;
       }
       return false;
     }

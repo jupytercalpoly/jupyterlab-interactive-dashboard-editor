@@ -8,7 +8,12 @@ import { MessageLoop, Message } from '@lumino/messaging';
 
 import { DashboardWidget } from './widget';
 
-import { Widgetstore, WidgetSchema, WidgetPosition } from './widgetstore';
+import {
+  Widgetstore,
+  WidgetSchema,
+  WidgetInfo,
+  WidgetPosition
+} from './widgetstore';
 
 import { WidgetTracker } from '@jupyterlab/apputils';
 
@@ -240,12 +245,12 @@ export class DashboardLayout extends Layout {
       }
       this.attachWidget(widget);
 
-      const { id, notebookId, cellId } = widget;
+      const { id, notebookId, cellId, snapToGrid } = widget;
 
       const ignore = !this._signalChanges;
 
       widget.ready.connect(() => {
-        this._updateWidget(widget, widget.pos, false);
+        this._updateWidget(widget, { pos: widget.pos }, false);
         this.fixOverlaps(widget);
         this._outputTracker.add(widget);
 
@@ -255,6 +260,7 @@ export class DashboardLayout extends Layout {
           widgetId: id,
           notebookId,
           cellId,
+          snapToGrid,
           ignore
         };
 
@@ -273,16 +279,13 @@ export class DashboardLayout extends Layout {
    *
    * @returns - whether the update was successful.
    */
-  updateWidget(
-    widget: DashboardWidget,
-    pos: Widgetstore.WidgetPosition
-  ): boolean {
+  updateWidget(widget: DashboardWidget, newInfo: Partial<WidgetInfo>): boolean {
     const wasInBatch = this.inBatch;
     if (!wasInBatch) {
       this.startBatch();
     }
 
-    const success = this._updateWidgetHelper(widget, pos);
+    const success = this._updateWidgetHelper(widget, newInfo);
 
     if (!wasInBatch) {
       this.endBatch();
@@ -308,14 +311,15 @@ export class DashboardLayout extends Layout {
    */
   private _updateWidgetHelper(
     widget: DashboardWidget,
-    pos: Widgetstore.WidgetPosition,
+    newInfo: Partial<WidgetInfo>,
     fixOverlaps = true
   ): boolean {
-    const success = this._updateWidget(widget, pos, fixOverlaps);
+    const success = this._updateWidget(widget, newInfo, fixOverlaps);
     if (success) {
       const change: IDashboardChange = {
-        type: 'move',
+        type: 'update',
         widgetId: widget.id,
+        snapToGrid: widget.snapToGrid,
         pos: widget.pos
       };
       this.signalChange(change);
@@ -341,7 +345,7 @@ export class DashboardLayout extends Layout {
    */
   private _updateWidget(
     widget: DashboardWidget,
-    pos: Widgetstore.WidgetPosition,
+    newInfo: Partial<WidgetInfo>,
     fixOverlaps = true
   ): boolean {
     // Get the item from the map.
@@ -352,7 +356,12 @@ export class DashboardLayout extends Layout {
       return false;
     }
 
-    let { left, top, width, height } = pos;
+    // Just changing snap-to-grid status.
+    if (newInfo.pos == null) {
+      return true;
+    }
+
+    let { left, top, width, height } = newInfo.pos;
 
     // Constrain the widget to the dashboard dimensions.
     if (this._width !== 0 && left + width > this._width) {
@@ -499,7 +508,7 @@ export class DashboardLayout extends Layout {
       }
 
       // Widget was moved or resized; update.
-      this.updateWidget(item.widget as DashboardWidget, pos);
+      this.updateWidget(item.widget as DashboardWidget, { pos });
     }
   }
 
@@ -627,7 +636,7 @@ export class DashboardLayout extends Layout {
       this._expandCanvas(type, widthDiff);
     }
 
-    this._updateWidget(widget, newPos);
+    this._updateWidget(widget, { pos: newPos });
   }
 
   /**
@@ -682,7 +691,7 @@ export class DashboardLayout extends Layout {
           const widget = _widget as DashboardWidget;
           const pos = widget.pos;
           pos.left += amount;
-          this._updateWidgetHelper(widget, pos);
+          this._updateWidgetHelper(widget, { pos });
         });
         break;
       case 'right':
@@ -694,7 +703,7 @@ export class DashboardLayout extends Layout {
           const widget = _widget as DashboardWidget;
           const pos = widget.pos;
           pos.top += amount;
-          this._updateWidgetHelper(widget, pos);
+          this._updateWidgetHelper(widget, { pos });
         });
         break;
       case 'down':
@@ -878,7 +887,7 @@ export class DashboardLayout extends Layout {
     this.startBatch();
     each(this, _widget => {
       const widget = _widget as DashboardWidget;
-      this.updateWidget(widget, widget.pos);
+      this.updateWidget(widget, { pos: widget.pos });
     });
     this.endBatch();
   }
@@ -1016,7 +1025,7 @@ export namespace DashboardLayout {
 /**
  * A type for dashboard changes emitted by the changed signal.
  */
-export type DashboardChangeType = 'add' | 'remove' | 'move';
+export type DashboardChangeType = 'add' | 'remove' | 'update';
 
 /**
  * An interface describing a change that occurs to the dashboard.
@@ -1036,6 +1045,8 @@ export interface IDashboardChange {
   notebookId?: string;
 
   cellId?: string;
+
+  snapToGrid?: boolean;
 
   ignore?: boolean;
 }

@@ -26,6 +26,33 @@ export function updateMetadata(
     source.model.metadata.set('presto', newValues);
   }
 }
+
+export function addMetadataView(
+  source: NotebookPanel | Cell,
+  viewId: string,
+  view: ReadonlyPartialJSONObject
+): void {
+  const oldMetadata = getMetadata(source);
+  let newMetadata;
+
+  // This sets an ID for a cell without metadata--maybe not the desired behavior.
+  if (oldMetadata == null) {
+    newMetadata = {
+      id: UUID.uuid4(),
+      views: {}
+    };
+  } else {
+    newMetadata = { ...oldMetadata };
+  }
+
+  // eslint-disable-next-line no-prototype-builtins
+  if (!(newMetadata as Record<string, any>).hasOwnProperty('views')) {
+    newMetadata['views'] = {};
+  }
+  newMetadata.views[viewId] = view;
+
+  source.model.metadata.set('presto', newMetadata);
+}
 /**
  * Adds a random, unique ID to a notebook's metadata.
  *

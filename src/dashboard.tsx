@@ -29,14 +29,15 @@ import { DashboardLayout } from './layout';
 
 import { DashboardWidget } from './widget';
 
-import { WidgetPosition, Widgetstore } from './widgetstore';
+import { Widgetstore, WidgetInfo } from './widgetstore';
 
 import {
   addCellId,
   addNotebookId,
   getNotebookById,
   getCellId,
-  updateMetadata
+  getMetadata,
+  addMetadataView
 } from './utils';
 
 import {
@@ -53,6 +54,8 @@ import { CommandIDs } from './commands';
 import { HTMLSelect } from '@jupyterlab/ui-components';
 
 import { UUID } from '@lumino/coreutils';
+
+import * as dbformat from './dbformat';
 
 // HTML element classes
 
@@ -95,8 +98,8 @@ export class Dashboard extends Widget {
       outputTracker,
       model,
       mode,
-      width: options.dashboardWidth || Dashboard.DEFAULT_WIDTH,
-      height: options.dashboardHeight || Dashboard.DEFAULT_HEIGHT
+      width: options.dashboardWidth || window.innerWidth,
+      height: options.dashboardHeight || window.innerHeight
     });
 
     widgetstore.connectDashboard(this);
@@ -182,8 +185,8 @@ export class Dashboard extends Widget {
       const pos = { left, top, width, height };
 
       if (oldDashboard === this) {
-        // dragging in same dashboard.ono
-        this.updateWidget(widget, pos);
+        // dragging in same dashboard.
+        this.updateWidget(widget, { pos });
       } else {
         // dragging between dashboards
         const info: Widgetstore.WidgetInfo = {
@@ -258,19 +261,21 @@ export class Dashboard extends Widget {
       return;
     }
 
+    // Changed to only "infinitely" scroll on the vertical
+
     const elem = this.node;
-    const rightEdge = elem.offsetWidth + elem.scrollLeft;
+    // const rightEdge = elem.offsetWidth + elem.scrollLeft;
     const bottomEdge = elem.offsetHeight + elem.scrollTop;
 
-    if (rightEdge >= model.width && rightEdge > this._oldRightEdge) {
-      model.width += 200;
-    }
+    // if (rightEdge >= model.width && rightEdge > this._oldRightEdge) {
+    //   model.width += 200;
+    // }
     if (bottomEdge >= model.height && bottomEdge > this._oldBottomEdge) {
-      model.height += 200;
+      model.height += (this.layout as DashboardLayout).tileSize;
     }
 
     this._oldBottomEdge = bottomEdge;
-    this._oldRightEdge = rightEdge;
+    // this._oldRightEdge = rightEdge;
   }
 
   /**
@@ -282,11 +287,8 @@ export class Dashboard extends Widget {
     (this.layout as DashboardLayout).addWidget(widget, pos);
   }
 
-  updateWidget(
-    widget: DashboardWidget,
-    pos: Widgetstore.WidgetPosition
-  ): boolean {
-    return (this.layout as DashboardLayout).updateWidget(widget, pos);
+  updateWidget(widget: DashboardWidget, newInfo: Partial<WidgetInfo>): boolean {
+    return (this.layout as DashboardLayout).updateWidget(widget, newInfo);
   }
 
   /**
@@ -364,7 +366,7 @@ export class Dashboard extends Widget {
     return (this.layout as DashboardLayout).createWidget(info, fit);
   }
 
-  saveToNotebookMetadata(): void {
+  saveToNotebookMetadata(name = 'default'): void {
     // Get a list of all notebookIds used in the dashboard.
     const widgets = toArray(this.model.widgetstore.getWidgets());
 
@@ -380,22 +382,65 @@ export class Dashboard extends Widget {
     const notebookTracker = this.model.notebookTracker;
     const notebook = getNotebookById(notebookId, notebookTracker);
 
-    updateMetadata(notebook, { hasDashboard: true });
+    const oldDashboardMetadata = getMetadata(notebook);
+    let dashboardId: string;
+
+    // eslint-disable-next-line no-prototype-builtins
+    if ((oldDashboardMetadata as Record<string, any>).hasOwnProperty('views')) {
+      const dashboardIds = Object.keys(oldDashboardMetadata.views);
+      const names = new Map<string, string>(
+        dashboardIds.map(id => [oldDashboardMetadata.views[id].name, id])
+      );
+      dashboardId = names.get(name) || UUID.uuid4();
+    } else {
+      dashboardId = UUID.uuid4();
+    }
+
+    const cellWidth = (this.layout as DashboardLayout).tileSize;
+    // Only square dimensions are currently supported.
+    const cellHeight = cellWidth;
+
+    const dashboardView = {
+      name,
+      cellWidth,
+      cellHeight,
+      dashboardWidth: this.model.width,
+      dashboardHeight: this.model.height
+    };
+    addMetadataView(notebook, dashboardId, dashboardView);
 
     const cells = notebook.content.widgets;
 
-    const widgetMap = new Map<string, WidgetPosition>(
-      widgets.map(widget => [widget.cellId, widget.pos])
+    const widgetMap = new Map<string, WidgetInfo>(
+      widgets.map(widget => [widget.cellId, widget])
     );
 
     each(cells, cell => {
       const cellId = getCellId(cell);
-      const pos = widgetMap.get(cellId);
-      if (pos != null) {
-        updateMetadata(cell, { pos, hidden: false });
-      } else {
-        updateMetadata(cell, { hidden: true });
+      const info = widgetMap.get(cellId);
+      let view: Partial<dbformat.ICellView> = { hidden: true };
+
+      if (info != null) {
+        const { pos, snapToGrid } = info;
+        const { left, top, width, height } = pos;
+        const adjustedPos = !snapToGrid
+          ? pos
+          : {
+              left: left / cellWidth,
+              top: top / cellHeight,
+              width: width / cellWidth,
+              height: height / cellHeight
+            };
+
+        view = {
+          hidden: false,
+          name,
+          pos: adjustedPos,
+          snapToGrid: snapToGrid
+        };
       }
+
+      addMetadataView(cell, dashboardId, view);
     });
 
     notebook.context.save();
@@ -411,7 +456,7 @@ export class Dashboard extends Widget {
 
   private _model: IDashboardModel;
   private _context: DocumentRegistry.IContext<DocumentRegistry.IModel>;
-  private _oldRightEdge = 0;
+  // private _oldRightEdge = 0;
   private _oldBottomEdge = 0;
 }
 
@@ -422,10 +467,6 @@ export namespace Dashboard {
   export type Mode = 'free-edit' | 'present' | 'grid-edit';
 
   export type ScrollMode = 'infinite' | 'constrained';
-
-  export const DEFAULT_WIDTH = 1920;
-
-  export const DEFAULT_HEIGHT = 1080;
 
   export interface IOptions extends Widget.IOptions {
     /**

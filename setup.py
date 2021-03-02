@@ -1,17 +1,23 @@
 """
 jupyterlab-interactive-dashboard-editor setup
 """
+import sys
 import json
-from os import path
+import os
 
 from jupyter_packaging import (
     create_cmdclass, install_npm, ensure_targets,
     combine_commands, skip_if_exists
 )
 
+try:
+    import jupyter_core.paths as jupyter_core_paths
+except:
+    jupyter_core_paths = None
+
 import setuptools
 
-HERE = path.abspath(path.dirname(__file__))
+HERE = os.path.abspath(os.path.dirname(__file__))
 
 # The name of the project
 name = "jupyterlab-interactive-dashboard-editor"
@@ -19,14 +25,14 @@ module = "jupyterlab_interactive_dashboard_editor"
 labext_name = "jupyterlab-interactive-dashboard-editor"
 
 # Get our version
-with open(path.join(HERE, 'package.json')) as f:
+with open(os.path.join(HERE, 'package.json')) as f:
     version = json.load(f)['version']
 
-lab_path = path.join(HERE, module, "labextension")
+lab_path = os.path.join(HERE, module, "labextension")
 
 # Representative files that should exist after a successful build
 jstargets = [
-    path.join(lab_path, "package.json"),
+    os.path.join(lab_path, "package.json"),
 ]
 
 package_data_spec = {
@@ -51,11 +57,43 @@ cmdclass['js'] = combine_commands(
         path=HERE,
         npm=["jlpm"],
         build_cmd="build:labextension",
-        build_dir=path.join(HERE, 'dist'),
-        source_dir=path.join(HERE, 'src')
+        build_dir=os.path.join(HERE, 'dist'),
+        source_dir=os.path.join(HERE, 'src')
     ),
     ensure_targets(jstargets),
 )
+
+base_develop_cmd = cmdclass["develop"]
+
+class DevelopCmd(base_develop_cmd):
+    prefix_targets = [
+        ("nbconvert/templates", 'presto'),
+        ("voila/templates", 'presto')
+    ]
+
+    def run(self):
+        target_dir = os.path.join(sys.prefix, "share", "jupyter")
+        if "--user" in sys.prefix:
+            target_dir = jupyter_core_paths.user_dir()
+        target_dir = os.path.join(target_dir)
+
+        for prefix_target, name in self.prefix_targets:
+            source = os.path.join("share", "jupyter", prefix_target, name)
+            target = os.path.join(target_dir, prefix_target, name)
+            target_subdir = os.path.dirname(target)
+            if not os.path.exists(target_subdir):
+                os.makedirs(target_subdir)
+            rel_source = os.path.relpath(os.path.abspath(source), os.path.abspath(target_subdir))
+            try:
+                os.remove(target)
+            except:
+                pass
+            print(rel_source, "->", target)
+            os.symlink(rel_source, target)
+
+        super(DevelopCmd, self).run()
+
+cmdclass['develop'] = DevelopCmd if jupyter_core_paths else base_develop_cmd
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
