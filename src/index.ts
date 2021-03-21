@@ -57,8 +57,10 @@ import { Widgetstore, WidgetInfo } from './widgetstore';
 
 import { getMetadata } from './utils';
 
+import { widgets } from './widgets';
+
 const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
-  id: 'jupyterlab-interactive-dashboard-editor',
+  id: 'jupyterlab-interactive-dashboard-editor:extension',
   autoStart: true,
   requires: [INotebookTracker, IMainMenu, IDocumentManager, ILauncher],
   provides: IDashboardTracker,
@@ -719,4 +721,6 @@ namespace Private {
   }
 }
 
-export default extension;
+const plugins: JupyterFrontEndPlugin<any>[] = [extension, widgets];
+
+export default plugins;

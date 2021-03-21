@@ -13,12 +13,13 @@
     "noUnusedLocals": true,
     "preserveWatchOutput": true,
     "resolveJsonModule": true,
-    "outDir": "lib",
-    "rootDir": "src",
     "strict": true,
+    "skipLibCheck": true,
     "strictNullChecks": false,
     "target": "es2017",
-    "types": []
+    "types": [],
+    "outDir": "lib",
+    "rootDir": "src",
   },
-  "include": ["src/*"]
+  "include": ["src/**/*"]
 }

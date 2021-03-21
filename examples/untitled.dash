@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "dashboardHeight": 608,
+    "dashboardWidth": 704
+  },
+  "version": 1,
+  "outputs": {
+    "3e4809c3-eb19-4b33-9ec5-44634d019200": [
+      {
+        "cellId": "569a1755-d78f-4b59-acc9-cd868b66e48b",
+        "pos": {
+          "left": 160,
+          "top": 224,
+          "width": 256,
+          "height": 128
+        }
+      }
+    ]
+  },
+  "paths": {
+    "Untitled.ipynb": "3e4809c3-eb19-4b33-9ec5-44634d019200"
+  }
+}
