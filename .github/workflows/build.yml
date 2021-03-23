@@ -22,7 +22,7 @@ jobs:
         python-version: '3.7'
         architecture: 'x64'
     - name: Install dependencies
-      run: python -m pip install -U pip jupyterlab~=3.0 jupyter-packaging~=0.7.9
+      run: python -m pip install -U jupyterlab~=3.0 jupyter-packaging~=0.7.9
     - name: Build the extension
       run: |
         jlpm
@@ -31,8 +31,5 @@ jobs:
 
         python -m pip install .
 
-        jupyter labextension list 1>labextensions 2>&1
-        cat labextensions | grep "jupyterlab-interactive-dashboard-editor.*OK"
-
+        jupyter labextension list 2>&1 | grep -ie "jupyterlab-interactive-dashboard-editor.*OK"
         python -m jupyterlab.browser_check
-

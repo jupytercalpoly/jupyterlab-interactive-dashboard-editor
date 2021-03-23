@@ -60,7 +60,7 @@ And edit them again!
 Note: You will need NodeJS to install the extension.
 
 ```bash
-pip install jupyterlab_interactive_dashboard_editor
+pip install jupyterlab-interactive-dashboard-editor
 jupyter lab build
 ```
 

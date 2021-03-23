@@ -2,6 +2,6 @@ node_modules
 **/node_modules
 **/lib
 **/package.json
-jupyterlab_interactive_dashboard_editor
+jupyterlab-interactive-dashboard-editor
 .vscode
 .github

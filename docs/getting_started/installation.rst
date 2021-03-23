@@ -13,7 +13,7 @@ Note: You will need NodeJS to install the extension.
 
 .. code:: bash
 
-    pip install jupyterlab_interactive_dashboard_editor
+    pip install jupyterlab-interactive-dashboard-editor
     jupyter lab build
 
 .. code:: bash
