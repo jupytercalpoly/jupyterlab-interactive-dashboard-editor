@@ -10,7 +10,7 @@ rm -rf design
 rm -rf .github
 rm -rf binder
 rm -rf docs
-rm -rf jupyterlab_interactive_dashboard_editor
+rm -rf jupyterlab-interactive-dashboard-editor
 rm package.json
 rm tsconfig.json
 rm yarn.lock
