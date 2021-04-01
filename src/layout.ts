@@ -6,7 +6,7 @@ import { IIterator, map, each, filter, toArray } from '@lumino/algorithm';
 
 import { MessageLoop, Message } from '@lumino/messaging';
 
-import { DashboardWidget } from './widget';
+import { DashboardWidget, OutputWidget } from './widget';
 
 import {
   Widgetstore,
@@ -25,6 +25,8 @@ import { DocumentRegistry } from '@jupyterlab/docregistry';
 
 import { IChangedArgs } from '@jupyterlab/coreutils';
 
+import { LayoutChange, NewDashboardModel } from './model';
+
 /**
  * The class name added to the dashboard canvas.
  */
@@ -39,6 +41,221 @@ const TILED_LAYOUT_CLASS = 'pr-TiledLayout';
  * The class name added to a dashboard in free mode.
  */
 const FREE_LAYOUT_CLASS = 'pr-FreeLayout';
+
+/**
+ * A layour for `Dashboard`s.
+ */
+export class NewDashboardLayout extends Layout {
+  /**
+   * Constructs a `DashboardLayout`.
+   */
+  constructor(model: NewDashboardModel, canvas: HTMLCanvasElement) {
+    super();
+    this._model = model;
+    this._canvas = canvas;
+    this._outputs = new Map<string, LayoutItem>();
+
+    this._model.ready.connect(_ => {
+      this._initOutputs();
+      this._updateDashboard();
+      this._model.layoutChanged.connect(this._handleModelChanges.bind(this));
+    });
+  }
+
+  /**
+   * Returns an iterator over the `OutputWidget`s in the layout.
+   */
+  iter(): IIterator<OutputWidget> {
+    // Is there a way to do this lazily?
+    const arr = Array.from(this._outputs.values());
+    return map(arr, item => item.widget as OutputWidget);
+  }
+
+  /**
+   * Disposes of resources held by the layout.
+   */
+  dispose(): void {
+    this._outputs.forEach(item => item.dispose());
+    this._outputs = undefined;
+    this._model = undefined;
+    this._canvas = undefined;
+    super.dispose();
+  }
+
+  /**
+   * Reflects changes in the model in the layout.
+   *
+   * @param _sender - the dashboard model sending the change signal. Unused.
+   *
+   * @param changes - An array of `LayoutChange`s to handle.
+   */
+  private _handleModelChanges(
+    _sender: NewDashboardModel,
+    changes: LayoutChange[]
+  ): void {
+    for (const change of changes) {
+      switch (change.type) {
+        case 'cell':
+          this._updateOutput(change.id);
+          break;
+        case 'dashboard':
+          this._updateDashboard();
+          break;
+      }
+    }
+  }
+
+  /**
+   * Updates all outputs from the model.
+   */
+  private _updateOutputs(): void {
+    for (const id of this._outputs.keys()) {
+      this._updateOutput(id);
+    }
+  }
+
+  /**
+   * Updates an output from the model.
+   *
+   * @param id - id of the cell to update from.
+   */
+  private _updateOutput(id: string): void {
+    const output = this._outputs.get(id);
+    if (output == null) {
+      return;
+    }
+
+    const { cellHeight, cellWidth } = this._model.info;
+    const outputInfo = this._model.getCellInfo(id);
+    const { hidden, snapToGrid, pos } = outputInfo;
+    let { left, top, width, height } = pos;
+    console.log('updating cell with id', id, outputInfo);
+
+    if (snapToGrid) {
+      left *= cellWidth;
+      top *= cellHeight;
+      width *= cellWidth;
+      height *= cellHeight;
+    }
+
+    if (hidden) {
+      output.widget.hide();
+    } else {
+      output.widget.show();
+    }
+
+    output.update(left, top, width, height);
+  }
+
+  /**
+   * Updates the dashboard and grid dimensions from the current dashboard view.
+   * Also updates all outputs.
+   */
+  private _updateDashboard(): void {
+    const {
+      dashboardHeight,
+      dashboardWidth,
+      cellHeight,
+      cellWidth
+    } = this._model.info;
+
+    this._canvas.style.backgroundSize = `${cellWidth}px ${cellHeight}px`;
+    this._canvas.width = dashboardWidth;
+    this._canvas.height = dashboardHeight;
+
+    this._updateOutputs();
+  }
+
+  /**
+   * Adds all cells from the model to the layout.
+   */
+  private _initOutputs(): void {
+    each(this._model.context.model.cells, cell => {
+      const content = this._model.createOutput(cell);
+      const widget = new OutputWidget({
+        content,
+        viewId: this._model.id,
+        cellId: cell.id,
+        type: cell.type
+      });
+      this.addWidget(widget);
+    });
+  }
+
+  /**
+   * Wraps an `OutputWidget` in a `LayoutItem` and adds it to the layout.
+   *
+   * @param widget - The `OutputWidget` to add.
+   */
+  public addWidget(widget: OutputWidget): void {
+    widget.hide();
+    const item = new LayoutItem(widget);
+    this._outputs.set(widget.cellId, item);
+    this.attachWidget(widget);
+  }
+
+  /**
+   * Removes an `OutputWidget` from the layout.
+   *
+   * @param widget - The `OutputWidget` to remove.
+   */
+  public removeWidget(widget: OutputWidget): void {
+    const item = this._outputs.get(widget.cellId);
+    if (item == null) {
+      return;
+    }
+    this._outputs.delete(widget.cellId);
+    item.dispose();
+
+    if (this.parent) {
+      this.detachWidget(-1, widget);
+    }
+  }
+
+  /**
+   * Attach a widget to the parent's DOM node.
+   *
+   * @param widget - The widget to attach to the parent.
+   */
+  protected attachWidget(widget: Widget): void {
+    widget.parent = this.parent;
+
+    if (this.parent!.isAttached) {
+      MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);
+    }
+
+    this.parent!.node.appendChild(widget.node);
+
+    if (this.parent!.isAttached) {
+      MessageLoop.sendMessage(widget, Widget.Msg.AfterAttach);
+    }
+
+    this.parent!.fit();
+  }
+
+  /**
+   * Detach a widget from the parent's DOM node.
+   *
+   * @param widget - The widget to detach from the parent.
+   */
+  protected detachWidget(_index: number, widget: Widget): void {
+    if (this.parent!.isAttached) {
+      MessageLoop.sendMessage(widget, Widget.Msg.BeforeDetach);
+    }
+
+    this.parent!.node.removeChild(widget.node);
+    if (this.parent!.isAttached) {
+      MessageLoop.sendMessage(widget, Widget.Msg.AfterDetach);
+    }
+
+    widget.parent = null;
+    this.parent!.fit();
+  }
+
+  private _canvas: HTMLCanvasElement;
+  private _model: NewDashboardModel;
+  private _outputs: Map<string, LayoutItem>;
+}
 
 /**
  * A layout for dashboards.
@@ -814,7 +1031,7 @@ export class DashboardLayout extends Layout {
    *
    * @param info - info to create widget from.
    *
-   * @param fit - whether to fit the widget to content when it's created.
+   * @param fit - whether to fit the widget tox content when it's created.
    *
    * @returns - the created widget.
    *

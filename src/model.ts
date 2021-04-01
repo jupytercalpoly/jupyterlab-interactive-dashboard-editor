@@ -1,5 +1,15 @@
 import { PathExt } from '@jupyterlab/coreutils';
 
+import {
+  ICellModel,
+  CodeCell,
+  RawCell,
+  MarkdownCell,
+  CodeCellModel,
+  RawCellModel,
+  MarkdownCellModel
+} from '@jupyterlab/cells';
+
 import { DocumentRegistry, DocumentModel } from '@jupyterlab/docregistry';
 
 import {
@@ -12,12 +22,23 @@ import {
   IDashboardContent,
   IDashboardMetadata,
   DASHBOARD_VERSION,
-  IOutputInfo
+  IOutputInfo,
+  verifyDBMetadata,
+  verifyCellMetadata
 } from './dbformat';
+
+import { IEditorMimeTypeService } from '@jupyterlab/codeeditor';
+
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 
 import { DashboardWidget } from './widget';
 
-import { INotebookTracker } from '@jupyterlab/notebook';
+import {
+  INotebookTracker,
+  StaticNotebook,
+  INotebookModel,
+  NotebookPanel
+} from '@jupyterlab/notebook';
 
 import { getPathFromNotebookId } from './utils';
 
@@ -27,13 +48,34 @@ import { ContentsManager, Contents } from '@jupyterlab/services';
 
 import { each } from '@lumino/algorithm';
 
-import { Signal } from '@lumino/signaling';
+import { Signal, ISignal } from '@lumino/signaling';
 
 import { Dashboard } from './dashboard';
 
 import { getNotebookById } from './utils';
 
-import { PartialJSONObject } from '@lumino/coreutils';
+import { PartialJSONObject, UUID } from '@lumino/coreutils';
+
+import { SimplifiedOutputArea } from '@jupyterlab/outputarea';
+
+import {
+  IDashboardView,
+  ICellView,
+  verifyCellView,
+  verifyDashboardView
+} from './dbformat';
+
+import { find } from '@lumino/algorithm';
+
+import { Widget } from '@lumino/widgets';
+
+import { OutputWidget } from './widget';
+
+export type LayoutChange = NewDashboardModel.LayoutChange;
+
+export type CellChange = NewDashboardModel.CellChange;
+
+export type DashboardChange = NewDashboardModel.DashboardChange;
 
 /**
  * The definition of a model object for a dashboard widget.
@@ -473,5 +515,534 @@ export class DashboardModelFactory
 export namespace DashboardModelFactory {
   export interface IOptions {
     notebookTracker: INotebookTracker;
+  }
+}
+
+// NEWNEW
+
+/**
+ * A dashboard model to keep track of the dashboard state.
+ */
+export class NewDashboardModel {
+  /**
+   * Construct a `DashboardModel`.
+   */
+  constructor(options: NewDashboardModel.IOptions) {
+    const {
+      dashboardId,
+      context,
+      rendermime,
+      contentFactory,
+      mimeTypeService,
+      editorConfig,
+      notebookConfig
+    } = options;
+
+    this._id = dashboardId || UUID.uuid4();
+    this._context = context;
+    this.rendermime = rendermime;
+    this.contentFactory = contentFactory;
+    this.mimeTypeService = mimeTypeService;
+    this._editorConfig = editorConfig;
+    this._notebookConfig = notebookConfig;
+    this._inBatch = false;
+    this._changes = [];
+
+    this._ready = new Signal<this, null>(this);
+    this._contentChanged = new Signal<this, null>(this);
+    this._stateChanged = new Signal<this, null>(this);
+    this._layoutChanged = new Signal<this, LayoutChange[]>(this);
+
+    this._context.sessionContext.ready.then(() => {
+      // this also ensures dashboard metadata
+      this._info = this._getDashboardViewById(this._id);
+      this._ensureCellsMetadata();
+      this._context.save().then(_ => this._ready.emit(null));
+    });
+  }
+
+  /**
+   * The rendermime instance for this context.
+   */
+  readonly rendermime: IRenderMimeRegistry;
+
+  /**
+   * A `NotebookPanel` content factory.
+   */
+  readonly contentFactory: NotebookPanel.IContentFactory;
+
+  /**
+   * The service used to look up mime types.
+   */
+  readonly mimeTypeService: IEditorMimeTypeService;
+
+  /**
+   * A config object for cell editors.
+   */
+  get editorConfig(): StaticNotebook.IEditorConfig {
+    return this._editorConfig;
+  }
+  /**
+   * A config object for cell editors.
+   *
+   * @param value - A `StaticNotebook.IEditorConfig`.
+   */
+  set editorConfig(value: StaticNotebook.IEditorConfig) {
+    this._editorConfig = value;
+  }
+
+  /**
+   * A config object for notebook widget.
+   */
+  get notebookConfig(): StaticNotebook.INotebookConfig {
+    return this._notebookConfig;
+  }
+  /**
+   * A config object for notebook widget.
+   *
+   * @param value - A `StaticNotebook.INotebookConfig`.
+   */
+  set notebookConfig(value: StaticNotebook.INotebookConfig) {
+    this._notebookConfig = value;
+  }
+
+  /**
+   * A signal emitted when the model is ready.
+   */
+  get ready(): ISignal<this, null> {
+    return this._ready;
+  }
+
+  /**
+   * A signal emitted when the model state changes.
+   */
+  get stateChanged(): ISignal<this, null> {
+    return this._stateChanged;
+  }
+
+  /**
+   * A signal emitted when the model content changes.
+   */
+  get contentChanged(): ISignal<this, null> {
+    return this._contentChanged;
+  }
+
+  /**
+   * A signal emitted when a cell or the dashboard changes.
+   */
+  get layoutChanged(): ISignal<this, LayoutChange[]> {
+    return this._layoutChanged;
+  }
+
+  /**
+   * The id of the dashboard view of the model.
+   */
+  get id(): string {
+    return this._id;
+  }
+
+  /**
+   * The context associated with the model.
+   */
+  get context(): DocumentRegistry.IContext<INotebookModel> {
+    return this._context;
+  }
+
+  /**
+   * Whether or not the model is in the middle of a batch of changes.
+   */
+  get inBatch(): boolean {
+    return this._inBatch;
+  }
+
+  /**
+   * The metadata of the dashboard notebook.
+   */
+  get metadata(): Record<string, any> | undefined {
+    return this._context.model.metadata.get('presto') as Record<string, any>;
+  }
+
+  set metadata(newMetadata: Record<string, any>) {
+    if (!verifyDBMetadata(newMetadata)) {
+      return;
+    }
+    this._context.model.metadata.set('presto', newMetadata);
+    const change: DashboardChange = { type: 'dashboard' };
+    this._pushChangeAndSignalIfNotBatch(change);
+  }
+
+  /**
+   * The `IDashboardView` used by the model.
+   */
+  get info(): IDashboardView {
+    return this._info;
+  }
+  set info(newInfo: IDashboardView) {
+    if (!verifyDashboardView(newInfo)) {
+      return;
+    }
+    this._ensureMetadata();
+    const metadata = this.metadata;
+    metadata.views[this.id] = newInfo;
+    this.metadata = metadata;
+    this._info = newInfo;
+  }
+
+  /**
+   * Creates a new dashboard output widget from an `ICellModel`.
+   *
+   * @param cellModel - `ICellModel` to create the output from.
+   */
+  public createOutput(cellModel: ICellModel): OutputWidget {
+    let content: Widget;
+
+    switch (cellModel.type) {
+      case 'code': {
+        const codeCell = new CodeCell({
+          model: cellModel as CodeCellModel,
+          rendermime: this.rendermime,
+          contentFactory: this.contentFactory,
+          editorConfig: this._editorConfig.code,
+          updateEditorOnShow: true
+        });
+
+        content = new SimplifiedOutputArea({
+          model: codeCell.outputArea.model,
+          rendermime: codeCell.outputArea.rendermime,
+          contentFactory: codeCell.outputArea.contentFactory
+        });
+
+        break;
+      }
+      case 'markdown': {
+        const markdownCell = new MarkdownCell({
+          model: cellModel as MarkdownCellModel,
+          rendermime: this.rendermime,
+          contentFactory: this.contentFactory,
+          editorConfig: this._editorConfig.markdown,
+          updateEditorOnShow: false
+        });
+        markdownCell.inputHidden = false;
+        markdownCell.rendered = true;
+        Private.removeElements(markdownCell.node, 'jp-Collapser');
+        Private.removeElements(markdownCell.node, 'jp-InputPrompt');
+        content = markdownCell;
+        break;
+      }
+      default: {
+        const rawCell = new RawCell({
+          model: cellModel as RawCellModel,
+          contentFactory: this.contentFactory,
+          editorConfig: this._editorConfig.raw,
+          updateEditorOnShow: false
+        });
+        rawCell.inputHidden = false;
+        Private.removeElements(rawCell.node, 'jp-Collapser');
+        Private.removeElements(rawCell.node, 'jp-InputPrompt');
+        content = rawCell;
+        break;
+      }
+    }
+
+    return new OutputWidget({
+      content,
+      viewId: this.id,
+      // Using cell model id, not presto cell id
+      cellId: cellModel.id,
+      type: cellModel.type
+    });
+  }
+
+  /**
+   * Get the dashboard cell's metadata.
+   *
+   * @param id - Cell id.
+   */
+  public getCellInfo(id: string): ICellView | undefined {
+    const targetCell = this.getCellModel(id);
+    if (targetCell != null) {
+      const data = targetCell.metadata.get('presto') as Record<string, any>;
+      const info = data.views[this.id];
+      return info != null ? info : undefined;
+    }
+    return undefined;
+  }
+
+  /**
+   * Set the dashboard cell's metadata.
+   *
+   * @param id - Cell id.
+   *
+   * @param info - The new ICellView for the cell.
+   */
+  public setCellInfo(id: string, info: ICellView): void {
+    this.setPartialCellInfo(id, info);
+  }
+
+  /**
+   * Updates given fields in a dashboard cell's metadata.
+   *
+   * @param id - Cell id.
+   *
+   * @param info - A `Partial<ICellView> with new values for the cell.
+   */
+  public setPartialCellInfo(id: string, info: Partial<ICellView>): void {
+    const targetCell = this.getCellModel(id);
+    if (targetCell == null) {
+      return;
+    }
+    this._ensureCellMetadata(targetCell);
+    const metadata = targetCell.metadata.get('presto') as Record<string, any>;
+    const oldInfo = metadata.views[this.id];
+    const newView = { ...oldInfo, ...info };
+    metadata.views[this.id] = newView;
+    console.log('old, new, combined', oldInfo, info, newView);
+    targetCell.metadata.set('presto', metadata);
+    const change: CellChange = {
+      type: 'cell',
+      id: targetCell.id
+    };
+    this._pushChangeAndSignalIfNotBatch(change);
+  }
+
+  /**
+   * Hide (remove) a cell from the dashboard.
+   *
+   * @param id - Id of cell to hide.
+   */
+  public hideCell(id: string): void {
+    const targetCell = this.getCellModel(id);
+    if (targetCell == null) {
+      return;
+    }
+    this._ensureCellMetadata(targetCell);
+    const data = targetCell.metadata.get('presto') as Record<string, any>;
+    data.views[this.id].hidden = true;
+    targetCell.metadata.set('presto', data);
+    const change: CellChange = {
+      type: 'cell',
+      id: targetCell.id
+    };
+    this._pushChangeAndSignalIfNotBatch(change);
+  }
+
+  /**
+   * Gets an `ICellModel` from the notebook by id.
+   *
+   * @param id - Id of the `ICellModel` to return.
+   */
+  public getCellModel(id: string): ICellModel | undefined {
+    return find(this._context.model.cells, cell => cell.id === id);
+  }
+
+  /**
+   * Make sure the dashboard's notebook has metadata and that it's properly formatted.
+   */
+  private _ensureMetadata(): void {
+    let metadata = this.metadata;
+    let view =
+      metadata.views && this.id in metadata.views
+        ? metadata.views[this.id]
+        : undefined;
+
+    if (verifyDashboardView(view)) {
+      return;
+    } else if (!verifyDBMetadata(metadata)) {
+      metadata = {
+        id: UUID.uuid4(),
+        views: {}
+      };
+    }
+
+    view = NewDashboardModel.getDefaultView();
+    metadata.views[this.id] = view;
+    this.metadata = metadata;
+  }
+
+  /**
+   * Make sure the notebook's cells' have metadata and that they're properly formatted.
+   */
+  private _ensureCellsMetadata(): void {
+    each(this._context.model.cells, cell => this._ensureCellMetadata(cell));
+  }
+
+  /**
+   * Make sure a notebook cell has metadata and that it's properly formatted.
+   */
+  private _ensureCellMetadata(cell: ICellModel): void {
+    const name = this.info.name;
+    let metadata = cell.metadata.get('presto') as Record<string, any>;
+    let view =
+      metadata.view && this.id in metadata.view
+        ? metadata.view[this.id]
+        : undefined;
+
+    if (verifyCellView(view)) {
+      return;
+    } else if (!verifyCellMetadata(metadata)) {
+      metadata = {
+        id: UUID.uuid4(),
+        views: {}
+      };
+    }
+
+    view = {
+      name,
+      pos: {
+        left: 0,
+        top: 0,
+        width: 0,
+        height: 0
+      },
+      hidden: true,
+      snapToGrid: true
+    };
+
+    metadata.views[this.id] = view;
+    cell.metadata.set('presto', metadata);
+    // emit change?
+  }
+
+  /**
+   * Returns a dashboard view from the notebook given its id.
+   *
+   * @param id - the id of the dashboard view.
+   */
+  private _getDashboardViewById(id: string): IDashboardView | undefined {
+    this._ensureMetadata();
+    const view = this.metadata.views[id];
+    return view != null ? view : undefined;
+  }
+
+  /**
+   * Start a batch of changes. Changes won't be emitted until the batch ends.
+   */
+  public beginBatch(): void {
+    this._inBatch = true;
+  }
+
+  /**
+   * End a batch of changes and emit all changes since the batch started.
+   */
+  public endBatch(): void {
+    if (!this.inBatch) {
+      return;
+    }
+    this._inBatch = false;
+    this._signalLayoutChanges();
+  }
+
+  /**
+   * Sel-explanatory (if wordy) function name.
+   *
+   * @param change - the change to push or emit.
+   */
+  private _pushChangeAndSignalIfNotBatch(change: LayoutChange): void {
+    this._changes.push(change);
+    this._contentChanged.emit(null);
+    this._context.model.dirty = true;
+    if (!this.inBatch) {
+      this._signalLayoutChanges();
+    }
+  }
+
+  /**
+   * Signals that changes have occured in the model and are ready to be rendered.
+   */
+  private _signalLayoutChanges(): void {
+    this._layoutChanged.emit(this._changes);
+    this._changes = [];
+  }
+
+  private _context: DocumentRegistry.IContext<INotebookModel>;
+  private _editorConfig: StaticNotebook.IEditorConfig;
+  private _notebookConfig: StaticNotebook.INotebookConfig;
+
+  private _ready: Signal<this, null>;
+  private _stateChanged: Signal<this, null>;
+  private _contentChanged: Signal<this, null>;
+  private _layoutChanged: Signal<this, LayoutChange[]>;
+  private _id: string;
+  private _inBatch: boolean;
+  private _changes: LayoutChange[];
+
+  private _info: IDashboardView;
+}
+
+export namespace NewDashboardModel {
+  /**
+   * An options object for initializing a `DashboardModel`.
+   */
+  export interface IOptions {
+    /**
+     * The dashboard id of the dashboard to render. Creates a new dashboard if undefined.
+     */
+    dashboardId?: string;
+
+    /**
+     * The `Notebook` context.
+     */
+    context: DocumentRegistry.IContext<INotebookModel>;
+
+    /**
+     * The rendermime instance for this context.
+     */
+    rendermime: IRenderMimeRegistry;
+
+    /**
+     * A `NotebookPanel` content factory.
+     */
+    contentFactory: NotebookPanel.IContentFactory;
+
+    /**
+     * The service used to look up mime types.
+     */
+    mimeTypeService: IEditorMimeTypeService;
+
+    /**
+     * A config object for cell editors
+     */
+    editorConfig: StaticNotebook.IEditorConfig;
+
+    /**
+     * A config object for notebook widget
+     */
+    notebookConfig: StaticNotebook.INotebookConfig;
+  }
+
+  export function getDefaultView(): IDashboardView {
+    return {
+      name: 'default',
+      cellWidth: 32,
+      cellHeight: 32,
+      dashboardHeight: window.innerHeight,
+      dashboardWidth: window.innerWidth
+    };
+  }
+
+  export type CellChange = {
+    type: 'cell';
+    id: string;
+  };
+
+  export type DashboardChange = {
+    type: 'dashboard';
+  };
+
+  export type LayoutChange = CellChange | DashboardChange;
+}
+
+/**
+ * A namespace for private functionality.
+ */
+namespace Private {
+  /**
+   * Remove children by className from an HTMLElement.
+   */
+  export function removeElements(node: HTMLElement, className: string): void {
+    const elements = node.getElementsByClassName(className);
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].remove();
+    }
   }
 }

@@ -3,7 +3,11 @@ import {
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
-import { INotebookTracker } from '@jupyterlab/notebook';
+import {
+  INotebookTracker,
+  StaticNotebook,
+  NotebookPanel
+} from '@jupyterlab/notebook';
 
 import {
   WidgetTracker,
@@ -18,7 +22,8 @@ import {
   Dashboard,
   DashboardDocumentFactory,
   DashboardTracker,
-  IDashboardTracker
+  IDashboardTracker,
+  NewDashboardDocumentWidget
 } from './dashboard';
 
 import { DashboardWidget } from './widget';
@@ -57,17 +62,34 @@ import { Widgetstore, WidgetInfo } from './widgetstore';
 
 import { getMetadata } from './utils';
 
+import { NewDashboardDocumentWidgetFactory } from './factory';
+
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
+
+import { IEditorServices } from '@jupyterlab/codeeditor';
+
 const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
   id: 'jupyterlab-interactive-dashboard-editor',
   autoStart: true,
-  requires: [INotebookTracker, IMainMenu, IDocumentManager, ILauncher],
+  requires: [
+    INotebookTracker,
+    IMainMenu,
+    IDocumentManager,
+    ILauncher,
+    NotebookPanel.IContentFactory,
+    IEditorServices,
+    IRenderMimeRegistry
+  ],
   provides: IDashboardTracker,
   activate: (
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
     mainMenu: IMainMenu,
     docManager: IDocumentManager,
-    launcher: ILauncher
+    launcher: ILauncher,
+    contentFactory: NotebookPanel.IContentFactory,
+    editorServices: IEditorServices,
+    rendermime: IRenderMimeRegistry
   ): IDashboardTracker => {
     // Tracker for Dashboard
     const dashboardTracker = new DashboardTracker({ namespace: 'dashboards' });
@@ -103,6 +125,40 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       notebookTracker
     );
 
+    // START NEW DASHBOARD INDEX
+
+    const newDashboardTracker = new WidgetTracker<NewDashboardDocumentWidget>({
+      namespace: 'presto-dashboards'
+    });
+
+    const factory = new NewDashboardDocumentWidgetFactory({
+      name: 'Dashboard',
+      fileTypes: ['notebook'],
+      modelName: 'notebook',
+      preferKernel: true,
+      canStartKernel: true,
+      rendermime: rendermime,
+      contentFactory,
+      editorConfig: StaticNotebook.defaultEditorConfig,
+      notebookConfig: StaticNotebook.defaultNotebookConfig,
+      mimeTypeService: editorServices.mimeTypeService,
+      commands: app.commands
+    });
+
+    factory.widgetCreated.connect((_sender, widget) => {
+      widget.context.pathChanged.connect(() => {
+        void newDashboardTracker.save(widget);
+      });
+
+      void newDashboardTracker.add(widget);
+      widget.update();
+      app.commands.notifyCommandChanged();
+    });
+
+    app.docRegistry.addWidgetFactory(factory);
+
+    // END NEW DASHBOARD INDEX
+
     // Create a new model factory.
     const modelFactory = new DashboardModelFactory({ notebookTracker });
 
@@ -119,8 +175,6 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
     app.docRegistry.addModelFactory(modelFactory);
     app.docRegistry.addWidgetFactory(widgetFactory);
 
-    // Add newly created dashboards to the tracker, set their icon and label,
-    // and set the default width, height, and scrollMode.
     widgetFactory.widgetCreated.connect((_sender, widget) => {
       void dashboardTracker.add(widget.content);
 
@@ -129,7 +183,6 @@ const extension: JupyterFrontEndPlugin<IDashboardTracker> = {
       widget.title.iconLabel = dashboardFiletype.iconLabel || '';
 
       const model = widget.content.model;
-      // TODO: Make scrollMode changable in JL. Default 'infinite' for now.
       model.scrollMode = 'infinite';
       model.width = (widget.content.layout as DashboardLayout).width;
       model.height = (widget.content.layout as DashboardLayout).height;
@@ -616,18 +669,24 @@ function addCommands(
         }
       } else {
         const dashboardIds = Object.keys(notebookMetadata.views);
-        const nameMap = new Map<string, string>(
-          dashboardIds.map(id => [notebookMetadata.views[id].name, id])
-        );
-        const dashboardName = await InputDialog.getItem({
-          title: 'Select a Dashboard',
-          current: 0,
-          items: Array.from(nameMap.keys())
-        });
-        if (dashboardName.value) {
-          dashboardId = nameMap.get(dashboardName.value);
+        if (dashboardIds.length === 1) {
+          dashboardId = dashboardIds[0];
         } else {
-          return;
+          const nameMap = new Map<string, string>(
+            dashboardIds.map(id => [notebookMetadata.views[id].name, id])
+          );
+
+          const selectedDashboard = await InputDialog.getItem({
+            title: 'Select a Dashboard',
+            current: 0,
+            items: Array.from(nameMap.keys())
+          });
+
+          if (selectedDashboard.value) {
+            dashboardId = nameMap.get(selectedDashboard.value);
+          } else {
+            return;
+          }
         }
       }
 
@@ -667,6 +726,7 @@ function addCommands(
             snapToGrid,
             pos: adjustedPos
           };
+
           widgetstore.addWidget(widgetInfo);
         }
       }

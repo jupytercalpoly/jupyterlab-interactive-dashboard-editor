@@ -14,7 +14,9 @@ import { Message } from '@lumino/messaging';
 
 import { Drag } from './drag';
 
-import { Dashboard } from './dashboard';
+import { Dashboard, NewDashboard } from './dashboard';
+
+import { CellType } from '@jupyterlab/nbformat';
 
 import {
   getNotebookId,
@@ -58,6 +60,386 @@ const MARKDOWN_OUTPUT_CLASS = 'pr-MarkdownOutput';
  * The class name added to dashboard widget drag images.
  */
 const DRAG_IMAGE_CLASS = 'pr-DragImage';
+
+/**
+ * A `Widget` to display cells in notebook files on `Dashboard`s.
+ */
+export class OutputWidget extends Widget {
+  /**
+   * Constructs an `OutputWidget`.
+   */
+  constructor(options: OutputWidget.IOptions) {
+    super();
+    const { content, cellId, viewId, type } = options;
+
+    this.node.setAttribute('tabindex', '-1');
+
+    this.addClass(DASHBOARD_WIDGET_CLASS);
+    this.addClass(EDITABLE_WIDGET_CLASS);
+    this._viewId = viewId;
+    this._cellId = cellId;
+    this._type = type;
+
+    content.node.appendChild(OutputWidget.createResizer('bottom-left'));
+    content.node.appendChild(OutputWidget.createResizer('bottom-right'));
+    content.node.appendChild(OutputWidget.createResizer('top-left'));
+    content.node.appendChild(OutputWidget.createResizer('top-right'));
+
+    this._content = content;
+
+    this.node.appendChild(this._content.node);
+  }
+
+  get pos(): WidgetPosition {
+    const style = this.node.style;
+    return {
+      left: parseInt(style.left, 10),
+      top: parseInt(style.top, 10),
+      width: parseInt(style.width, 10),
+      height: parseInt(style.height, 10)
+    };
+  }
+
+  get cellPos(): WidgetPosition {
+    const absPos = this.pos;
+    const { cellWidth, cellHeight } = this._dashboard.model.info;
+    return {
+      left: Math.round(absPos.left / cellWidth),
+      top: Math.round(absPos.top / cellHeight),
+      width: Math.round(absPos.width / cellWidth),
+      height: Math.round(absPos.height / cellHeight)
+    };
+  }
+
+  get cellId(): string {
+    return this._cellId;
+  }
+
+  get viewId(): string {
+    return this._viewId;
+  }
+
+  get type(): CellType {
+    return this._type;
+  }
+
+  get mode(): string {
+    return this._mode;
+  }
+
+  /**
+   * Create click listeners on attach
+   */
+  onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.node.addEventListener('mousedown', this);
+    this.node.addEventListener('keydown', this);
+    this._dashboard = this.parent as NewDashboard;
+  }
+
+  /**
+   * Remove click listeners on detach
+   */
+  onBeforeDetach(msg: Message): void {
+    super.onBeforeDetach(msg);
+    this.node.removeEventListener('mousedown', this);
+    this.node.removeEventListener('keydown', this);
+  }
+
+  handleEvent(event: Event): void {
+    // Just do the default behavior in present mode.
+    if (this._mode === 'present') {
+      return;
+    }
+
+    switch (event.type) {
+      case 'keydown':
+        this._evtKeyDown(event as KeyboardEvent);
+        break;
+      case 'mousedown':
+        this._evtMouseDown(event as MouseEvent);
+        break;
+      case 'mouseup':
+        this._evtMouseUp(event as MouseEvent);
+        break;
+      case 'mousemove':
+        this._evtMouseMove(event as MouseEvent);
+        break;
+    }
+  }
+
+  private _evtKeyDown(event: KeyboardEvent): void {
+    if (event.key === ' ') {
+      console.log('spacebar pressed on widget', this._cellId);
+    }
+  }
+
+  /**
+   * Handle `mousedown` events for the widget.
+   */
+  private _evtMouseDown(event: MouseEvent): void {
+    const { button, shiftKey, target } = event;
+
+    // We only handle main or secondary button actions.
+    if (
+      !(button === 0 || button === 2) ||
+      // Shift right-click gives the browser default behavior.
+      (shiftKey && button === 2)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    window.addEventListener('mouseup', this);
+    window.addEventListener('mousemove', this);
+
+    const elem = target as HTMLElement;
+
+    let selectedResizer: OutputWidget.ResizerCorner | undefined;
+    let mouseMode: OutputWidget.MouseMode;
+    // Set mode to resize if the mousedown happened on a resizer.
+    if (elem.classList.contains('pr-Resizer')) {
+      mouseMode = 'resize';
+      if (elem.classList.contains('pr-ResizerTopRight')) {
+        selectedResizer = 'top-right';
+      } else if (elem.classList.contains('pr-ResizerTopLeft')) {
+        selectedResizer = 'top-left';
+      } else if (elem.classList.contains('pr-ResizerBottomLeft')) {
+        selectedResizer = 'bottom-left';
+      } else {
+        selectedResizer = 'bottom-right';
+      }
+    } else {
+      mouseMode = 'move';
+    }
+
+    const rect = this.node.getBoundingClientRect();
+
+    const origPos = this.pos;
+
+    this._clickData = {
+      pressX: event.clientX,
+      pressY: event.clientY,
+      origPos,
+      target: this.node.cloneNode(true) as HTMLElement,
+      widgetX: rect.left,
+      widgetY: rect.top,
+      selectedResizer,
+      mouseMode
+    };
+  }
+
+  private _evtMouseMove(event: MouseEvent): void {
+    if (this._clickData == null) {
+      return;
+    }
+
+    switch (this._clickData.mouseMode) {
+      case 'interact':
+        return;
+      case 'move':
+        event.preventDefault();
+        this._dragMove(event);
+        return;
+      case 'resize':
+        event.preventDefault();
+        this._resizeMove(event);
+        return;
+    }
+  }
+
+  private _dragMove(event: MouseEvent): void {
+    const data = this._clickData;
+    if (data == null) {
+      return;
+    }
+    const { clientX, clientY } = event;
+
+    if (Private.shouldStartDrag(data.pressX, data.pressY, clientX, clientY)) {
+      const dragImage = data.target;
+
+      dragImage.classList.add(DRAG_IMAGE_CLASS);
+
+      this.node.style.opacity = '0';
+      this.node.style.pointerEvents = 'none';
+
+      this._drag = new Drag({
+        mimeData: new MimeData(),
+        dragImage,
+        proposedAction: 'move',
+        supportedActions: 'copy-move',
+        source: this,
+        dragAdjustX: this._clickData.widgetX,
+        dragAdjustY: this._clickData.widgetY
+      });
+
+      this._drag.mimeData.setData(DASHBOARD_WIDGET_MIME, this);
+
+      document.removeEventListener('mousemove', this, true);
+      document.removeEventListener('mouseup', this, true);
+
+      this._drag.start(clientX, clientY).then(() => {
+        if (this.isDisposed) {
+          return;
+        }
+        this.node.style.opacity = null;
+        this.node.style.pointerEvents = 'auto';
+        this._drag = null;
+        this._clickData = null;
+      });
+    }
+  }
+
+  private _resizeMove(event: MouseEvent): void {
+    const { pressX, pressY, origPos, selectedResizer } = this._clickData;
+
+    const origWidth = origPos.width;
+    const origHeight = origPos.height;
+    const origLeft = origPos.left;
+    const origTop = origPos.top;
+
+    const deltaX = event.clientX - pressX;
+    const deltaY = event.clientY - pressY;
+
+    let { width, height, top, left } = this.pos;
+
+    switch (selectedResizer) {
+      case 'bottom-right':
+        width = Math.max(origWidth + deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight + deltaY, DashboardWidget.MIN_HEIGHT);
+        break;
+      case 'bottom-left':
+        width = Math.max(origWidth - deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight + deltaY, DashboardWidget.MIN_HEIGHT);
+        left = origLeft + deltaX;
+        break;
+      case 'top-right':
+        width = Math.max(origWidth + deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight - deltaY, DashboardWidget.MIN_HEIGHT);
+        top = origTop + deltaY;
+        break;
+      case 'top-left':
+        width = Math.max(origWidth - deltaX, DashboardWidget.MIN_WIDTH);
+        height = Math.max(origHeight - deltaY, DashboardWidget.MIN_HEIGHT);
+        top = origTop + deltaY;
+        left = origLeft + deltaX;
+        break;
+    }
+
+    this.node.style.top = `${top}px`;
+    this.node.style.left = `${left}px`;
+    this.node.style.width = `${width}px`;
+    this.node.style.height = `${height}px`;
+
+    this._dashboard.drawDropZone({ left, top, width, height }, true);
+  }
+
+  private _evtMouseUp(event: MouseEvent): void {
+    if (this._clickData == null) {
+      return;
+    }
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    this.node.style.opacity = null;
+
+    if (this._clickData.mouseMode === 'resize') {
+      this._dashboard.modifyOutput({ pos: this.pos }, this.cellId);
+    }
+
+    this._clickData = undefined;
+    this._dashboard.clearCanvas();
+    window.removeEventListener('mouseup', this);
+    window.removeEventListener('mousemove', this);
+  }
+
+  private _clickData: {
+    pressX: number;
+    pressY: number;
+    widgetX: number;
+    widgetY: number;
+    origPos: WidgetPosition;
+    target: HTMLElement;
+    mouseMode: OutputWidget.MouseMode;
+    selectedResizer: OutputWidget.ResizerCorner | undefined;
+  };
+
+  private _drag: Drag;
+  private _viewId: string;
+  private _cellId: string;
+  private _content: Widget;
+  private _type: CellType;
+  private _mode: string;
+  private _dashboard: NewDashboard;
+}
+
+export namespace OutputWidget {
+  export interface IOptions {
+    /**
+     * The main content of the `OutputWidget`.
+     */
+    content: Widget;
+
+    /**
+     * The id of the cell content is generated from.
+     */
+    cellId: string;
+
+    /**
+     * The id of the view the content is generated from.
+     */
+    viewId: string;
+
+    /**
+     * The type of the content.
+     */
+    type: CellType;
+  }
+
+  /**
+   * A type for describing the corner for a widget resizer.
+   */
+  export type ResizerCorner =
+    | 'top-left'
+    | 'bottom-left'
+    | 'top-right'
+    | 'bottom-right';
+
+  /**
+   * A type for describing what to do with a click on an `OutputWidget`.
+   */
+  export type MouseMode = 'resize' | 'move' | 'interact';
+
+  /**
+   * Create a resizer element for a dashboard widget.
+   */
+  export function createResizer(corner: ResizerCorner): HTMLElement {
+    const resizer = document.createElement('div');
+    resizer.classList.add('pr-Resizer');
+
+    switch (corner) {
+      case 'top-left':
+        resizer.classList.add('pr-ResizerTopLeft');
+        break;
+      case 'top-right':
+        resizer.classList.add('pr-ResizerTopRight');
+        break;
+      case 'bottom-left':
+        resizer.classList.add('pr-ResizerBottomLeft');
+        break;
+      case 'bottom-right':
+        resizer.classList.add('pr-ResizerBottomRight');
+        break;
+      default:
+        resizer.classList.add('pr-ResizerBottomRight');
+        break;
+    }
+
+    return resizer;
+  }
+}
 
 /**
  * Widget to wrap delete/move/etc functionality of widgets in a dashboard (future).

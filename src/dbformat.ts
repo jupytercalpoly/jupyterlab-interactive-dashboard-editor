@@ -78,7 +78,42 @@ export interface IDashboardView {
   dashboardHeight: number;
 }
 
-export interface INBMetadataFormat {
+export interface IDBMetadata {
   id: string;
   views: { [id: string]: IDashboardView };
+}
+
+// Currently identical to verifyNVMetadata
+export function verifyCellMetadata(metadata: any): boolean {
+  return metadata && 'id' in metadata && 'views' in metadata;
+}
+
+// Currently identical to verifyCellMetadata
+export function verifyDBMetadata(metadata: any): boolean {
+  return metadata && 'id' in metadata && 'views' in metadata;
+}
+
+export function verifyCellView(view: any): boolean {
+  return (
+    view &&
+    'name' in view &&
+    'pos' in view &&
+    'top' in view.pos &&
+    'left' in view.pos &&
+    'width' in view.pos &&
+    'height' in view.pos &&
+    'hidden' in view &&
+    'snapToGrid' in view
+  );
+}
+
+export function verifyDashboardView(view: any): boolean {
+  return (
+    view &&
+    'name' in view &&
+    'cellWidth' in view &&
+    'cellHeight' in view &&
+    'dashboardWidth' in view &&
+    'dashboardHeight' in view
+  );
 }
